@@ -15,7 +15,9 @@
 
 SPEC-002 compresses with Python `zstandard` at **level 19**. Confirmed on macOS arm64 by decompressing `data/dist/book_1.isb` with system `libzstd` (Homebrew) via a thin FFI smoke (`app/tool/zstd_ffi_smoke.dart`): output starts with `SQLite format 3`, length 315392.
 
-Unit tests run in the Dart VM **without** the Flutter plugin’s native framework loaded. Production code uses `Zstandard().decompress`; tests inject a `ZstdDecompressor` fake or the FFI/libzstd implementation when available.
+**App note:** `Zstandard().decompress` (plugin helper) sizes the output as `compressed × 20`. Level-19 catalog frames without a pledged content size expand more than 20× (e.g. 1521 → 49152), so that helper returns `null`. The app therefore calls `ZSTD_decompress` via FFI on the same embedded `zstandard_*` library with a growing buffer (`PluginZstdDecompressor` in `lib/core/compress/zstd.dart`). Pipeline compressors also pass `size=` / `write_content_size=True` so new frames embed content size.
+
+Unit tests run in the Dart VM **without** the Flutter plugin’s native framework loaded. Production code uses the FFI wrapper above; tests inject a `ZstdDecompressor` fake or system `zstd` when available.
 
 ## Escalation
 

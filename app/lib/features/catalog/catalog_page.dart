@@ -30,7 +30,10 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
           actions: [
             IconButton(
               tooltip: l10n.refresh,
-              onPressed: () => ref.invalidate(catalogSyncTickProvider),
+              onPressed: () {
+                ref.invalidate(catalogSyncTickProvider);
+                ref.invalidate(catalogRepositoryProvider);
+              },
               icon: const Icon(Icons.refresh),
             ),
           ],
@@ -49,8 +52,10 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
                       Text(l10n.offlineEmpty, textAlign: TextAlign.center),
                       const SizedBox(height: 16),
                       FilledButton(
-                        onPressed: () =>
-                            ref.invalidate(catalogSyncTickProvider),
+                        onPressed: () {
+                          ref.invalidate(catalogSyncTickProvider);
+                          ref.invalidate(catalogRepositoryProvider);
+                        },
                         child: Text(l10n.refresh),
                       ),
                       syncTick.when(

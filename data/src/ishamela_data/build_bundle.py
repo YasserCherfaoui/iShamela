@@ -230,9 +230,11 @@ def _sha256_file(path: Path) -> str:
 
 
 def _compress_zstd(src: Path, dst: Path) -> None:
-    cctx = zstd.ZstdCompressor(level=ZSTD_LEVEL)
+    # Pledge size so the frame stores content size (helps clients that size
+    # the output buffer from ZSTD_getFrameContentSize).
+    cctx = zstd.ZstdCompressor(level=ZSTD_LEVEL, write_content_size=True)
     with src.open("rb") as fin, dst.open("wb") as fout:
-        cctx.copy_stream(fin, fout)
+        cctx.copy_stream(fin, fout, size=src.stat().st_size)
 
 
 def build_bundle_from_paths(

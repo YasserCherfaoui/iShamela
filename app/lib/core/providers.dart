@@ -21,11 +21,6 @@ final stateDatabaseProvider = FutureProvider<StateDatabase>((ref) async {
   return StateDatabase.open(paths);
 });
 
-final catalogRepositoryProvider = FutureProvider<CatalogRepository>((ref) async {
-  final paths = await ref.watch(appPathsProvider.future);
-  return CatalogRepository(paths);
-});
-
 final catalogSyncProvider = FutureProvider<CatalogSync>((ref) async {
   final paths = await ref.watch(appPathsProvider.future);
   return CatalogSync(
@@ -34,6 +29,13 @@ final catalogSyncProvider = FutureProvider<CatalogSync>((ref) async {
     zstd: ref.watch(zstdProvider),
     baseUrl: catalogBaseUrl,
   );
+});
+
+/// Runs catalog sync, then exposes a repository (so the UI sees a just-installed DB).
+final catalogRepositoryProvider = FutureProvider<CatalogRepository>((ref) async {
+  await ref.watch(catalogSyncTickProvider.future);
+  final paths = await ref.watch(appPathsProvider.future);
+  return CatalogRepository(paths);
 });
 
 final downloadServiceProvider = FutureProvider<DownloadService>((ref) async {
