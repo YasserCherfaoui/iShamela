@@ -1,0 +1,17 @@
+---
+description: iShamela core rules — always apply
+alwaysApply: true
+---
+
+# iShamela — Core Rules
+
+Open-source Flutter app + Python data pipeline for the Islamic Sciences corpus (Hugging Face datasets). Repo ships code only, never book content.
+
+- Implement ONLY what a `docs/specs/SPEC-*.md` defines. If the task has no spec, stop and tell the user to request one. Never invent schema fields, HF dataset field names, or normalization rules.
+- Decisions in `docs/adr/` are final context, not suggestions. ADR-001: search = pre-built SQLite FTS5 bundles, offline-first. Do not propose hosted search engines or alternative index tech.
+- `pages.body` is verbatim source text: NEVER transform, trim, or "clean" it. All normalization lives in SPEC-001's `normalize()` and applies only to `body_norm` and user queries.
+- Golden files in `shared/` are read-only unless the task explicitly updates the corresponding spec.
+- Dependencies: only those on the spec's allowed list; anything else must be surfaced to the user first.
+- Print-edition page numbers are citation-critical; never renumber or infer them.
+- Offline-first: no runtime network calls except explicit bundle downloads.
+- Before coding: read the spec + linked ADR, output a file-by-file plan, write the acceptance tests first.
