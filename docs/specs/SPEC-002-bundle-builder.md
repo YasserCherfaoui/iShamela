@@ -10,9 +10,25 @@ Transform one book from `AuthenticIlm/Shamela4_Full_DB` (Hugging Face) into a se
 HF: pages.jsonl + _meta/*.parquet  →  build_bundle  →  book_<id>.sqlite  →  zstd  →  book_<id>.isb
 ```
 
-## ⚠️ Schema verification gate (do this first)
+## Schema verification gate (Task 0 — done)
 
-The upstream field names below are **assumed from the dataset card** (`book_id`, `body`, per-book `pages.jsonl`, `_meta/book_metadata.parquet`). Task 0 of this spec: download ONE small book + the metadata parquets, print the actual schemas, and record them in `docs/DATA_SOURCES.md`. If reality differs from this spec, update the spec (PR) before implementing. Do not let your AI tool guess field names.
+Verified 2026-09-17 against revision `07554bee488a12955dd5231d08487ae7ce767d1e`. Full schemas live in [`docs/DATA_SOURCES.md`](../DATA_SOURCES.md). Do not invent field names.
+
+**Upstream → bundle mapping (normative):**
+
+| Bundle field | Upstream |
+|---|---|
+| `pages.id` | `pages.jsonl` → `sequence_num` |
+| `pages.part` | `part` |
+| `pages.page_number` | `page_num` (print edition; nullable) |
+| `pages.body` | `body` (verbatim; never modified) |
+| `meta.title` | `book_metadata` → `title_ar` |
+| `meta.author` | `main_author_name_ar` |
+| `meta.category_id` / `category_name` | `category_id` / `category_name_ar` |
+
+Hub layout has **no** `stage0_raw/` prefix: `{NN}__{category}/{book_id}__{slug}/pages.jsonl` plus `_meta/book_metadata.parquet`.
+
+ʿAqīdah acceptance sample: **book_id `1`** (90 pages). CLI `--book-id 43` remains a generic example (that id is not in ʿAqīdah).
 
 ## CLI contract
 
@@ -60,12 +76,12 @@ Notes for the implementer:
 
 ## Acceptance criteria
 
-- [ ] Building book id from the ʿAqīdah category sample completes and the `.isb` opens after decompression with `sqlite3`, all `meta` keys present.
-- [ ] `SELECT count(*) FROM pages` equals upstream page count for that book (record both in the test).
-- [ ] A search for a known phrase from the book **with full diacritics typed** returns the correct page id via `pages_fts MATCH normalize(query)`.
-- [ ] Determinism: two consecutive builds of the same book produce identical sha256.
-- [ ] Build of one average book < 30 s on a laptop; memory < 1 GB regardless of book size (stream pages, don't load whole books into RAM).
-- [ ] `--keep-sqlite` retains the uncompressed DB for inspection.
+- [x] Building ʿAqīdah sample book_id `1` completes and the `.isb` opens after decompression with `sqlite3`, all `meta` keys present.
+- [x] `SELECT count(*) FROM pages` equals upstream page count for that book (record both in the test).
+- [x] A search for a known phrase from the book **with full diacritics typed** returns the correct page id via `pages_fts MATCH normalize(query)`.
+- [x] Determinism: two consecutive builds of the same book produce identical sha256.
+- [x] Build of one average book < 30 s on a laptop; memory < 1 GB regardless of book size (stream pages, don't load whole books into RAM).
+- [x] `--keep-sqlite` retains the uncompressed DB for inspection.
 
 ## Dependencies (allowed list)
 

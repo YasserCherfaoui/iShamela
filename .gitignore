@@ -29,3 +29,8 @@ htmlcov/
 .idea/
 *.iml
 .vscode/
+
+# Pipeline caches / artifacts
+data/hf/
+data/dist/
+*.isb
