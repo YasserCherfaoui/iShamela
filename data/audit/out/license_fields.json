@@ -1,0 +1,22 @@
+{
+  "ieasybooks-org/shamela-waqfeya-library": {
+    "license": "mit",
+    "card_data_keys": [],
+    "hub_url": "https://huggingface.co/datasets/ieasybooks-org/shamela-waqfeya-library"
+  },
+  "ieasybooks-org/waqfeya-library": {
+    "license": "mit",
+    "card_data_keys": [],
+    "hub_url": "https://huggingface.co/datasets/ieasybooks-org/waqfeya-library"
+  },
+  "ieasybooks-org/prophet-mosque-library": {
+    "license": "mit",
+    "card_data_keys": [],
+    "hub_url": "https://huggingface.co/datasets/ieasybooks-org/prophet-mosque-library"
+  },
+  "AuthenticIlm/Shamela4_Full_DB": {
+    "license": "mit",
+    "card_data_keys": [],
+    "hub_url": "https://huggingface.co/datasets/AuthenticIlm/Shamela4_Full_DB"
+  }
+}

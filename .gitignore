@@ -33,6 +33,7 @@ htmlcov/
 # Pipeline caches / artifacts
 data/hf/
 data/dist/
+data/audit/cache/
 *.isb
 
 # Generated decompressions of test fixtures

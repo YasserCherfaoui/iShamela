@@ -1,0 +1,7 @@
+repo=AuthenticIlm/Shamela4_Full_DB
+revision=07554bee488a12955dd5231d08487ae7ce767d1e
+books={'small': 1, 'multi': 6551, 'quranic': 6}
+pages_lines=66500
+codepoint_unique=137
+range_hits={"tashkil_064B_065F": 889682, "superscript_alef_0670": 0, "tatweel_0640": 5146, "quranic_06D6_06ED": 0, "arabic_ext_08D3_08FF": 0, "presentation_FB50_FDFF": 14737, "presentation_FE70_FEFF": 0, "lt_gt_htmlish": 80420}
+outputs=['d1_topology.json', 'd1_meta_schemas.txt', 'd1_pages_keys.json', 'd1_codepoints.tsv', 'd1_footnotes.txt', 'd1_extras.txt']

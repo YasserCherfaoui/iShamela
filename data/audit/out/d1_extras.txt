@@ -1,0 +1,79 @@
+=== root_dictionary / hadith tables (local schemas) ===
+
+=== authors.parquet (3187 rows) ===
+  id: Int64
+  shamela_id: Int64
+  name_ar: String
+  death_hijri: Int64
+  death_hijri_text: String
+  alpha_sort: Int64
+  biography: String
+
+=== book_metadata.parquet (8589 rows) ===
+  book_id: Int64
+  shamela_id: Int64
+  title_ar: String
+  book_type: Int64
+  book_type_label: String
+  category_id: Int64
+  category_name_ar: String
+  main_author_id: Int64
+  main_author_name_ar: String
+  main_author_death_hijri: Int64
+  main_author_death_hijri_text: String
+  authors_text: String
+  hijri_era: Int64
+  printed: Boolean
+  is_hidden: Boolean
+  parent_id: Int64
+  group_id: Int64
+  version_major: Int64
+  version_minor: Int64
+  betaka_text: String
+  meta: String
+  volume_count_observed: Int64
+  has_multi_part: Boolean
+  authors_json: String
+
+=== categories.parquet (41 rows) ===
+  id: Int64
+  name_ar: String
+  name_en: Null
+  sort_order: Int64
+
+=== hadith_xrefs.parquet (37076 rows) ===
+  id: Int64
+  key_id: Int64
+  book_id: Int64
+  page_id: Int64
+
+=== narrators.parquet (18989 rows) ===
+  id: Int64
+  short_name: String
+  long_name: String
+  narrator_type: Int64
+  biography_text: String
+  criticism_text: String
+
+=== page_isnads.parquet (35526 rows) ===
+  id: Int64
+  book_id: Int64
+  shamela_page_id: Int64
+  hadeeth_key: Int64
+  narrator_ids: List(Int64)
+
+=== quran_verses.parquet (6236 rows) ===
+  id: Int64
+  body: String
+  majma: String
+  amiri: String
+
+=== root_dictionary.parquet (1952803 rows) ===
+  token: String
+  roots: List(String)
+
+=== tafsir_xrefs.parquet (84430 rows) ===
+  id: Int64
+  key_id: Int64
+  book_id: Int64
+  page_id: Int64

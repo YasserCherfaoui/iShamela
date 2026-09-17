@@ -98,4 +98,4 @@ ishamela-catalog --sidecars ./dist --out ./dist/catalog [--base-url <url>]
 
 - Delta/incremental catalog updates (full swap is fine at this size).
 - PDF-library datasets (their catalog is a future spec).
-- CI publishing workflow (SPEC-007, future) — this spec ends at files on disk.
+- CI publishing workflow and live app selection UX — see [`SPEC-007-live-catalog.md`](SPEC-007-live-catalog.md); this spec ends at files on disk.

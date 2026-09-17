@@ -1,0 +1,18 @@
+{
+  "repo_id": "ieasybooks-org/prophet-mosque-library",
+  "revision": "fc5372ff6258e20d51c4ddf0b4326695675ef12c",
+  "audited_at": "2026-09-17T18:45:56.944143+00:00",
+  "file_count": 0,
+  "pdf_count": 0,
+  "total_size_bytes_known": null,
+  "pdf_size_sum_known": null,
+  "pdf_size_p50": null,
+  "pdf_size_p95": null,
+  "pdf_size_max": null,
+  "largest_file": null,
+  "depth_min": 0,
+  "depth_max": 0,
+  "index_candidate_files": [],
+  "sample_paths": [],
+  "license_field": "mit"
+}

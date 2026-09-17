@@ -1,0 +1,101 @@
+{
+  "lines": 66500,
+  "books": [
+    1,
+    6,
+    6551
+  ],
+  "sequence_monotonic_per_file": true,
+  "keys": {
+    "body": {
+      "present_on_lines": 66500,
+      "null_or_empty": 0,
+      "null_pct": 0.0,
+      "dtypes": {
+        "str": 66500
+      }
+    },
+    "book_id": {
+      "present_on_lines": 66500,
+      "null_or_empty": 0,
+      "null_pct": 0.0,
+      "dtypes": {
+        "int": 66500
+      }
+    },
+    "footnotes": {
+      "present_on_lines": 66500,
+      "null_or_empty": 65576,
+      "null_pct": 98.611,
+      "dtypes": {
+        "NoneType": 65576,
+        "str": 924
+      }
+    },
+    "hints": {
+      "present_on_lines": 66500,
+      "null_or_empty": 66500,
+      "null_pct": 100.0,
+      "dtypes": {
+        "NoneType": 66500
+      }
+    },
+    "page_id": {
+      "present_on_lines": 66500,
+      "null_or_empty": 0,
+      "null_pct": 0.0,
+      "dtypes": {
+        "int": 66500
+      }
+    },
+    "page_num": {
+      "present_on_lines": 66500,
+      "null_or_empty": 1025,
+      "null_pct": 1.541,
+      "dtypes": {
+        "int": 65475,
+        "NoneType": 1025
+      }
+    },
+    "part": {
+      "present_on_lines": 66500,
+      "null_or_empty": 1069,
+      "null_pct": 1.608,
+      "dtypes": {
+        "NoneType": 1069,
+        "str": 65431
+      }
+    },
+    "sequence_num": {
+      "present_on_lines": 66500,
+      "null_or_empty": 0,
+      "null_pct": 0.0,
+      "dtypes": {
+        "int": 66500
+      }
+    },
+    "services_raw": {
+      "present_on_lines": 66500,
+      "null_or_empty": 66500,
+      "null_pct": 100.0,
+      "dtypes": {
+        "NoneType": 66500
+      }
+    },
+    "shamela_page_id": {
+      "present_on_lines": 66500,
+      "null_or_empty": 0,
+      "null_pct": 0.0,
+      "dtypes": {
+        "int": 66500
+      }
+    }
+  },
+  "confirmed_mapping": {
+    "book_id_key": "book_id",
+    "body_key": "body",
+    "print_page_key": "page_num",
+    "part_key": "part",
+    "order_key": "sequence_num (1-based, monotonic in samples)"
+  }
+}
