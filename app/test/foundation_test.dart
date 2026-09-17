@@ -10,6 +10,8 @@ import 'package:ishamela/core/compress/zstd.dart';
 import 'package:ishamela/core/db/paths.dart';
 import 'package:ishamela/core/db/state_database.dart';
 import 'package:ishamela/core/models/models.dart';
+import 'package:ishamela/core/net/bundle_downloader.dart';
+import 'package:ishamela/core/net/catalog_client.dart';
 import 'package:ishamela/core/search/normalizer.dart';
 import 'package:ishamela/features/catalog/catalog_service.dart';
 import 'package:ishamela/features/downloads/download_service.dart';
@@ -137,10 +139,9 @@ void main() {
     });
 
     final sync = CatalogSync(
-      dio: dio,
+      client: CatalogClient(dio, baseUrl: 'https://example.test/'),
       paths: paths,
       zstd: zstd,
-      baseUrl: 'https://example.test/',
     );
     final result = await sync.sync();
     expect(result, isNotNull);
@@ -165,10 +166,9 @@ void main() {
           _read('catalog.sqlite.zst'),
     });
     final sync = CatalogSync(
-      dio: dio,
+      client: CatalogClient(dio, baseUrl: 'https://example.test/'),
       paths: paths,
       zstd: zstd,
-      baseUrl: 'https://example.test/',
     );
     final result = await sync.sync();
     expect(result, isNull);
@@ -188,7 +188,7 @@ void main() {
       'https://example.test/books/book_900001.isb': (_) => isb,
     });
     final svc = DownloadService(
-      dio: dio,
+      downloader: BundleDownloader(dio),
       paths: paths,
       state: state,
       catalog: catalog,
@@ -214,7 +214,7 @@ void main() {
       'https://example.test/books/book_900001.isb': (_) => corrupt,
     });
     final svc = DownloadService(
-      dio: dio,
+      downloader: BundleDownloader(dio),
       paths: paths,
       state: state,
       catalog: catalog,
@@ -252,7 +252,7 @@ void main() {
       'https://example.test/books/book_900001.isb': (_) => badIsb,
     });
     final svc = DownloadService(
-      dio: dio,
+      downloader: BundleDownloader(dio),
       paths: paths,
       state: state,
       catalog: catalog,
@@ -297,7 +297,7 @@ void main() {
       },
     });
     final svc = DownloadService(
-      dio: dio,
+      downloader: BundleDownloader(dio),
       paths: paths,
       state: state,
       catalog: catalog,
@@ -314,7 +314,7 @@ void main() {
     final state = await StateDatabase.open(paths);
     final catalog = CatalogRepository(paths);
     final svc = DownloadService(
-      dio: Dio(),
+      downloader: BundleDownloader(Dio()),
       paths: paths,
       state: state,
       catalog: catalog,

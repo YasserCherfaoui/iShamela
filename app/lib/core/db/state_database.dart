@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:sqlite3/sqlite3.dart';
 
 import 'package:ishamela/core/db/paths.dart';
@@ -123,8 +121,3 @@ class StateDatabase {
   }
 }
 
-Database openReadonlySqlite(File path) {
-  final db = sqlite3.open(path.path, mode: OpenMode.readOnly);
-  db.execute('PRAGMA query_only = ON');
-  return db;
-}

@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 
 import 'package:ishamela/core/compress/zstd.dart';
 import 'package:ishamela/core/db/paths.dart';
+import 'package:ishamela/core/net/catalog_client.dart';
 import 'package:ishamela/features/catalog/catalog_service.dart';
 
 Future<void> main() async {
@@ -20,10 +21,9 @@ Future<void> main() async {
   stdout.writeln('baseUrl=$base');
   try {
     final sync = CatalogSync(
-      dio: Dio(),
+      client: CatalogClient(Dio(), baseUrl: base),
       paths: paths,
       zstd: PluginZstdDecompressor(),
-      baseUrl: base,
     );
     final m = await sync.sync();
     stdout.writeln(

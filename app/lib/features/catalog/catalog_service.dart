@@ -4,34 +4,30 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
-import 'package:dio/dio.dart';
 
 import 'package:ishamela/core/compress/zstd.dart';
 import 'package:ishamela/core/config.dart';
+import 'package:ishamela/core/db/open_readonly.dart';
 import 'package:ishamela/core/db/paths.dart';
-import 'package:ishamela/core/db/state_database.dart';
 import 'package:ishamela/core/models/models.dart';
+import 'package:ishamela/core/net/catalog_client.dart';
 import 'package:ishamela/core/search/normalizer.dart';
 
-/// Resolve [relative] against [baseUrl] (must end with `/` for directory bases).
-String catalogUrl(String baseUrl, String relative) {
-  final base = baseUrl.endsWith('/') ? baseUrl : '$baseUrl/';
-  return Uri.parse(base).resolve(relative).toString();
-}
+export 'package:ishamela/core/net/catalog_client.dart' show catalogUrl;
 
 /// Fetches and installs the remote catalog (SPEC-004).
 class CatalogSync {
   CatalogSync({
-    required this.dio,
+    required CatalogClient client,
     required this.paths,
     required this.zstd,
-    this.baseUrl = catalogBaseUrl,
-  });
+  }) : _client = client;
 
-  final Dio dio;
   final AppPaths paths;
   final ZstdDecompressor zstd;
-  final String baseUrl;
+  final CatalogClient _client;
+
+  String get baseUrl => _client.baseUrl;
 
   int? localCatalogVersion() {
     final file = paths.catalogSqlite;
@@ -49,22 +45,15 @@ class CatalogSync {
   }
 
   /// Fetch manifest; download/swap catalog DB if newer. Failures keep the old catalog.
-  Future<CatalogManifest?> sync({Duration timeout = const Duration(seconds: 5)}) async {
+  Future<CatalogManifest?> sync({
+    Duration timeout = const Duration(seconds: 5),
+  }) async {
     try {
-      final manifestUrl = catalogUrl(baseUrl, 'catalog/catalog.json');
-      developer.log('catalog sync GET $manifestUrl', name: 'CatalogSync');
-      final response = await dio.get<List<int>>(
-        manifestUrl,
-        options: Options(
-          responseType: ResponseType.bytes,
-          receiveTimeout: timeout,
-          sendTimeout: timeout,
-        ),
+      developer.log(
+        'catalog sync GET ${catalogUrl(baseUrl, 'catalog/catalog.json')}',
+        name: 'CatalogSync',
       );
-      final raw = response.data;
-      if (raw == null) return null;
-      final data = decodeJsonMap(utf8.decode(raw));
-      final manifest = CatalogManifest.fromJson(data);
+      final manifest = await _client.fetchManifest(timeout: timeout);
       final local = localCatalogVersion() ?? 0;
       if (manifest.catalogVersion <= local) {
         return manifest;
@@ -84,13 +73,11 @@ class CatalogSync {
   }
 
   Future<void> _installCatalogDb(CatalogManifest manifest) async {
-    final zstUrl = catalogUrl(baseUrl, manifest.catalogSqliteZstPath);
-    developer.log('catalog sync GET $zstUrl', name: 'CatalogSync');
-    final response = await dio.get<List<int>>(
-      zstUrl,
-      options: Options(responseType: ResponseType.bytes),
+    developer.log(
+      'catalog sync GET ${catalogUrl(baseUrl, manifest.catalogSqliteZstPath)}',
+      name: 'CatalogSync',
     );
-    final bytes = Uint8List.fromList(response.data ?? const []);
+    final bytes = await _client.fetchBytes(manifest.catalogSqliteZstPath);
     final digest = sha256.convert(bytes).toString();
     if (digest != manifest.catalogSqliteZstSha256) {
       throw StateError('catalog.sqlite.zst sha256 mismatch');

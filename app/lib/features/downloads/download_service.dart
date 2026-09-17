@@ -1,14 +1,15 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
 import 'package:ishamela/core/compress/zstd.dart';
 import 'package:ishamela/core/config.dart';
+import 'package:ishamela/core/db/open_readonly.dart';
 import 'package:ishamela/core/db/paths.dart';
 import 'package:ishamela/core/db/state_database.dart';
 import 'package:ishamela/core/models/models.dart';
+import 'package:ishamela/core/net/bundle_downloader.dart';
 import 'package:ishamela/features/catalog/catalog_service.dart';
 
 typedef NowMs = int Function();
@@ -16,7 +17,7 @@ typedef NowMs = int Function();
 /// Download queue: max 2 concurrent, resumable Range GETs (SPEC-004).
 class DownloadService {
   DownloadService({
-    required this.dio,
+    required BundleDownloader downloader,
     required this.paths,
     required this.state,
     required this.catalog,
@@ -24,9 +25,8 @@ class DownloadService {
     required this.booksBaseUrl,
     this.nowMs = _defaultNow,
     this.maxConcurrent = 2,
-  });
+  }) : _downloader = downloader;
 
-  final Dio dio;
   final AppPaths paths;
   final StateDatabase state;
   final CatalogRepository catalog;
@@ -34,6 +34,7 @@ class DownloadService {
   final String booksBaseUrl;
   final NowMs nowMs;
   final int maxConcurrent;
+  final BundleDownloader _downloader;
 
   final _active = <int, CancelToken>{};
   final _controllers = <void Function()>[];
@@ -238,28 +239,12 @@ class DownloadService {
     _notify();
 
     final url = catalogUrl(booksBaseUrl, book.filename);
-    final headers = <String, dynamic>{};
-    if (existing > 0) {
-      headers['Range'] = 'bytes=$existing-';
-    }
-    final response = await dio.get<ResponseBody>(
-      url,
-      options: Options(
-        responseType: ResponseType.stream,
-        headers: headers,
-        // 206 Partial Content or 200 OK both acceptable
-        validateStatus: (s) => s != null && (s == 200 || s == 206),
-      ),
+    await _downloader.downloadToFile(
+      url: url,
+      dest: dest,
+      existingBytes: existing,
       cancelToken: token,
-    );
-    final sink = dest.openWrite(
-      mode: response.statusCode == 206 ? FileMode.append : FileMode.write,
-    );
-    var done = response.statusCode == 206 ? existing : 0;
-    try {
-      await for (final chunk in response.data!.stream) {
-        sink.add(chunk);
-        done += chunk.length;
+      onProgress: (done) {
         state.upsertDownload(
           bookId: book.bookId,
           status: DownloadStatus.downloading.name,
@@ -268,10 +253,8 @@ class DownloadService {
           updatedAt: nowMs(),
         );
         _notify();
-      }
-    } finally {
-      await sink.close();
-    }
+      },
+    );
   }
 
   Future<void> _verify(Book book) async {
