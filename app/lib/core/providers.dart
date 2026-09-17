@@ -1,0 +1,66 @@
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:ishamela/core/compress/zstd.dart';
+import 'package:ishamela/core/config.dart';
+import 'package:ishamela/core/db/paths.dart';
+import 'package:ishamela/core/db/state_database.dart';
+import 'package:ishamela/features/catalog/catalog_service.dart';
+import 'package:ishamela/features/downloads/download_service.dart';
+
+final appPathsProvider = FutureProvider<AppPaths>((ref) => AppPaths.resolve());
+
+final dioProvider = Provider<Dio>((ref) => Dio());
+
+final zstdProvider = Provider<ZstdDecompressor>(
+  (ref) => PluginZstdDecompressor(),
+);
+
+final stateDatabaseProvider = FutureProvider<StateDatabase>((ref) async {
+  final paths = await ref.watch(appPathsProvider.future);
+  return StateDatabase.open(paths);
+});
+
+final catalogRepositoryProvider = FutureProvider<CatalogRepository>((ref) async {
+  final paths = await ref.watch(appPathsProvider.future);
+  return CatalogRepository(paths);
+});
+
+final catalogSyncProvider = FutureProvider<CatalogSync>((ref) async {
+  final paths = await ref.watch(appPathsProvider.future);
+  return CatalogSync(
+    dio: ref.watch(dioProvider),
+    paths: paths,
+    zstd: ref.watch(zstdProvider),
+    baseUrl: catalogBaseUrl,
+  );
+});
+
+final downloadServiceProvider = FutureProvider<DownloadService>((ref) async {
+  final paths = await ref.watch(appPathsProvider.future);
+  final state = await ref.watch(stateDatabaseProvider.future);
+  final catalog = await ref.watch(catalogRepositoryProvider.future);
+  final booksBase = () {
+    // Prefer books_base_url from last sync when available via catalog meta —
+    // until then use compile-time default's books/ sibling.
+    if (catalogBaseUrl.endsWith('/')) {
+      return '${catalogBaseUrl}books/';
+    }
+    return '$catalogBaseUrl/books/';
+  }();
+  final service = DownloadService(
+    dio: ref.watch(dioProvider),
+    paths: paths,
+    state: state,
+    catalog: catalog,
+    zstd: ref.watch(zstdProvider),
+    booksBaseUrl: booksBase,
+  );
+  service.recoverQueue();
+  return service;
+});
+
+final catalogSyncTickProvider = FutureProvider<void>((ref) async {
+  final sync = await ref.watch(catalogSyncProvider.future);
+  await sync.sync();
+});

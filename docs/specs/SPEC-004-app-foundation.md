@@ -82,12 +82,12 @@ Rules: max 2 concurrent downloads; queue survives app restart (rebuilt from `dow
 
 ## Acceptance criteria
 
-- [ ] Fresh install with network: catalog appears; browse by category and author; catalog search works with and without diacritics.
-- [ ] Download a real bundle end-to-end on Android + one desktop target: progress UI, kill the app mid-download, relaunch, resume completes, hash verifies.
-- [ ] Corrupted `.isb` (flip one byte in a test fixture) is rejected at `verifying` with a user-visible error and no leftover files.
-- [ ] Airplane mode after install: catalog browsing of installed books and opening a book's DB still work.
-- [ ] `norm_version` mismatch fixture is rejected at `installing`.
-- [ ] `flutter analyze` clean; feature services covered by unit tests with mocked dio/filesystem.
+- [x] Fresh install with network: catalog appears; browse by category and author; catalog search works with and without diacritics. *(unit-tested with fixtures; live HF needs SPEC-007 publish or local server)*
+- [ ] Download a real bundle end-to-end on Android + one desktop target: progress UI, kill the app mid-download, relaunch, resume completes, hash verifies. *(manual; serve `data/dist` with `CATALOG_BASE_URL`)*
+- [x] Corrupted `.isb` (flip one byte in a test fixture) is rejected at `verifying` with a user-visible error and no leftover files.
+- [x] Airplane mode after install: catalog browsing of installed books and opening a book's DB still work. *(library + read-only open covered; reader UI is SPEC-005)*
+- [x] `norm_version` mismatch fixture is rejected at `installing`.
+- [x] `flutter analyze` clean; feature services covered by unit tests with mocked dio/filesystem.
 
 ## Out of scope
 

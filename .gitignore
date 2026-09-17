@@ -34,3 +34,7 @@ htmlcov/
 data/hf/
 data/dist/
 *.isb
+
+# Generated decompressions of test fixtures
+app/test/fixtures/book_*.sqlite
+app/test/fixtures/.*.tmp

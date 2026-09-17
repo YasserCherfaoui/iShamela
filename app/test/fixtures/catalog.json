@@ -1,0 +1,1 @@
+{"catalog_version":1,"generated_at":"2026-09-17T00:00:00Z","schema_version":1,"norm_version":"1.0.0","catalog_sqlite_zst":{"path":"catalog/catalog.sqlite.zst","bytes":1244,"sha256":"b1f89f9179160d6ced47476aabf179af270af2b2428cddea5e8ea26b1a2e66ae"},"books_base_url":"https://example.test/books/","book_count":1,"min_app_version":"0.1.0"}
