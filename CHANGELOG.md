@@ -6,5 +6,6 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
+- Library catalog builder (SPEC-003): `ishamela-catalog` merges SPEC-002 sidecars with HF `_meta` parquets into `catalog.json` + `catalog.sqlite.zst` (contentless FTS5 over normalized title/author). JSON Schema at `data/schemas/catalog.schema.json`. `CATALOG_SCHEMA_VERSION` is `1`.
 - Book bundle builder (SPEC-002): `ishamela-build` CLI builds per-book SQLite+FTS5 bundles from `AuthenticIlm/Shamela4_Full_DB`, compressed to `.isb` (zstd level 19) with JSON sidecars. Schema gate documented in `docs/DATA_SOURCES.md`. `SCHEMA_VERSION` is `1`.
 - Arabic search normalizer (SPEC-001): deterministic `normalize()` in Python (`ishamela_data.normalizer`) and Dart (`app/lib/core/search/normalizer.dart`), locked together by `shared/norm_test_vectors.jsonl`. `NORM_VERSION` / `normVersion` is `1.0.0`.

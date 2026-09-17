@@ -68,7 +68,7 @@ Per-book directory name pattern: `{book_id}__{slug}/` under
 
 No page-count column in the parquet; per-book `manifest.json` has `page_count`.
 
-### `_meta/categories.parquet` schema
+### `_meta/categories.parquet` schema (41 rows)
 
 | Column | Type |
 |---|---|
@@ -76,6 +76,33 @@ No page-count column in the parquet; per-book `manifest.json` has `page_count`.
 | `name_ar` | String |
 | `name_en` | Null (currently) |
 | `sort_order` | Int64 |
+
+### `_meta/authors.parquet` schema (3187 rows)
+
+| Column | Type |
+|---|---|
+| `id` | Int64 |
+| `shamela_id` | Int64 |
+| `name_ar` | String |
+| `death_hijri` | Int64 |
+| `death_hijri_text` | String |
+| `alpha_sort` | Int64 |
+| `biography` | String |
+
+### SPEC-003 catalog joins
+
+Catalog builder (`ishamela-catalog`) consumes SPEC-002 `book_*.json` sidecars and
+joins HF `_meta` for FK / volume fields:
+
+| Catalog column | Source |
+|---|---|
+| `books.*` sizes / sha256 / title / page_count | sidecar |
+| `books.filename` | derived `book_{id}.isb` |
+| `books.category_id` | `book_metadata.category_id` |
+| `books.author_id` | `book_metadata.main_author_id` |
+| `books.volume_count` | `book_metadata.volume_count_observed` (`0` → SQL NULL) |
+| `categories.id` / `name` / `position` | `categories.id` / `name_ar` / `sort_order` |
+| `authors.id` / `name` / `death_year_hijri` | `authors.id` / `name_ar` / `death_hijri` |
 
 ### `pages.jsonl` object schema (one page per line)
 

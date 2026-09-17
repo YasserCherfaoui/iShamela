@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ishamela.org/schemas/catalog.schema.json",
+  "title": "iShamela catalog.json manifest (SPEC-003)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "catalog_version",
+    "generated_at",
+    "schema_version",
+    "norm_version",
+    "catalog_sqlite_zst",
+    "books_base_url",
+    "book_count",
+    "min_app_version"
+  ],
+  "properties": {
+    "catalog_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "norm_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "catalog_sqlite_zst": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "bytes", "sha256"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "const": "catalog/catalog.sqlite.zst"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "books_base_url": {
+      "type": "string",
+      "minLength": 1
+    },
+    "book_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "min_app_version": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}
