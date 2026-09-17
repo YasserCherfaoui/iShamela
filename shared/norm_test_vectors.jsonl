@@ -1,0 +1,60 @@
+{"in": "", "out": "", "note": "empty string"}
+{"in": "   ", "out": "", "note": "spaces only"}
+{"in": "\t\n\r", "out": "", "note": "tabs newlines CR only"}
+{"in": "\u00a0\u00a0", "out": "", "note": "NBSP only"}
+{"in": "الحمد لله", "out": "الحمد لله", "note": "already normalized; idempotence"}
+{"in": "الْحَمْدُ", "out": "الحمد", "note": "N1 tashkil fatha damma sukun"}
+{"in": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", "out": "بسم الله الرحمن الرحيم", "note": "fully vocalized basmala; N1 tashkil and superscript alef"}
+{"in": "أحمد", "out": "احمد", "note": "N4 alef with hamza above"}
+{"in": "إبراهيم", "out": "ابراهيم", "note": "N4 alef with hamza below"}
+{"in": "آدم", "out": "ادم", "note": "N4 alef with madda"}
+{"in": "ٱلْكِتَاب", "out": "الكتاب", "note": "N4 alef wasla plus N1 tashkil"}
+{"in": "سؤال", "out": "سوال", "note": "N7 waw with hamza"}
+{"in": "مسائل", "out": "مسايل", "note": "N7 yeh with hamza"}
+{"in": "ماء", "out": "ما", "note": "N7 standalone hamza removed"}
+{"in": "مؤمن", "out": "مومن", "note": "N7 hamza on waw"}
+{"in": "شيء", "out": "شي", "note": "N7 standalone hamza after yeh"}
+{"in": "شئ", "out": "شي", "note": "N7 yeh hamza carrier"}
+{"in": "الـحـمـد", "out": "الحمد", "note": "N2 tatweel stripped"}
+{"in": "التى", "out": "التي", "note": "N5 alef maqsura"}
+{"in": "مدرسة", "out": "مدرسه", "note": "N6 ta marbuta"}
+{"in": "١٢٣", "out": "123", "note": "N8 Arabic-Indic digits"}
+{"in": "۴۵۶", "out": "456", "note": "N8 Eastern Arabic-Indic digits"}
+{"in": "صفحة ٤٢", "out": "صفحه 42", "note": "N6 ta marbuta and N8 digits"}
+{"in": "Qur'an قرآن 123", "out": "Qur an قران 123", "note": "mixed Latin/Arabic/digits; N4 madda in قرآن; N9 apostrophe"}
+{"in": "قال: نعم.", "out": "قال نعم", "note": "N9 Latin colon and period"}
+{"in": "هل فهمت؟ نعم، فهمت؛", "out": "هل فهمت نعم فهمت", "note": "N9 Arabic question mark, comma, semicolon"}
+{"in": "﴿بسم﴾", "out": "بسم", "note": "N9 ornate parentheses U+FD3E/U+FD3F"}
+{"in": "[كتاب] (باب)", "out": "كتاب باب", "note": "N9 Latin brackets and parentheses"}
+{"in": "الرَّحْمَٰن", "out": "الرحمن", "note": "N1 shadda, sukun, fatha, and superscript alef"}
+{"in": "الله\u06dd", "out": "الله", "note": "N3 Quranic end of ayah U+06DD"}
+{"in": "\u06de الله", "out": "الله", "note": "N3 rub el hizb U+06DE"}
+{"in": "كتاب\u08d4", "out": "كتاب", "note": "N3 Arabic Extended-A mark U+08D4"}
+{"in": "ا\u0654حمد", "out": "احمد", "note": "N11 NFC composes alef+hamza above then N4 folds"}
+{"in": "ﻻ", "out": "ﻻ", "note": "NFC does not compatibility-decompose U+FEFB; letter is kept"}
+{"in": "الحمد    لله", "out": "الحمد لله", "note": "N10 collapse interior spaces"}
+{"in": "  الحمد لله  ", "out": "الحمد لله", "note": "N10 trim ends"}
+{"in": "الحمد\nلله", "out": "الحمد لله", "note": "N10 newline to space"}
+{"in": "كتابًا", "out": "كتابا", "note": "N1 fathatan"}
+{"in": "أإآؤئءٱ", "out": "اااويا", "note": "N4+N7 all alef and hamza carriers; standalone hamza deleted"}
+{"in": "الــــرحمن", "out": "الرحمن", "note": "N2 repeated tatweel"}
+{"in": "قَالَ: «آمَنَ».", "out": "قال امن", "note": "N1 tashkil, N4 madda, N9 quotes colon period"}
+{"in": "cafe\u0301", "out": "café", "note": "N11 NFC Latin combining acute"}
+{"in": "كتاب، باب، فصل", "out": "كتاب باب فصل", "note": "N9 Arabic comma"}
+{"in": "ab١٢c۳۴", "out": "ab12c34", "note": "N8 mixed Latin letters and Arabic/Eastern digits"}
+{"in": "الشَّمْس", "out": "الشمس", "note": "N1 shadda and sukun"}
+{"in": "﴿بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ﴾", "out": "بسم الله الرحمن الرحيم", "note": "vocalized Quranic text with ornate parentheses"}
+{"in": "داو\u06e5د", "out": "داود", "note": "N3 U+06E5 is inside U+06D6–U+06ED so stripped"}
+{"in": "foo_bar #1", "out": "foo bar 1", "note": "N9 underscore and hash to space"}
+{"in": "باب 12", "out": "باب 12", "note": "already normalized with ASCII digits"}
+{"in": "لا\u200cله", "out": "لا له", "note": "N9 ZWNJ (Cf) replaced with space"}
+{"in": "نعم!!!", "out": "نعم", "note": "N9 repeated punctuation collapsed by N10"}
+{"in": "٠١٢٣٤٥٦٧٨٩", "out": "0123456789", "note": "N8 full Arabic-Indic digit row"}
+{"in": "۰۱۲۳۴۵۶۷۸۹", "out": "0123456789", "note": "N8 full Eastern Arabic-Indic digit row"}
+{"in": "كتاب\u08ff", "out": "كتاب", "note": "N3 U+08FF end of Extended-A range"}
+{"in": "بٍ", "out": "ب", "note": "N1 kasratan"}
+{"in": "علمٌ", "out": "علم", "note": "N1 dammatan"}
+{"in": "يَكْتُبُ", "out": "يكتب", "note": "N1 fully vocalized verb"}
+{"in": "الْكِتَابُ وَالْقَلَمُ", "out": "الكتاب والقلم", "note": "N1 two vocalized words"}
+{"in": "({كتاب})", "out": "كتاب", "note": "N9 nested brackets"}
+{"in": "a\tb\nc", "out": "a b c", "note": "N10 mixed ASCII whitespace"}
