@@ -99,6 +99,24 @@ iShamela is at the very beginning. If you care about making the Islamic library 
 2. Check the open issues and the project board.
 3. Open a discussion before large changes — architecture is settled through ADRs in `docs/adr/`.
 
+### Duʿāʾ for contributors
+
+To everyone who contributes to this project — code, data, docs, review, or duʿāʾ — may Allah accept it and count it among your ḥasanāt:
+
+> **العربية**
+>
+> اللَّهُمَّ اجْزِ كُلَّ مَنْ سَاهَمَ فِي هَذَا الْمَشْرُوعِ خَيْرَ الْجَزَاءِ، وَاحْسُبْهُ فِي حَسَنَاتِهِ، وَاجْعَلْهُ مِمَّا يَنْفَعُهُ بَعْدَ مَوْتِهِ، وَبَارِكْ لَهُ فِي عِلْمِهِ وَعَمَلِهِ، وَتَقَبَّلْ مِنَّا وَمِنْهُمْ إِنَّكَ أَنْتَ السَّمِيعُ الْعَلِيمُ.
+>
+> **Transliteration**
+>
+> *Allāhumma ijzi kulla man sāhama fī hādhā al-mashrūʿi khayra al-jazāʾ, wa-ḥsubhu fī ḥasanātihi, wa-jʿalhu mimmā yanfaʿuhu baʿda mawtihi, wa-bārik lahu fī ʿilmihi wa-ʿamalih, wa-taqabbal minnā wa-minhum, innaka Anta as-Samīʿu al-ʿAlīm.*
+>
+> **Translation**
+>
+> *O Allah, reward everyone who contributed to this project with the best of rewards, count it among their good deeds (ḥasanāt), make it among what benefits them after death, bless them in their knowledge and their work, and accept from us and from them — indeed You are the All-Hearing, the All-Knowing.*
+
+جزاكم الله خيرًا — *jazākumu Llāhu khayran* — may Allah reward you with good.
+
 ## Acknowledgements
 
 - **al-Maktaba al-Shamela** ([shamela.ws](https://shamela.ws)) — the foundation of digital Islamic text libraries.
