@@ -8,8 +8,7 @@ import 'package:ishamela/features/reader/citation.dart';
 import 'package:ishamela/features/reader/reader_styles.dart';
 import 'package:ishamela/features/reader/text_roles.dart';
 
-/// Selectable body with SPEC-010 highlights / notes / copy-citation
-/// and SPEC-011 role coloring.
+/// Selectable body with SPEC-010/011/012 annotations, roles, note badges.
 class AnnotatedBody extends StatefulWidget {
   const AnnotatedBody({
     super.key,
@@ -22,6 +21,7 @@ class AnnotatedBody extends StatefulWidget {
     this.part,
     this.pageNumber,
     this.textStyles,
+    this.onNotesChanged,
   });
 
   final String body;
@@ -33,6 +33,7 @@ class AnnotatedBody extends StatefulWidget {
   final String? part;
   final int? pageNumber;
   final ReaderTextStyles? textStyles;
+  final VoidCallback? onNotesChanged;
 
   @override
   State<AnnotatedBody> createState() => _AnnotatedBodyState();
@@ -41,8 +42,12 @@ class AnnotatedBody extends StatefulWidget {
 class _AnnotatedBodyState extends State<AnnotatedBody> {
   List<Map<String, Object?>> _highlights = [];
   List<Map<String, Object?>> _notes = [];
+  Map<int, int> _noteIndexById = {};
   late BodyDisplayMap _map;
   late TextRoleMap _roles;
+
+  /// Selectable index → display index; `-1` = note-badge placeholder.
+  List<int> _selToDisplay = const [];
 
   @override
   void initState() {
@@ -72,7 +77,12 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
       _highlights =
           widget.state.highlightsForPage(widget.bookId, widget.pageId);
       _notes = widget.state.notesForPage(widget.bookId, widget.pageId);
+      final all = widget.state.notesForBook(widget.bookId);
+      _noteIndexById = {
+        for (var i = 0; i < all.length; i++) all[i]['id'] as int: i + 1,
+      };
     });
+    widget.onNotesChanged?.call();
   }
 
   TextStyle _baseStyle(ReaderTextStyles styles) => TextStyle(
@@ -81,12 +91,13 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
         fontFamily: styles.font.familyName,
       );
 
-  List<InlineSpan> _buildSpans() {
+  (List<InlineSpan>, List<int>) _buildSpansAndMap() {
     final display = _map.display;
     final styles = widget.textStyles ?? ReaderTextStyles.defaults();
     final base = _baseStyle(styles);
     final hl = List<Color?>.filled(display.length, null);
     final noteFlags = List<bool>.filled(display.length, false);
+    final badgeAt = <int, int>{}; // display index → note index
 
     for (final h in _highlights) {
       final start = h['start_offset'] as int;
@@ -100,22 +111,53 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
       }
     }
     for (final n in _notes) {
+      final id = n['id'] as int;
       final start = n['start_offset'] as int;
       final end = n['end_offset'] as int;
       final (ds, de) = _map.toDisplayRange(start, end);
+      final idx = _noteIndexById[id] ?? 0;
+      if (ds < display.length && idx > 0) {
+        badgeAt[ds] = idx;
+      }
       for (var i = ds; i < de && i < display.length; i++) {
         noteFlags[i] = true;
       }
     }
 
     final out = <InlineSpan>[];
+    final selMap = <int>[];
     var i = 0;
     while (i < display.length) {
+      if (badgeAt.containsKey(i)) {
+        final n = badgeAt[i]!;
+        out.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: _NoteBadge(
+              index: n,
+              onTap: () {
+                Map<String, Object?>? note;
+                for (final x in _notes) {
+                  if (_noteIndexById[x['id']] == n) {
+                    note = x;
+                    break;
+                  }
+                }
+                if (note != null) {
+                  _editNote(note['id'] as int, note['note'] as String);
+                }
+              },
+            ),
+          ),
+        );
+        selMap.add(-1);
+      }
       final role = _roles.roleAt(i);
       final bg = hl[i];
       final note = noteFlags[i];
       var j = i + 1;
       while (j < display.length &&
+          !badgeAt.containsKey(j) &&
           _roles.roleAt(j) == role &&
           hl[j] == bg &&
           noteFlags[j] == note) {
@@ -137,17 +179,56 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
         );
       }
       out.add(TextSpan(text: display.substring(i, j), style: style));
+      for (var k = i; k < j; k++) {
+        selMap.add(k);
+      }
       i = j;
     }
     if (out.isEmpty) {
       out.add(TextSpan(text: display, style: base));
     }
-    return out;
+    return (out, selMap);
+  }
+
+  (int, int)? _selectionToBody(TextSelection sel) {
+    if (!sel.isValid || sel.isCollapsed) return null;
+    if (_selToDisplay.isEmpty) {
+      return _map.toBodyRange(sel.start, sel.end);
+    }
+    final a = sel.start.clamp(0, _selToDisplay.length);
+    final b = sel.end.clamp(0, _selToDisplay.length);
+    int? dStart;
+    int? dEnd;
+    for (var i = a; i < b; i++) {
+      final d = _selToDisplay[i];
+      if (d < 0) continue;
+      dStart ??= d;
+      dEnd = d + 1;
+    }
+    if (dStart == null || dEnd == null || dEnd <= dStart) return null;
+    return _map.toBodyRange(dStart, dEnd);
+  }
+
+  String? _selectionExcerpt(TextSelection sel) {
+    if (!sel.isValid || sel.isCollapsed) return null;
+    if (_selToDisplay.isEmpty) {
+      return _map.display.substring(sel.start, sel.end);
+    }
+    final a = sel.start.clamp(0, _selToDisplay.length);
+    final b = sel.end.clamp(0, _selToDisplay.length);
+    final buf = StringBuffer();
+    for (var i = a; i < b; i++) {
+      final d = _selToDisplay[i];
+      if (d < 0) continue;
+      buf.write(_map.display[d]);
+    }
+    return buf.toString();
   }
 
   Future<void> _highlight(TextSelection sel, String color) async {
-    if (!sel.isValid || sel.isCollapsed) return;
-    final (start, end) = _map.toBodyRange(sel.start, sel.end);
+    final range = _selectionToBody(sel);
+    if (range == null) return;
+    final (start, end) = range;
     if (end <= start) return;
     widget.state.insertHighlight(
       bookId: widget.bookId,
@@ -161,7 +242,6 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
   }
 
   Future<void> _addNote(TextSelection sel) async {
-    if (!sel.isValid || sel.isCollapsed) return;
     final l10n = AppLocalizations.of(context);
     final ctrl = TextEditingController();
     final note = await showDialog<String>(
@@ -187,7 +267,9 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
       ),
     );
     if (note == null || note.isEmpty) return;
-    final (start, end) = _map.toBodyRange(sel.start, sel.end);
+    final range = _selectionToBody(sel);
+    if (range == null) return;
+    final (start, end) = range;
     if (end <= start) return;
     widget.state.insertNote(
       bookId: widget.bookId,
@@ -201,8 +283,8 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
   }
 
   Future<void> _copyCitation(TextSelection sel) async {
-    if (!sel.isValid || sel.isCollapsed) return;
-    final excerpt = _map.display.substring(sel.start, sel.end);
+    final excerpt = _selectionExcerpt(sel);
+    if (excerpt == null || excerpt.isEmpty) return;
     final arabic = Localizations.localeOf(context).languageCode == 'ar';
     final text = formatCitation(
       excerpt: excerpt,
@@ -224,8 +306,10 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
     final l10n = AppLocalizations.of(context);
     final styles = widget.textStyles ?? ReaderTextStyles.defaults();
     final fontSize = styles.fontSize;
+    final (spans, selMap) = _buildSpansAndMap();
+    _selToDisplay = selMap;
     return SelectableText.rich(
-      TextSpan(children: _buildSpans()),
+      TextSpan(children: spans),
       textAlign: TextAlign.justify,
       style: TextStyle(
         fontSize: fontSize,
@@ -277,10 +361,11 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
         for (final n in _notes) {
           final id = n['id'] as int;
           final preview = n['note'] as String;
+          final idx = _noteIndexById[id];
           items.add(
             ContextMenuButtonItem(
               label:
-                  '${l10n.addNote}: ${preview.length > 24 ? '${preview.substring(0, 24)}…' : preview}',
+                  '${idx != null ? '#$idx ' : ''}${preview.length > 24 ? '${preview.substring(0, 24)}…' : preview}',
               onPressed: () {
                 ContextMenuController.removeAny();
                 _editNote(id, preview);
@@ -345,5 +430,37 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
       default:
         return l10n.colorYellow;
     }
+  }
+}
+
+class _NoteBadge extends StatelessWidget {
+  const _NoteBadge({required this.index, required this.onTap});
+
+  final int index;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 1),
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+        decoration: BoxDecoration(
+          color: scheme.primary,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          '$index',
+          style: TextStyle(
+            color: scheme.onPrimary,
+            fontSize: 10,
+            height: 1.2,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -101,5 +101,17 @@
   "fontAmiri": "أميري",
   "fontScheherazade": "شهرزاد الجديدة",
   "fontSystem": "خط النظام",
-  "fontSize": "حجم الخط"
+  "fontSize": "حجم الخط",
+  "notesTab": "الملاحظات",
+  "notesEmpty": "لا ملاحظات بعد",
+  "tocEmpty": "لا فهرس",
+  "footnotes": "الحواشي",
+  "notePageLabel": "ص {page}",
+  "@notePageLabel": {
+    "placeholders": {
+      "page": {
+        "type": "String"
+      }
+    }
+  }
 }

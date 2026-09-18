@@ -23,7 +23,7 @@ from huggingface_hub import HfApi, hf_hub_download
 
 from ishamela_data.normalizer import NORM_VERSION, normalize
 
-SCHEMA_VERSION = "2"
+SCHEMA_VERSION = "3"
 SOURCE_DATASET = "AuthenticIlm/Shamela4_Full_DB"
 ZSTD_LEVEL = 19
 
@@ -99,7 +99,8 @@ def _create_schema(conn: sqlite3.Connection) -> None:
           part TEXT,
           page_number INTEGER,
           body TEXT NOT NULL,
-          source_page_id INTEGER
+          source_page_id INTEGER,
+          footnotes TEXT
         );
 
         CREATE VIRTUAL TABLE pages_fts USING fts5(
@@ -142,7 +143,9 @@ def _insert_pages(
     """
     page_count = 0
     non_empty_norm = 0
-    pages_rows: list[tuple[int, str | None, int | None, str, int | None]] = []
+    pages_rows: list[
+        tuple[int, str | None, int | None, str, int | None, str | None]
+    ] = []
     fts_rows: list[tuple[int, str]] = []
     source_to_id: dict[int, int] = {}
 
@@ -201,8 +204,19 @@ def _insert_pages(
                 ) from exc
             source_to_id[source_page_id] = page_id
 
+        fn_raw = obj.get("footnotes")
+        footnotes: str | None
+        if fn_raw is None:
+            footnotes = None
+        elif isinstance(fn_raw, str):
+            footnotes = fn_raw
+        else:
+            footnotes = str(fn_raw)
+
         body_norm = normalize(body)
-        pages_rows.append((page_id, part, page_number, body, source_page_id))
+        pages_rows.append(
+            (page_id, part, page_number, body, source_page_id, footnotes)
+        )
         if body_norm:
             fts_rows.append((page_id, body_norm))
             non_empty_norm += 1
@@ -210,8 +224,9 @@ def _insert_pages(
 
         if len(pages_rows) >= 500:
             conn.executemany(
-                "INSERT INTO pages (id, part, page_number, body, source_page_id) "
-                "VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO pages "
+                "(id, part, page_number, body, source_page_id, footnotes) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
                 pages_rows,
             )
             conn.executemany(
@@ -223,8 +238,9 @@ def _insert_pages(
 
     if pages_rows:
         conn.executemany(
-            "INSERT INTO pages (id, part, page_number, body, source_page_id) "
-            "VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO pages "
+            "(id, part, page_number, body, source_page_id, footnotes) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
             pages_rows,
         )
         conn.executemany(

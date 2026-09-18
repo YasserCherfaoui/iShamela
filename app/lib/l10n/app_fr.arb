@@ -101,5 +101,17 @@
   "fontAmiri": "Amiri",
   "fontScheherazade": "Scheherazade New",
   "fontSystem": "Système",
-  "fontSize": "Taille de police"
+  "fontSize": "Taille de police",
+  "notesTab": "Notes",
+  "notesEmpty": "Aucune note",
+  "tocEmpty": "Pas de sommaire",
+  "footnotes": "Notes de bas de page",
+  "notePageLabel": "p. {page}",
+  "@notePageLabel": {
+    "placeholders": {
+      "page": {
+        "type": "String"
+      }
+    }
+  }
 }

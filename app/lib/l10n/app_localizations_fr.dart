@@ -255,4 +255,21 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get fontSize => 'Taille de police';
+
+  @override
+  String get notesTab => 'Notes';
+
+  @override
+  String get notesEmpty => 'Aucune note';
+
+  @override
+  String get tocEmpty => 'Pas de sommaire';
+
+  @override
+  String get footnotes => 'Notes de bas de page';
+
+  @override
+  String notePageLabel(String page) {
+    return 'p. $page';
+  }
 }

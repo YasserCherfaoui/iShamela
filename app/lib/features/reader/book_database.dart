@@ -13,6 +13,7 @@ class BookPage {
     required this.body,
     this.part,
     this.pageNumber,
+    this.footnotes,
   });
 
   final int id;
@@ -21,6 +22,9 @@ class BookPage {
 
   /// Verbatim `pages.body` — never normalize for display.
   final String body;
+
+  /// Verbatim upstream footnotes (SPEC-012); null if absent.
+  final String? footnotes;
 }
 
 class TocEntry {
@@ -89,33 +93,57 @@ class BookDatabase {
   }
 
   BookPage? pageById(int id) {
-    final rows = _db.select(
-      'SELECT id, part, page_number, body FROM pages WHERE id = ? LIMIT 1',
-      [id],
-    );
-    if (rows.isEmpty) return null;
-    final r = rows.first;
-    return BookPage(
-      id: r['id'] as int,
-      part: r['part'] as String?,
-      pageNumber: r['page_number'] as int?,
-      body: r['body'] as String,
-    );
+    try {
+      final rows = _db.select(
+        'SELECT id, part, page_number, body, footnotes '
+        'FROM pages WHERE id = ? LIMIT 1',
+        [id],
+      );
+      if (rows.isEmpty) return null;
+      return _pageFromRow(rows.first);
+    } catch (_) {
+      final rows = _db.select(
+        'SELECT id, part, page_number, body FROM pages WHERE id = ? LIMIT 1',
+        [id],
+      );
+      if (rows.isEmpty) return null;
+      return _pageFromRow(rows.first);
+    }
   }
 
   BookPage? pageByPrintNumber(int pageNumber) {
-    final rows = _db.select(
-      'SELECT id, part, page_number, body FROM pages '
-      'WHERE page_number = ? ORDER BY id LIMIT 1',
-      [pageNumber],
-    );
-    if (rows.isEmpty) return null;
-    final r = rows.first;
+    try {
+      final rows = _db.select(
+        'SELECT id, part, page_number, body, footnotes FROM pages '
+        'WHERE page_number = ? ORDER BY id LIMIT 1',
+        [pageNumber],
+      );
+      if (rows.isEmpty) return null;
+      return _pageFromRow(rows.first);
+    } catch (_) {
+      final rows = _db.select(
+        'SELECT id, part, page_number, body FROM pages '
+        'WHERE page_number = ? ORDER BY id LIMIT 1',
+        [pageNumber],
+      );
+      if (rows.isEmpty) return null;
+      return _pageFromRow(rows.first);
+    }
+  }
+
+  BookPage _pageFromRow(Row r) {
+    String? footnotes;
+    try {
+      footnotes = r['footnotes'] as String?;
+    } catch (_) {
+      footnotes = null;
+    }
     return BookPage(
       id: r['id'] as int,
       part: r['part'] as String?,
       pageNumber: r['page_number'] as int?,
       body: r['body'] as String,
+      footnotes: footnotes,
     );
   }
 

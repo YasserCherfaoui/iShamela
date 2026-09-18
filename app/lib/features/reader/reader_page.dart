@@ -9,6 +9,7 @@ import 'package:ishamela/core/search/normalizer_map.dart';
 import 'package:ishamela/features/reader/annotated_body.dart';
 import 'package:ishamela/features/reader/body_html.dart';
 import 'package:ishamela/features/reader/book_database.dart';
+import 'package:ishamela/features/reader/sticky_toc.dart';
 
 enum ReadingMode { pagedH, pagedV, continuousV }
 
@@ -72,6 +73,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   BookDatabase? _db;
   List<int> _ids = const [];
   List<TocEntry> _toc = const [];
+  int _notesTick = 0;
   int _index = 0;
   PageController? _pageController;
   final _jumpCtrl = TextEditingController();
@@ -303,8 +305,8 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                           children: [
                             if (wide && _showToc)
                               SizedBox(
-                                width: 260,
-                                child: _tocList(l10n),
+                                width: 280,
+                                child: _sideIndexPane(l10n),
                               ),
                             if (wide && _showToc) const VerticalDivider(width: 1),
                             Expanded(child: _bodyPane(title)),
@@ -381,20 +383,88 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     );
   }
 
+  Widget _sideIndexPane(AppLocalizations l10n) {
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          TabBar(
+            tabs: [
+              Tab(text: l10n.toc),
+              Tab(text: l10n.notesTab),
+            ],
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _tocList(l10n),
+                _notesList(l10n),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _tocList(AppLocalizations l10n) {
     if (_toc.isEmpty) {
-      return Center(child: Text(l10n.noBooks));
+      return Center(child: Text(l10n.tocEmpty));
     }
+    final currentId = _ids.isNotEmpty ? _ids[_index] : _toc.first.pageId;
+    final active = stickyTocIndex(
+      _toc.map((e) => e.pageId).toList(),
+      currentId,
+    );
     return ListView.builder(
       itemCount: _toc.length,
       itemBuilder: (context, i) {
         final e = _toc[i];
-        final selected = _ids.isNotEmpty && _ids[_index] == e.pageId;
         return ListTile(
           dense: true,
-          selected: selected,
+          selected: i == active,
+          selectedTileColor:
+              Theme.of(context).colorScheme.primaryContainer.withValues(
+                    alpha: 0.45,
+                  ),
           title: Text(e.title, maxLines: 2, overflow: TextOverflow.ellipsis),
           onTap: () => _jumpToId(e.pageId),
+        );
+      },
+    );
+  }
+
+  Widget _notesList(AppLocalizations l10n) {
+    // Depend on tick so list rebuilds when annotations change.
+    final _ = _notesTick;
+    final notes = _state?.notesForBook(widget.bookId) ?? const [];
+    if (notes.isEmpty) {
+      return Center(child: Text(l10n.notesEmpty));
+    }
+    return ListView.builder(
+      itemCount: notes.length,
+      itemBuilder: (context, i) {
+        final n = notes[i];
+        final pageId = n['page_id'] as int;
+        final preview = n['note'] as String;
+        final page = _db?.pageById(pageId);
+        final printNo = page?.pageNumber?.toString() ?? '—';
+        return ListTile(
+          dense: true,
+          leading: CircleAvatar(
+            radius: 12,
+            child: Text(
+              '${i + 1}',
+              style: const TextStyle(fontSize: 11),
+            ),
+          ),
+          title: Text(
+            preview,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          subtitle: Text(l10n.notePageLabel(printNo)),
+          onTap: () => _jumpToId(pageId),
         );
       },
     );
@@ -452,6 +522,8 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     ].join(' · ');
     final searchHit = _highlightPageIds.contains(page.id);
     final author = widget.authorName ?? _db?.meta('author') ?? '';
+    final footnotes = page.footnotes?.trim();
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -465,21 +537,50 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
           const Divider(),
           Expanded(
             child: SingleChildScrollView(
-              child: searchHit
-                  ? _highlightedBody(page.body)
-                  : (_state == null
-                      ? buildBodyDisplay(page.body)
-                      : AnnotatedBody(
-                          body: page.body,
-                          bookId: widget.bookId,
-                          pageId: page.id,
-                          state: _state!,
-                          title: title,
-                          author: author,
-                          part: part,
-                          pageNumber: page.pageNumber,
-                          textStyles: ref.watch(readerTextStylesProvider),
-                        )),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  searchHit
+                      ? _highlightedBody(page.body)
+                      : (_state == null
+                          ? buildBodyDisplay(page.body)
+                          : AnnotatedBody(
+                              body: page.body,
+                              bookId: widget.bookId,
+                              pageId: page.id,
+                              state: _state!,
+                              title: title,
+                              author: author,
+                              part: part,
+                              pageNumber: page.pageNumber,
+                              textStyles: ref.watch(readerTextStylesProvider),
+                              onNotesChanged: () {
+                                if (mounted) {
+                                  setState(() => _notesTick++);
+                                }
+                              },
+                            )),
+                  if (footnotes != null && footnotes.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    const Divider(),
+                    Text(
+                      l10n.footnotes,
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    buildBodyDisplay(
+                      footnotes,
+                      style: TextStyle(
+                        fontSize: (ref.watch(readerTextStylesProvider).fontSize) *
+                            0.9,
+                        height: 1.7,
+                        fontFamily:
+                            ref.watch(readerTextStylesProvider).font.familyName,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
         ],
@@ -529,12 +630,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         child: SafeArea(
           child: SizedBox(
             height: MediaQuery.sizeOf(context).height * 0.6,
-            child: Column(
-              children: [
-                ListTile(title: Text(l10n.toc)),
-                Expanded(child: _tocList(l10n)),
-              ],
-            ),
+            child: _sideIndexPane(l10n),
           ),
         ),
       ),

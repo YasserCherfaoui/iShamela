@@ -9,10 +9,7 @@ String formatCitation({
   int? pageNumber,
   required bool arabic,
 }) {
-  var ex = excerpt.trim().replaceAll(RegExp(r'\s+'), ' ');
-  if (ex.length > 280) {
-    ex = '${ex.substring(0, 279)}…';
-  }
+  final ex = excerpt.trim().replaceAll(RegExp(r'\s+'), ' ');
   final page = pageNumber?.toString() ?? '—';
   if (arabic) {
     final partBit =

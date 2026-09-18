@@ -254,4 +254,21 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get fontSize => 'حجم الخط';
+
+  @override
+  String get notesTab => 'الملاحظات';
+
+  @override
+  String get notesEmpty => 'لا ملاحظات بعد';
+
+  @override
+  String get tocEmpty => 'لا فهرس';
+
+  @override
+  String get footnotes => 'الحواشي';
+
+  @override
+  String notePageLabel(String page) {
+    return 'ص $page';
+  }
 }

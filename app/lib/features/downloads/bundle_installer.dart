@@ -10,7 +10,7 @@ import 'package:ishamela/core/search/normalizer.dart';
 class BundleInstaller {
   const BundleInstaller();
 
-  static const String bookSchemaVersion = '2';
+  static const String bookSchemaVersion = '3';
   static const String sourceDataset = 'AuthenticIlm/Shamela4_Full_DB';
 
   Future<BundleInstallResult> installFromPagesJsonl({
@@ -48,7 +48,8 @@ class BundleInstaller {
           part TEXT,
           page_number INTEGER,
           body TEXT NOT NULL,
-          source_page_id INTEGER
+          source_page_id INTEGER,
+          footnotes TEXT
         )
       ''');
       db.execute('''
@@ -69,8 +70,9 @@ class BundleInstaller {
       ''');
 
       final insertPage = db.prepare(
-        'INSERT INTO pages (id, part, page_number, body, source_page_id) '
-        'VALUES (?, ?, ?, ?, ?)',
+        'INSERT INTO pages '
+        '(id, part, page_number, body, source_page_id, footnotes) '
+        'VALUES (?, ?, ?, ?, ?, ?)',
       );
       final insertFts = db.prepare(
         'INSERT INTO pages_fts (rowid, body_norm) VALUES (?, ?)',
@@ -121,8 +123,21 @@ class BundleInstaller {
             sourcePageId = sp is int ? sp : int.parse(sp.toString());
             sourceToId[sourcePageId] = pageId;
           }
+          final fnRaw = obj['footnotes'];
+          final String? footnotes = fnRaw == null
+              ? null
+              : fnRaw is String
+                  ? fnRaw
+                  : fnRaw.toString();
 
-          insertPage.execute([pageId, part, pageNumber, body, sourcePageId]);
+          insertPage.execute([
+            pageId,
+            part,
+            pageNumber,
+            body,
+            sourcePageId,
+            footnotes,
+          ]);
           final bodyNorm = normalize(body);
           if (bodyNorm.isNotEmpty) {
             insertFts.execute([pageId, bodyNorm]);

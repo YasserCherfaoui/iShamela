@@ -306,13 +306,35 @@ class StateDatabase {
   List<Map<String, Object?>> notesForPage(int bookId, int pageId) {
     return _db
         .select(
-          'SELECT id, start_offset, end_offset, note, created_at '
+          'SELECT id, page_id, start_offset, end_offset, note, created_at '
           'FROM text_notes WHERE book_id = ? AND page_id = ? '
-          'ORDER BY created_at ASC',
+          'ORDER BY start_offset ASC, id ASC',
           [bookId, pageId],
         )
         .map((r) => Map<String, Object?>.from(r))
         .toList();
+  }
+
+  /// All notes for a book in SPEC-012 index order.
+  List<Map<String, Object?>> notesForBook(int bookId) {
+    return _db
+        .select(
+          'SELECT id, page_id, start_offset, end_offset, note, created_at '
+          'FROM text_notes WHERE book_id = ? '
+          'ORDER BY page_id ASC, start_offset ASC, id ASC',
+          [bookId],
+        )
+        .map((r) => Map<String, Object?>.from(r))
+        .toList();
+  }
+
+  /// 1-based note index for [noteId] within [bookId], or null if missing.
+  int? noteIndex(int bookId, int noteId) {
+    final all = notesForBook(bookId);
+    for (var i = 0; i < all.length; i++) {
+      if (all[i]['id'] == noteId) return i + 1;
+    }
+    return null;
   }
 
   int insertNote({

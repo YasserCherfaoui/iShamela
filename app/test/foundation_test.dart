@@ -232,7 +232,7 @@ void main() {
       builtBy: 'ishamela/test',
     );
     expect(result.pageCount, 3);
-    expect(result.schemaVersion, '2');
+    expect(result.schemaVersion, '3');
     expect(result.normVersion, normVersion);
 
     final db = openReadonlySqlite(paths.bookSqlite(900001));
@@ -244,10 +244,15 @@ void main() {
       expect(meta['page_count'], '3');
       expect(meta['source_revision'], 'test-rev');
       expect(meta['built_by'], 'ishamela/test');
+      expect(meta['schema_version'], '3');
       final body = db.select(
         'SELECT body FROM pages WHERE id = 1',
       ).first['body'] as String;
       expect(body, contains('بِسْمِ')); // verbatim with diacritics
+      final fn = db
+          .select('SELECT footnotes FROM pages WHERE id = 2')
+          .first['footnotes'] as String?;
+      expect(fn, contains('حاشية'));
       final hits = db.select(
         'SELECT rowid FROM pages_fts WHERE pages_fts MATCH ?',
         [normalize('الحمد')],

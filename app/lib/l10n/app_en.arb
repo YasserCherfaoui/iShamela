@@ -101,5 +101,17 @@
   "fontAmiri": "Amiri",
   "fontScheherazade": "Scheherazade New",
   "fontSystem": "System",
-  "fontSize": "Font size"
+  "fontSize": "Font size",
+  "notesTab": "Notes",
+  "notesEmpty": "No notes yet",
+  "tocEmpty": "No table of contents",
+  "footnotes": "Footnotes",
+  "notePageLabel": "p. {page}",
+  "@notePageLabel": {
+    "placeholders": {
+      "page": {
+        "type": "String"
+      }
+    }
+  }
 }

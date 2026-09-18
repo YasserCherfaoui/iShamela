@@ -571,6 +571,36 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'حجم الخط'**
   String get fontSize;
+
+  /// No description provided for @notesTab.
+  ///
+  /// In ar, this message translates to:
+  /// **'الملاحظات'**
+  String get notesTab;
+
+  /// No description provided for @notesEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا ملاحظات بعد'**
+  String get notesEmpty;
+
+  /// No description provided for @tocEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا فهرس'**
+  String get tocEmpty;
+
+  /// No description provided for @footnotes.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحواشي'**
+  String get footnotes;
+
+  /// No description provided for @notePageLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'ص {page}'**
+  String notePageLabel(String page);
 }
 
 class _AppLocalizationsDelegate

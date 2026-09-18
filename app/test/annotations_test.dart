@@ -41,7 +41,7 @@ void main() {
     );
   });
 
-  test('formatCitation ellipsizes long excerpts', () {
+  test('formatCitation keeps long excerpts in full', () {
     final long = 'a' * 300;
     final out = formatCitation(
       excerpt: long,
@@ -50,8 +50,8 @@ void main() {
       pageNumber: 1,
       arabic: false,
     );
-    expect(out.contains('…'), isTrue);
-    expect(out.length < 350, isTrue);
+    expect(out.contains('…'), isFalse);
+    expect(out.contains(long), isTrue);
   });
 
   test('BodyDisplayMap maps around HTML tags', () {

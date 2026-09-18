@@ -255,4 +255,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get fontSize => 'Font size';
+
+  @override
+  String get notesTab => 'Notes';
+
+  @override
+  String get notesEmpty => 'No notes yet';
+
+  @override
+  String get tocEmpty => 'No table of contents';
+
+  @override
+  String get footnotes => 'Footnotes';
+
+  @override
+  String notePageLabel(String page) {
+    return 'p. $page';
+  }
 }

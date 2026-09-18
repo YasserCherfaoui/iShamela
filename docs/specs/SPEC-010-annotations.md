@@ -63,7 +63,7 @@ Fixed palette (no arbitrary hex in v1):
 «{excerpt}» — {title}، {author}، ج{part}، ص{page}
 ```
 
-If `part` is null/empty, omit `ج…،`. If print `page_number` is null, use `ص—`. Excerpt = selected text (trimmed); if longer than 280 chars, ellipsize with `…`.
+If `part` is null/empty, omit `ج…،`. If print `page_number` is null, use `ص—`. Excerpt = selected text (trimmed, whitespace-collapsed). **Do not truncate** (SPEC-012); older drafts that ellipsized at 280 chars are superseded.
 
 English locale template:
 
