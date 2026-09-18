@@ -271,4 +271,28 @@ class AppLocalizationsAr extends AppLocalizations {
   String notePageLabel(String page) {
     return 'ص $page';
   }
+
+  @override
+  String get downloadsActive => 'جاري التنزيل';
+
+  @override
+  String get downloadsFailed => 'فشل';
+
+  @override
+  String get downloadsCompleted => 'مكتمل';
+
+  @override
+  String get downloadsEmpty => 'لا شيء هنا';
+
+  @override
+  String get redownload => 'إعادة التنزيل';
+
+  @override
+  String get confirmBulkDelete => 'حذف الكتب المحددة من الجهاز؟';
+
+  @override
+  String get libraryAllBooks => 'كل الكتب';
+
+  @override
+  String get back => 'رجوع';
 }

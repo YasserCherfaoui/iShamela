@@ -272,4 +272,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String notePageLabel(String page) {
     return 'p. $page';
   }
+
+  @override
+  String get downloadsActive => 'Downloading';
+
+  @override
+  String get downloadsFailed => 'Failed';
+
+  @override
+  String get downloadsCompleted => 'Completed';
+
+  @override
+  String get downloadsEmpty => 'Nothing here';
+
+  @override
+  String get redownload => 'Redownload';
+
+  @override
+  String get confirmBulkDelete => 'Delete the selected books from this device?';
+
+  @override
+  String get libraryAllBooks => 'All books';
+
+  @override
+  String get back => 'Back';
 }

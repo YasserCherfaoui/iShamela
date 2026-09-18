@@ -113,5 +113,13 @@
         "type": "String"
       }
     }
-  }
+  },
+  "downloadsActive": "جاري التنزيل",
+  "downloadsFailed": "فشل",
+  "downloadsCompleted": "مكتمل",
+  "downloadsEmpty": "لا شيء هنا",
+  "redownload": "إعادة التنزيل",
+  "confirmBulkDelete": "حذف الكتب المحددة من الجهاز؟",
+  "libraryAllBooks": "كل الكتب",
+  "back": "رجوع"
 }

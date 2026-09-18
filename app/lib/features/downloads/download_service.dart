@@ -191,6 +191,59 @@ class DownloadService {
     _notify();
   }
 
+  /// Force a fresh on-device install (SPEC-013): uninstall if needed, then enqueue.
+  Future<void> redownload(int bookId) async {
+    if (state.isInstalled(bookId)) {
+      await deleteInstalled(bookId);
+    } else {
+      await cancel(bookId);
+    }
+    await enqueue(bookId);
+  }
+
+  Future<void> redownloadMany(Iterable<int> bookIds) async {
+    for (final id in bookIds) {
+      await redownload(id);
+    }
+  }
+
+  Future<void> deleteInstalledMany(Iterable<int> bookIds) async {
+    for (final id in bookIds) {
+      await deleteInstalled(id);
+    }
+  }
+
+  Future<void> cancelMany(Iterable<int> bookIds) async {
+    for (final id in bookIds) {
+      await cancel(id);
+    }
+  }
+
+  Future<void> pauseMany(Iterable<int> bookIds) async {
+    for (final id in bookIds) {
+      final rows = state.listDownloads().where((r) => r['book_id'] == id);
+      if (rows.isEmpty) continue;
+      final status = DownloadStatus.parse(rows.first['status'] as String);
+      if (status == DownloadStatus.queued ||
+          status == DownloadStatus.downloading ||
+          status == DownloadStatus.verifying ||
+          status == DownloadStatus.installing) {
+        await pause(id);
+      }
+    }
+  }
+
+  Future<void> resumeMany(Iterable<int> bookIds) async {
+    for (final id in bookIds) {
+      final rows = state.listDownloads().where((r) => r['book_id'] == id);
+      if (rows.isEmpty) continue;
+      final status = DownloadStatus.parse(rows.first['status'] as String);
+      if (status == DownloadStatus.paused || status == DownloadStatus.error) {
+        await resume(id);
+      }
+    }
+  }
+
   Future<void> _deletePartials(int bookId) async {
     for (final f in [
       paths.tmpPagesJsonl(bookId),

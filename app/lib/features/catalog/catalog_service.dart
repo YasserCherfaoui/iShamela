@@ -304,6 +304,205 @@ class CatalogRepository {
     }
   }
 
+  /// Batch-load books by id (one DB open). Missing ids are skipped.
+  List<Book> booksByIds(Iterable<int> bookIds) {
+    final ids = bookIds.toSet().toList()..sort();
+    if (ids.isEmpty) return const [];
+    final out = <Book>[];
+    final db = openReadonlySqlite(paths.catalogSqlite);
+    try {
+      for (final chunk in _chunkIds(ids, 400)) {
+        final placeholders = List.filled(chunk.length, '?').join(',');
+        final rows = db.select(
+          '''
+          SELECT b.*, a.name AS author_name, c.name AS category_name
+          FROM books b
+          LEFT JOIN authors a ON a.id = b.author_id
+          JOIN categories c ON c.id = b.category_id
+          WHERE b.book_id IN ($placeholders)
+          ORDER BY b.title
+          ''',
+          chunk,
+        );
+        out.addAll(rows.map(_bookFromRow));
+      }
+    } finally {
+      db.dispose();
+    }
+    return out;
+  }
+
+  /// Categories that contain at least one of [installedIds], with counts.
+  List<({Category category, int count})> categoriesForInstalled(
+    Set<int> installedIds,
+  ) {
+    if (installedIds.isEmpty) return const [];
+    final counts = <int, int>{};
+    final db = openReadonlySqlite(paths.catalogSqlite);
+    try {
+      for (final chunk in _chunkIds(installedIds.toList(), 400)) {
+        final placeholders = List.filled(chunk.length, '?').join(',');
+        final rows = db.select(
+          '''
+          SELECT b.category_id AS id, COUNT(*) AS cnt
+          FROM books b
+          WHERE b.book_id IN ($placeholders)
+          GROUP BY b.category_id
+          ''',
+          chunk,
+        );
+        for (final r in rows) {
+          final id = r['id'] as int;
+          counts[id] = (counts[id] ?? 0) + (r['cnt'] as int);
+        }
+      }
+      if (counts.isEmpty) return const [];
+      final catIds = counts.keys.toList();
+      final out = <({Category category, int count})>[];
+      for (final chunk in _chunkIds(catIds, 400)) {
+        final placeholders = List.filled(chunk.length, '?').join(',');
+        final rows = db.select(
+          '''
+          SELECT id, name, position FROM categories
+          WHERE id IN ($placeholders)
+          ORDER BY position, id
+          ''',
+          chunk,
+        );
+        for (final r in rows) {
+          final id = r['id'] as int;
+          out.add((
+            category: Category(
+              id: id,
+              name: r['name'] as String,
+              position: r['position'] as int,
+            ),
+            count: counts[id] ?? 0,
+          ));
+        }
+      }
+      out.sort((a, b) => a.category.position.compareTo(b.category.position));
+      return out;
+    } finally {
+      db.dispose();
+    }
+  }
+
+  /// Authors that have at least one of [installedIds], with counts.
+  List<({Author author, int count})> authorsForInstalled(
+    Set<int> installedIds,
+  ) {
+    if (installedIds.isEmpty) return const [];
+    final counts = <int, int>{};
+    final db = openReadonlySqlite(paths.catalogSqlite);
+    try {
+      for (final chunk in _chunkIds(installedIds.toList(), 400)) {
+        final placeholders = List.filled(chunk.length, '?').join(',');
+        final rows = db.select(
+          '''
+          SELECT b.author_id AS id, COUNT(*) AS cnt
+          FROM books b
+          WHERE b.book_id IN ($placeholders) AND b.author_id IS NOT NULL
+          GROUP BY b.author_id
+          ''',
+          chunk,
+        );
+        for (final r in rows) {
+          final id = r['id'] as int;
+          counts[id] = (counts[id] ?? 0) + (r['cnt'] as int);
+        }
+      }
+      if (counts.isEmpty) return const [];
+      final out = <({Author author, int count})>[];
+      for (final chunk in _chunkIds(counts.keys.toList(), 400)) {
+        final placeholders = List.filled(chunk.length, '?').join(',');
+        final rows = db.select(
+          '''
+          SELECT id, name, death_year_hijri FROM authors
+          WHERE id IN ($placeholders)
+          ORDER BY name
+          ''',
+          chunk,
+        );
+        for (final r in rows) {
+          final id = r['id'] as int;
+          out.add((
+            author: Author(
+              id: id,
+              name: r['name'] as String,
+              deathYearHijri: r['death_year_hijri'] as int?,
+            ),
+            count: counts[id] ?? 0,
+          ));
+        }
+      }
+      out.sort((a, b) => a.author.name.compareTo(b.author.name));
+      return out;
+    } finally {
+      db.dispose();
+    }
+  }
+
+  /// Installed books in one category (single query).
+  List<Book> installedBooksByCategory(int categoryId, Set<int> installedIds) {
+    if (installedIds.isEmpty) return const [];
+    final out = <Book>[];
+    final db = openReadonlySqlite(paths.catalogSqlite);
+    try {
+      for (final chunk in _chunkIds(installedIds.toList(), 400)) {
+        final placeholders = List.filled(chunk.length, '?').join(',');
+        final rows = db.select(
+          '''
+          SELECT b.*, a.name AS author_name, c.name AS category_name
+          FROM books b
+          LEFT JOIN authors a ON a.id = b.author_id
+          JOIN categories c ON c.id = b.category_id
+          WHERE b.category_id = ? AND b.book_id IN ($placeholders)
+          ORDER BY b.title
+          ''',
+          [categoryId, ...chunk],
+        );
+        out.addAll(rows.map(_bookFromRow));
+      }
+    } finally {
+      db.dispose();
+    }
+    return out;
+  }
+
+  /// Installed books by one author (single query).
+  List<Book> installedBooksByAuthor(int authorId, Set<int> installedIds) {
+    if (installedIds.isEmpty) return const [];
+    final out = <Book>[];
+    final db = openReadonlySqlite(paths.catalogSqlite);
+    try {
+      for (final chunk in _chunkIds(installedIds.toList(), 400)) {
+        final placeholders = List.filled(chunk.length, '?').join(',');
+        final rows = db.select(
+          '''
+          SELECT b.*, a.name AS author_name, c.name AS category_name
+          FROM books b
+          LEFT JOIN authors a ON a.id = b.author_id
+          JOIN categories c ON c.id = b.category_id
+          WHERE b.author_id = ? AND b.book_id IN ($placeholders)
+          ORDER BY b.title
+          ''',
+          [authorId, ...chunk],
+        );
+        out.addAll(rows.map(_bookFromRow));
+      }
+    } finally {
+      db.dispose();
+    }
+    return out;
+  }
+
+  static Iterable<List<int>> _chunkIds(List<int> ids, int size) sync* {
+    for (var i = 0; i < ids.length; i += size) {
+      yield ids.sublist(i, i + size > ids.length ? ids.length : i + size);
+    }
+  }
+
   List<Book> search(String query) {
     return scopedSearch(query, chipScope: CatalogSearchScope.books).books;
   }

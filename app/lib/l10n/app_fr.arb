@@ -113,5 +113,13 @@
         "type": "String"
       }
     }
-  }
+  },
+  "downloadsActive": "Téléchargement",
+  "downloadsFailed": "Échec",
+  "downloadsCompleted": "Terminé",
+  "downloadsEmpty": "Rien ici",
+  "redownload": "Retélécharger",
+  "confirmBulkDelete": "Supprimer les livres sélectionnés de cet appareil ?",
+  "libraryAllBooks": "Tous les livres",
+  "back": "Retour"
 }

@@ -113,5 +113,13 @@
         "type": "String"
       }
     }
-  }
+  },
+  "downloadsActive": "Downloading",
+  "downloadsFailed": "Failed",
+  "downloadsCompleted": "Completed",
+  "downloadsEmpty": "Nothing here",
+  "redownload": "Redownload",
+  "confirmBulkDelete": "Delete the selected books from this device?",
+  "libraryAllBooks": "All books",
+  "back": "Back"
 }

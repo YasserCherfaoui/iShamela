@@ -601,6 +601,54 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'ص {page}'**
   String notePageLabel(String page);
+
+  /// No description provided for @downloadsActive.
+  ///
+  /// In ar, this message translates to:
+  /// **'جاري التنزيل'**
+  String get downloadsActive;
+
+  /// No description provided for @downloadsFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'فشل'**
+  String get downloadsFailed;
+
+  /// No description provided for @downloadsCompleted.
+  ///
+  /// In ar, this message translates to:
+  /// **'مكتمل'**
+  String get downloadsCompleted;
+
+  /// No description provided for @downloadsEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا شيء هنا'**
+  String get downloadsEmpty;
+
+  /// No description provided for @redownload.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعادة التنزيل'**
+  String get redownload;
+
+  /// No description provided for @confirmBulkDelete.
+  ///
+  /// In ar, this message translates to:
+  /// **'حذف الكتب المحددة من الجهاز؟'**
+  String get confirmBulkDelete;
+
+  /// No description provided for @libraryAllBooks.
+  ///
+  /// In ar, this message translates to:
+  /// **'كل الكتب'**
+  String get libraryAllBooks;
+
+  /// No description provided for @back.
+  ///
+  /// In ar, this message translates to:
+  /// **'رجوع'**
+  String get back;
 }
 
 class _AppLocalizationsDelegate
