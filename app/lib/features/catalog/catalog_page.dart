@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ishamela/l10n/app_localizations.dart';
 
+import 'package:ishamela/core/format_bytes.dart';
 import 'package:ishamela/core/models/models.dart';
 import 'package:ishamela/core/providers.dart';
 import 'package:ishamela/features/catalog/catalog_service.dart';
+import 'package:ishamela/features/downloads/download_service.dart';
+import 'package:ishamela/features/reader/reader_page.dart';
 
 class CatalogPage extends ConsumerStatefulWidget {
   const CatalogPage({super.key});
@@ -14,13 +17,21 @@ class CatalogPage extends ConsumerStatefulWidget {
 }
 
 class _CatalogPageState extends ConsumerState<CatalogPage> {
+  final _searchCtrl = TextEditingController();
   String _query = '';
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final catalogAsync = ref.watch(catalogRepositoryProvider);
     final syncTick = ref.watch(catalogSyncTickProvider);
+    final stateAsync = ref.watch(stateDatabaseProvider);
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -71,16 +82,53 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
                 ),
               );
             }
+
+            // Stale hint: local catalog older than 30 days (SPEC-007 optional).
+            final showStale = catalog.isCatalogStale();
+            final bookCount = catalog.bookCount();
+            final installedBytes = stateAsync.maybeWhen(
+              data: (s) => s.installedSqliteBytesTotal,
+              orElse: () => 0,
+            );
+
             return Column(
               children: [
+                if (showStale)
+                  Material(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info_outline, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text(l10n.catalogStaleHint)),
+                        ],
+                      ),
+                    ),
+                  ),
                 Padding(
                   padding: const EdgeInsets.all(12),
                   child: TextField(
+                    controller: _searchCtrl,
                     decoration: InputDecoration(
                       hintText: l10n.searchHint,
                       prefixIcon: const Icon(Icons.search),
                       border: const OutlineInputBorder(),
+                      suffixIcon: _query.isEmpty
+                          ? null
+                          : IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchCtrl.clear();
+                                setState(() => _query = '');
+                              },
+                            ),
                     ),
+                    textInputAction: TextInputAction.search,
                     onChanged: (v) => setState(() => _query = v),
                   ),
                 ),
@@ -88,6 +136,20 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
                   child: _query.trim().isEmpty
                       ? _BrowseTabs(catalog: catalog)
                       : _SearchResults(catalog: catalog, query: _query),
+                ),
+                SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+                    child: Text(
+                      l10n.catalogFooter(
+                        bookCount,
+                        formatBytes(installedBytes),
+                      ),
+                      style: Theme.of(context).textTheme.bodySmall,
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
                 ),
               ],
             );
@@ -147,6 +209,7 @@ class _CategoryList extends StatelessWidget {
               builder: (_) => BookListPage(
                 title: c.name,
                 books: catalog.booksByCategory(c.id),
+                allowDownloadAll: true,
               ),
             ),
           ),
@@ -174,6 +237,7 @@ class _AuthorList extends StatelessWidget {
               builder: (_) => BookListPage(
                 title: a.name,
                 books: catalog.booksByAuthor(a.id),
+                allowDownloadAll: true,
               ),
             ),
           ),
@@ -198,26 +262,198 @@ class _SearchResults extends StatelessWidget {
   }
 }
 
-class BookListPage extends StatelessWidget {
-  const BookListPage({super.key, required this.title, required this.books});
+class BookListPage extends ConsumerStatefulWidget {
+  const BookListPage({
+    super.key,
+    required this.title,
+    required this.books,
+    this.allowDownloadAll = false,
+  });
+
   final String title;
   final List<Book> books;
+  final bool allowDownloadAll;
+
+  @override
+  ConsumerState<BookListPage> createState() => _BookListPageState();
+}
+
+class _BookListPageState extends ConsumerState<BookListPage> {
+  bool _selecting = false;
+  final Set<int> _selected = {};
+
+  Future<DownloadService?> _service() async {
+    return ref.read(downloadServiceProvider).when(
+          data: (s) => s,
+          loading: () => null,
+          error: (_, __) => null,
+        );
+  }
+
+  Future<void> _confirmAndEnqueue(List<Book> books) async {
+    final l10n = AppLocalizations.of(context);
+    final state = await ref.read(stateDatabaseProvider.future);
+    if (!mounted) return;
+    final statuses = <int, DownloadStatus?>{};
+    for (final row in state.listDownloads()) {
+      statuses[row['book_id'] as int] = DownloadStatus.parse(
+        row['status'] as String,
+      );
+    }
+    final plan = planBatchDownload(
+      books: books,
+      isInstalled: state.isInstalled,
+      downloadStatus: (id) => statuses[id],
+    );
+    if (plan.missingCount == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.noBooks)),
+      );
+      return;
+    }
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      builder: (ctx) {
+        final loc = AppLocalizations.of(ctx);
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  loc.confirmDownloadTitle,
+                  style: Theme.of(ctx).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  loc.confirmDownloadBody(
+                    plan.missingCount,
+                    formatBytes(plan.isbBytesTotal),
+                    formatBytes(plan.sqliteBytesTotal),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: Text(loc.cancel),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: Text(loc.confirm),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (!mounted || ok != true) return;
+    final svc = await _service();
+    await svc?.enqueueMany(plan.toEnqueue);
+    if (!mounted) return;
+    setState(() {
+      _selecting = false;
+      _selected.clear();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(title: Text(title)),
-        body: BookListView(books: books),
+        appBar: AppBar(
+          title: Text(widget.title),
+          actions: [
+            if (_selecting) ...[
+              IconButton(
+                tooltip: l10n.downloadSelected,
+                onPressed: _selected.isEmpty
+                    ? null
+                    : () {
+                        final books = widget.books
+                            .where((b) => _selected.contains(b.bookId))
+                            .toList();
+                        _confirmAndEnqueue(books);
+                      },
+                icon: const Icon(Icons.download),
+              ),
+              IconButton(
+                tooltip: l10n.cancel,
+                onPressed: () => setState(() {
+                  _selecting = false;
+                  _selected.clear();
+                }),
+                icon: const Icon(Icons.close),
+              ),
+            ] else ...[
+              IconButton(
+                tooltip: l10n.select,
+                onPressed: () => setState(() => _selecting = true),
+                icon: const Icon(Icons.checklist),
+              ),
+              if (widget.allowDownloadAll)
+                IconButton(
+                  tooltip: l10n.downloadAll,
+                  onPressed: () => _confirmAndEnqueue(widget.books),
+                  icon: const Icon(Icons.download_for_offline_outlined),
+                ),
+            ],
+          ],
+        ),
+        body: BookListView(
+          books: widget.books,
+          selecting: _selecting,
+          selected: _selected,
+          onToggle: (id) {
+            setState(() {
+              if (_selected.contains(id)) {
+                _selected.remove(id);
+              } else {
+                _selected.add(id);
+              }
+            });
+          },
+          onLongPressSelect: (id) {
+            setState(() {
+              _selecting = true;
+              _selected.add(id);
+            });
+          },
+        ),
       ),
     );
   }
 }
 
 class BookListView extends ConsumerWidget {
-  const BookListView({super.key, required this.books});
+  const BookListView({
+    super.key,
+    required this.books,
+    this.selecting = false,
+    this.selected = const {},
+    this.onToggle,
+    this.onLongPressSelect,
+  });
+
   final List<Book> books;
+  final bool selecting;
+  final Set<int> selected;
+  final void Function(int bookId)? onToggle;
+  final void Function(int bookId)? onLongPressSelect;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -237,23 +473,56 @@ class BookListView extends ConsumerWidget {
           data: (s) => s.isInstalled(book.bookId),
           orElse: () => false,
         );
+        final sizeLabel = book.isbBytes > 0 ? ' · ${formatBytes(book.isbBytes)}' : '';
+        final subtitle =
+            '${book.authorName ?? ''} · ${l10n.pagesCount(book.pageCount)}'
+            '$sizeLabel'
+            '${book.categoryName != null ? ' · ${book.categoryName}' : ''}';
+
+        final canDownload = book.canInstallOnDevice;
+
+        if (selecting) {
+          return CheckboxListTile(
+            value: selected.contains(book.bookId),
+            onChanged: installed || !canDownload
+                ? null
+                : (_) => onToggle?.call(book.bookId),
+            title: Text(book.title),
+            subtitle: Text(subtitle),
+            secondary: installed ? Chip(label: Text(l10n.installed)) : null,
+          );
+        }
+
         return ListTile(
           title: Text(book.title),
-          subtitle: Text(book.authorName ?? ''),
+          subtitle: Text(subtitle),
+          onTap: installed
+              ? () => ReaderPage.open(
+                    context,
+                    bookId: book.bookId,
+                    title: book.title,
+                    authorName: book.authorName,
+                  )
+              : null,
+          onLongPress: installed || !canDownload
+              ? null
+              : () => onLongPressSelect?.call(book.bookId),
           trailing: installed
               ? Chip(label: Text(l10n.installed))
-              : IconButton(
-                  tooltip: l10n.download,
-                  icon: const Icon(Icons.download),
-                  onPressed: () async {
-                    final svc = await downloadsAsync.when(
-                      data: (s) async => s,
-                      loading: () async => null,
-                      error: (_, __) async => null,
-                    );
-                    await svc?.enqueue(book.bookId);
-                  },
-                ),
+              : canDownload
+                  ? IconButton(
+                      tooltip: l10n.download,
+                      icon: const Icon(Icons.download),
+                      onPressed: () async {
+                        final svc = await downloadsAsync.when(
+                          data: (s) async => s,
+                          loading: () async => null,
+                          error: (_, __) async => null,
+                        );
+                        await svc?.enqueue(book.bookId);
+                      },
+                    )
+                  : null,
         );
       },
     );

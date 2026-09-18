@@ -68,6 +68,7 @@ class Book {
     this.authorName,
     this.categoryName,
     this.volumeCount,
+    this.sourcePagesPath,
   });
 
   final int bookId;
@@ -82,6 +83,12 @@ class Book {
   final int sqliteBytes;
   final String sha256;
   final String filename;
+
+  /// Hub-relative `pages.jsonl` path (SPEC-008). Null/empty ⇒ not installable.
+  final String? sourcePagesPath;
+
+  bool get canInstallOnDevice =>
+      sourcePagesPath != null && sourcePagesPath!.isNotEmpty;
 }
 
 enum DownloadStatus {

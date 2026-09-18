@@ -1,9 +1,8 @@
 import 'dart:async';
-import 'dart:typed_data';
+import 'dart:developer' as developer;
 
 import 'package:dio/dio.dart';
 
-import 'package:ishamela/core/compress/zstd.dart';
 import 'package:ishamela/core/config.dart';
 import 'package:ishamela/core/db/open_readonly.dart';
 import 'package:ishamela/core/db/paths.dart';
@@ -11,18 +10,24 @@ import 'package:ishamela/core/db/state_database.dart';
 import 'package:ishamela/core/models/models.dart';
 import 'package:ishamela/core/net/bundle_downloader.dart';
 import 'package:ishamela/features/catalog/catalog_service.dart';
+import 'package:ishamela/features/downloads/batch_plan.dart';
+import 'package:ishamela/features/downloads/bundle_installer.dart';
+
+export 'package:ishamela/features/downloads/batch_plan.dart';
 
 typedef NowMs = int Function();
 
-/// Download queue: max 2 concurrent, resumable Range GETs (SPEC-004).
+/// Download queue: max 2 concurrent, pages.jsonl → on-device SQLite (SPEC-008).
 class DownloadService {
   DownloadService({
     required BundleDownloader downloader,
     required this.paths,
     required this.state,
     required this.catalog,
-    required this.zstd,
-    required this.booksBaseUrl,
+    required this.pagesBaseUrl,
+    this.sourceRevision = shamela4Revision,
+    this.builtBy = appBuiltBy,
+    this.installer = const BundleInstaller(),
     this.nowMs = _defaultNow,
     this.maxConcurrent = 2,
   }) : _downloader = downloader;
@@ -30,8 +35,10 @@ class DownloadService {
   final AppPaths paths;
   final StateDatabase state;
   final CatalogRepository catalog;
-  final ZstdDecompressor zstd;
-  final String booksBaseUrl;
+  final String pagesBaseUrl;
+  final String sourceRevision;
+  final String builtBy;
+  final BundleInstaller installer;
   final NowMs nowMs;
   final int maxConcurrent;
   final BundleDownloader _downloader;
@@ -88,16 +95,53 @@ class DownloadService {
     if (book == null) {
       throw StateError('book $bookId not in catalog');
     }
+    if (!book.canInstallOnDevice) {
+      throw StateError('book $bookId has no source_pages_path');
+    }
     if (state.isInstalled(bookId)) return;
+    final existing = state.listDownloads().where((r) => r['book_id'] == bookId);
+    if (existing.isNotEmpty) {
+      final status = DownloadStatus.parse(existing.first['status'] as String);
+      if (isDownloadInFlight(status)) return;
+    }
     state.upsertDownload(
       bookId: bookId,
       status: DownloadStatus.queued.name,
       bytesDone: 0,
-      bytesTotal: book.isbBytes,
+      bytesTotal: null,
       updatedAt: nowMs(),
     );
     _notify();
     await _pump();
+  }
+
+  /// Enqueue many books; skips installed, in-flight, and uninstallable (SPEC-007/008).
+  Future<DownloadBatchPlan> enqueueMany(List<Book> books) async {
+    final statuses = <int, DownloadStatus?>{};
+    for (final row in state.listDownloads()) {
+      statuses[row['book_id'] as int] = DownloadStatus.parse(
+        row['status'] as String,
+      );
+    }
+    final plan = planBatchDownload(
+      books: books,
+      isInstalled: state.isInstalled,
+      downloadStatus: (id) => statuses[id],
+    );
+    for (final book in plan.toEnqueue) {
+      state.upsertDownload(
+        bookId: book.bookId,
+        status: DownloadStatus.queued.name,
+        bytesDone: 0,
+        bytesTotal: null,
+        updatedAt: nowMs(),
+      );
+    }
+    if (plan.toEnqueue.isNotEmpty) {
+      _notify();
+      await _pump();
+    }
+    return plan;
   }
 
   Future<void> pause(int bookId) async {
@@ -134,10 +178,7 @@ class DownloadService {
     final token = _active.remove(bookId);
     token?.cancel('cancelled');
     state.deleteDownload(bookId);
-    final tmp = paths.tmpIsb(bookId);
-    if (tmp.existsSync()) await tmp.delete();
-    final part = paths.bookSqlitePart(bookId);
-    if (part.existsSync()) await part.delete();
+    await _deletePartials(bookId);
     _notify();
     await _pump();
   }
@@ -148,6 +189,16 @@ class DownloadService {
     final file = paths.bookSqlite(bookId);
     if (file.existsSync()) await file.delete();
     _notify();
+  }
+
+  Future<void> _deletePartials(int bookId) async {
+    for (final f in [
+      paths.tmpPagesJsonl(bookId),
+      paths.tmpIsb(bookId),
+      paths.bookSqlitePart(bookId),
+    ]) {
+      if (f.existsSync()) await f.delete();
+    }
   }
 
   Future<void> _pump() async {
@@ -173,32 +224,56 @@ class DownloadService {
   Future<void> _runOne(int bookId) async {
     final token = _active[bookId] ?? CancelToken();
     _active[bookId] = token;
+    developer.log('download start book=$bookId', name: 'DownloadService');
     try {
       final book = catalog.bookById(bookId);
       if (book == null) {
         throw StateError('book missing from catalog');
       }
-      await _download(book, token);
+      if (!book.canInstallOnDevice) {
+        throw StateError('book $bookId has no source_pages_path');
+      }
+      await _downloadPages(book, token);
       if (token.isCancelled) return;
-      await _verify(book);
+      developer.log('install start book=$bookId', name: 'DownloadService');
+      await _install(book, token);
       if (token.isCancelled) return;
-      await _install(book);
+      final dest = paths.bookSqlite(bookId);
       state.upsertDownload(
         bookId: bookId,
         status: DownloadStatus.done.name,
-        bytesDone: book.isbBytes,
-        bytesTotal: book.isbBytes,
+        bytesDone: dest.existsSync() ? dest.lengthSync() : 0,
+        bytesTotal: dest.existsSync() ? dest.lengthSync() : null,
         updatedAt: nowMs(),
       );
+      developer.log(
+        'download done book=$bookId bytes=${dest.lengthSync()}',
+        name: 'DownloadService',
+      );
+    } on BundleInstallCancelled {
+      developer.log('download cancelled book=$bookId', name: 'DownloadService');
+      // cancelled — status already cleared by cancel()
     } on DioException catch (e) {
       if (CancelToken.isCancel(e) || token.isCancelled) {
+        developer.log('download paused/cancelled book=$bookId', name: 'DownloadService');
         // paused/cancelled — status already set by pause/cancel
       } else {
+        developer.log(
+          'download network error book=$bookId: ${e.message}',
+          name: 'DownloadService',
+          error: e,
+        );
         _fail(bookId, e.message ?? e.toString());
       }
-    } catch (e) {
+    } catch (e, st) {
       if (!token.isCancelled) {
-        _fail(bookId, e.toString());
+        developer.log(
+          'download failed book=$bookId: $e',
+          name: 'DownloadService',
+          error: e,
+          stackTrace: st,
+        );
+        _fail(bookId, _userFacingError(e));
       }
     } finally {
       _active.remove(bookId);
@@ -207,11 +282,21 @@ class DownloadService {
     }
   }
 
+  String _userFacingError(Object e) {
+    final s = e.toString();
+    if (s.contains('UNIQUE constraint failed')) {
+      return 'تعذّر التثبيت: تعارض في أرقام الصفحات. أعد المحاولة بعد التحديث.';
+    }
+    if (s.contains('404') || s.contains('status code of 404')) {
+      return 'الملف غير موجود على المصدر (404).';
+    }
+    // Keep short; full detail is in developer.log.
+    if (s.length > 180) return '${s.substring(0, 180)}…';
+    return s;
+  }
+
   void _fail(int bookId, String message) {
-    final tmp = paths.tmpIsb(bookId);
-    if (tmp.existsSync()) tmp.deleteSync();
-    final part = paths.bookSqlitePart(bookId);
-    if (part.existsSync()) part.deleteSync();
+    unawaited(_deletePartials(bookId));
     final dest = paths.bookSqlite(bookId);
     if (dest.existsSync()) dest.deleteSync();
     state.upsertDownload(
@@ -223,8 +308,8 @@ class DownloadService {
     );
   }
 
-  Future<void> _download(Book book, CancelToken token) async {
-    final dest = paths.tmpIsb(book.bookId);
+  Future<void> _downloadPages(Book book, CancelToken token) async {
+    final dest = paths.tmpPagesJsonl(book.bookId);
     var existing = 0;
     if (dest.existsSync()) {
       existing = dest.lengthSync();
@@ -233,12 +318,12 @@ class DownloadService {
       bookId: book.bookId,
       status: DownloadStatus.downloading.name,
       bytesDone: existing,
-      bytesTotal: book.isbBytes,
+      bytesTotal: null,
       updatedAt: nowMs(),
     );
     _notify();
 
-    final url = catalogUrl(booksBaseUrl, book.filename);
+    final url = catalogUrl(pagesBaseUrl, book.sourcePagesPath!);
     await _downloader.downloadToFile(
       url: url,
       dest: dest,
@@ -249,7 +334,7 @@ class DownloadService {
           bookId: book.bookId,
           status: DownloadStatus.downloading.name,
           bytesDone: done,
-          bytesTotal: book.isbBytes,
+          bytesTotal: null,
           updatedAt: nowMs(),
         );
         _notify();
@@ -257,81 +342,77 @@ class DownloadService {
     );
   }
 
-  Future<void> _verify(Book book) async {
-    state.upsertDownload(
-      bookId: book.bookId,
-      status: DownloadStatus.verifying.name,
-      bytesDone: book.isbBytes,
-      bytesTotal: book.isbBytes,
-      updatedAt: nowMs(),
-    );
-    _notify();
-    final file = paths.tmpIsb(book.bookId);
-    final digest = sha256File(file);
-    if (digest != book.sha256) {
-      await file.delete();
-      throw StateError('sha256 mismatch for book ${book.bookId}');
-    }
-  }
-
-  Future<void> _install(Book book) async {
+  Future<void> _install(Book book, CancelToken token) async {
     state.upsertDownload(
       bookId: book.bookId,
       status: DownloadStatus.installing.name,
-      bytesDone: book.isbBytes,
-      bytesTotal: book.isbBytes,
+      bytesDone: 0,
+      bytesTotal: book.pageCount,
       updatedAt: nowMs(),
     );
     _notify();
 
-    final isb = paths.tmpIsb(book.bookId);
-    final compressed = await isb.readAsBytes();
-    final plain = await zstd.decompress(Uint8List.fromList(compressed));
-    final part = paths.bookSqlitePart(book.bookId);
-    await part.writeAsBytes(plain, flush: true);
+    final pages = paths.tmpPagesJsonl(book.bookId);
+    if (!pages.existsSync()) {
+      throw StateError('missing pages.jsonl for book ${book.bookId}');
+    }
 
-    final db = openReadonlySqlite(part);
-    late final String schemaVersion;
-    late final String normVersion;
+    final result = await installer.installFromPagesJsonl(
+      pagesJsonl: pages,
+      partFile: paths.bookSqlitePart(book.bookId),
+      destFile: paths.bookSqlite(book.bookId),
+      book: book,
+      sourceRevision: sourceRevision,
+      builtBy: builtBy,
+      isCancelled: () => token.isCancelled,
+      onProgress: (pagesDone) {
+        state.upsertDownload(
+          bookId: book.bookId,
+          status: DownloadStatus.installing.name,
+          bytesDone: pagesDone,
+          bytesTotal: book.pageCount,
+          updatedAt: nowMs(),
+        );
+        _notify();
+      },
+    );
+
+    final catalogNorm = catalog.normVersion;
+    if (catalogNorm != null && result.normVersion != catalogNorm) {
+      final dest = paths.bookSqlite(book.bookId);
+      if (dest.existsSync()) dest.deleteSync();
+      await pages.delete();
+      throw StateError(
+        'norm_version mismatch: bundle=${result.normVersion} catalog=$catalogNorm',
+      );
+    }
+    if (!supportedBookSchemaVersions.contains(result.schemaVersion)) {
+      final dest = paths.bookSqlite(book.bookId);
+      if (dest.existsSync()) dest.deleteSync();
+      await pages.delete();
+      throw StateError('unsupported schema_version ${result.schemaVersion}');
+    }
+
+    // Smoke-open read-only to ensure the file is a valid SQLite DB.
+    final dest = paths.bookSqlite(book.bookId);
+    final db = openReadonlySqlite(dest);
     try {
-      final schemaRows = db.select(
-        "SELECT value FROM meta WHERE key = 'schema_version' LIMIT 1",
+      final rows = db.select(
+        "SELECT value FROM meta WHERE key = 'page_count' LIMIT 1",
       );
-      final normRows = db.select(
-        "SELECT value FROM meta WHERE key = 'norm_version' LIMIT 1",
-      );
-      if (schemaRows.isEmpty || normRows.isEmpty) {
-        throw StateError('bundle missing meta keys');
+      if (rows.isEmpty) {
+        throw StateError('installed bundle missing meta.page_count');
       }
-      schemaVersion = schemaRows.first['value'] as String;
-      normVersion = normRows.first['value'] as String;
     } finally {
       db.dispose();
     }
 
-    if (!supportedBookSchemaVersions.contains(schemaVersion)) {
-      await part.delete();
-      await isb.delete();
-      throw StateError('unsupported schema_version $schemaVersion');
-    }
-    final catalogNorm = catalog.normVersion;
-    if (catalogNorm != null && normVersion != catalogNorm) {
-      await part.delete();
-      await isb.delete();
-      throw StateError(
-        'norm_version mismatch: bundle=$normVersion catalog=$catalogNorm',
-      );
-    }
-
-    final dest = paths.bookSqlite(book.bookId);
-    if (dest.existsSync()) await dest.delete();
-    await part.rename(dest.path);
-    await isb.delete();
+    await pages.delete();
 
     state.upsertInstalled(
       bookId: book.bookId,
-      schemaVersion: int.parse(schemaVersion),
-      normVersion: normVersion,
+      schemaVersion: int.parse(result.schemaVersion),
+      normVersion: result.normVersion,
       sqliteBytes: dest.lengthSync(),
       installedAt: nowMs(),
     );

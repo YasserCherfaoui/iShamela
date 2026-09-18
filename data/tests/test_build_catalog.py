@@ -20,7 +20,22 @@ SCHEMA_PATH = Path(__file__).resolve().parents[1] / "schemas" / "catalog.schema.
 
 GENERATED_AT = "2026-09-17T00:00:00Z"
 CATALOG_VERSION = 3
-BASE_URL = "https://huggingface.co/datasets/ishamela/bundles/resolve/main/books/"
+BASE_URL = "https://huggingface.co/datasets/AuthenticIlm/Shamela4_Full_DB/resolve/main/books/"
+
+
+def test_upstream_meta_hub_paths_match_data_sources() -> None:
+    """Catalog inputs are Shamela4 _meta parquets (pipeline), not app CDN paths."""
+    from ishamela_data.build_bundle import SOURCE_DATASET
+    from ishamela_data.build_catalog import (
+        META_AUTHORS_PATH,
+        META_BOOK_METADATA_PATH,
+        META_CATEGORIES_PATH,
+    )
+
+    assert SOURCE_DATASET == "AuthenticIlm/Shamela4_Full_DB"
+    assert META_CATEGORIES_PATH == "_meta/categories.parquet"
+    assert META_AUTHORS_PATH == "_meta/authors.parquet"
+    assert META_BOOK_METADATA_PATH == "_meta/book_metadata.parquet"
 
 
 def _build(out: Path, *, sidecars: Path = SIDECARS, keep_sqlite: bool = False):

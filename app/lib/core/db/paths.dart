@@ -18,6 +18,8 @@ class AppPaths {
   Directory get booksDir => Directory(p.join(root.path, 'books'));
 
   File tmpIsb(int bookId) => File(p.join(tmpDir.path, 'book_$bookId.isb'));
+  File tmpPagesJsonl(int bookId) =>
+      File(p.join(tmpDir.path, 'book_$bookId.pages.jsonl'));
   File bookSqlite(int bookId) =>
       File(p.join(booksDir.path, 'book_$bookId.sqlite'));
   File bookSqlitePart(int bookId) =>

@@ -1,7 +1,8 @@
 """Library catalog builder (SPEC-003).
 
 Merges SPEC-002 ``book_*.json`` sidecars with HF ``_meta`` parquets into
-``catalog.json`` + ``catalog.sqlite.zst``.
+``catalog.json`` + ``catalog.sqlite.zst``, or builds a browse catalog from
+``_meta`` alone (CDN = ``AuthenticIlm/Shamela4_Full_DB``).
 """
 
 from __future__ import annotations
@@ -19,16 +20,28 @@ import polars as pl
 import zstandard as zstd
 from huggingface_hub import hf_hub_download
 
-from ishamela_data.build_bundle import SOURCE_DATASET, resolve_dataset_revision
+from ishamela_data.build_bundle import (
+    SOURCE_DATASET,
+    _index_book_pages_paths,
+    resolve_dataset_revision,
+)
 from ishamela_data.normalizer import NORM_VERSION, normalize
 
-CATALOG_SCHEMA_VERSION = 1
+CATALOG_SCHEMA_VERSION = 2
 ZSTD_LEVEL = 19
 MIN_APP_VERSION = "0.1.0"
-DEFAULT_BOOKS_BASE_URL = (
-    "https://huggingface.co/datasets/ishamela/bundles/resolve/main/books/"
+# App CDN (SPEC-007): Shamela4_Full_DB resolve root.
+DEFAULT_CDN_BASE_URL = (
+    "https://huggingface.co/datasets/AuthenticIlm/Shamela4_Full_DB/resolve/main/"
 )
+DEFAULT_BOOKS_BASE_URL = f"{DEFAULT_CDN_BASE_URL}books/"
+# Hub paths under SOURCE_DATASET (resolve/main/ or pinned revision).
+META_CATEGORIES_PATH = "_meta/categories.parquet"
+META_AUTHORS_PATH = "_meta/authors.parquet"
+META_BOOK_METADATA_PATH = "_meta/book_metadata.parquet"
 _SIDECAR_RE = re.compile(r"^book_(\d+)\.json$")
+# Browse-only rows (no .isb on the Shamela4 CDN yet).
+_PLACEHOLDER_SHA256 = "0" * 64
 
 
 class CatalogBuildError(Exception):
@@ -102,7 +115,8 @@ def _create_schema(conn: sqlite3.Connection) -> None:
           isb_bytes INTEGER NOT NULL,
           sqlite_bytes INTEGER NOT NULL,
           sha256 TEXT NOT NULL,
-          filename TEXT NOT NULL
+          filename TEXT NOT NULL,
+          source_pages_path TEXT
         );
 
         CREATE VIRTUAL TABLE books_fts USING fts5(
@@ -204,6 +218,7 @@ def build_catalog_from_paths(
     source_revision: str,
     base_url: str = DEFAULT_BOOKS_BASE_URL,
     keep_sqlite: bool = False,
+    pages_path_index: dict[int, str] | None = None,
 ) -> CatalogResult:
     """Build catalog artifacts from local sidecars + parquet metadata."""
     if catalog_version < 1:
@@ -236,6 +251,7 @@ def build_catalog_from_paths(
     needed_author_ids: set[int] = set()
     needed_category_ids: set[int] = set()
     book_rows: list[dict[str, Any]] = []
+    path_index = pages_path_index or {}
 
     for sc in sorted(sidecars, key=lambda s: int(s["book_id"])):
         book_id = int(sc["book_id"])
@@ -284,6 +300,8 @@ def build_catalog_from_paths(
                 "sqlite_bytes": int(sc["sqlite_bytes"]),
                 "sha256": str(sc["sha256"]),
                 "filename": f"book_{book_id}.isb",
+                "source_pages_path": path_index.get(book_id)
+                or sc.get("source_pages_path"),
             }
         )
 
@@ -329,8 +347,9 @@ def build_catalog_from_paths(
                     """
                     INSERT INTO books (
                       book_id, title, author_id, category_id, page_count,
-                      volume_count, isb_bytes, sqlite_bytes, sha256, filename
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                      volume_count, isb_bytes, sqlite_bytes, sha256, filename,
+                      source_pages_path
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         row["book_id"],
@@ -343,6 +362,7 @@ def build_catalog_from_paths(
                         row["sqlite_bytes"],
                         row["sha256"],
                         row["filename"],
+                        row.get("source_pages_path"),
                     ),
                 )
                 conn.execute(
@@ -434,19 +454,36 @@ def build_catalog(
     revision: str | None = None,
     base_url: str = DEFAULT_BOOKS_BASE_URL,
     keep_sqlite: bool = False,
+    from_meta_only: bool = False,
+    overlay_sidecars: Path | None = None,
 ) -> CatalogResult:
     """Download HF metadata parquets and build the catalog."""
     resolved = resolve_dataset_revision(revision)
     hf_cache.mkdir(parents=True, exist_ok=True)
     book_metadata_path = _download(
-        "_meta/book_metadata.parquet", revision=resolved, local_dir=hf_cache
+        META_BOOK_METADATA_PATH, revision=resolved, local_dir=hf_cache
     )
     authors_path = _download(
-        "_meta/authors.parquet", revision=resolved, local_dir=hf_cache
+        META_AUTHORS_PATH, revision=resolved, local_dir=hf_cache
     )
     categories_path = _download(
-        "_meta/categories.parquet", revision=resolved, local_dir=hf_cache
+        META_CATEGORIES_PATH, revision=resolved, local_dir=hf_cache
     )
+    pages_index = _index_book_pages_paths(resolved)
+    if from_meta_only:
+        return build_catalog_from_meta_only(
+            out_dir=out_dir,
+            catalog_version=catalog_version,
+            generated_at=generated_at,
+            book_metadata_path=book_metadata_path,
+            authors_path=authors_path,
+            categories_path=categories_path,
+            source_revision=resolved,
+            base_url=base_url,
+            keep_sqlite=keep_sqlite,
+            sidecars_dir=overlay_sidecars,
+            pages_path_index=pages_index,
+        )
     return build_catalog_from_paths(
         sidecars_dir=sidecars_dir,
         out_dir=out_dir,
@@ -458,4 +495,82 @@ def build_catalog(
         source_revision=resolved,
         base_url=base_url,
         keep_sqlite=keep_sqlite,
+        pages_path_index=pages_index,
     )
+
+
+def build_catalog_from_meta_only(
+    *,
+    out_dir: Path,
+    catalog_version: int,
+    generated_at: str,
+    book_metadata_path: Path,
+    authors_path: Path,
+    categories_path: Path,
+    source_revision: str,
+    base_url: str = DEFAULT_BOOKS_BASE_URL,
+    keep_sqlite: bool = False,
+    sidecars_dir: Path | None = None,
+    pages_path_index: dict[int, str] | None = None,
+) -> CatalogResult:
+    """Full browse catalog from Shamela4 ``_meta``.
+
+    Optional ``sidecars_dir`` overlays real ``.isb`` download fields for books
+    that have been built. ``pages_path_index`` fills SPEC-008 ``source_pages_path``.
+    """
+    overlay: dict[int, dict[str, Any]] = {}
+    if sidecars_dir is not None and sidecars_dir.is_dir():
+        for sc in _load_sidecars(sidecars_dir):
+            overlay[int(sc["book_id"])] = sc
+
+    books_meta = pl.read_parquet(book_metadata_path)
+    with tempfile.TemporaryDirectory(prefix="ishamela-meta-sidecars-") as tmp:
+        sidecars_out = Path(tmp)
+        for bm in books_meta.to_dicts():
+            if bm.get("is_hidden") is True:
+                continue
+            book_id = int(bm["book_id"])
+            sc = overlay.get(book_id)
+            if sc is not None:
+                sidecar = {
+                    "book_id": book_id,
+                    "title": str(sc["title"]),
+                    "author": str(sc["author"]),
+                    "category": str(bm.get("category_name_ar") or ""),
+                    "page_count": int(sc["page_count"]),
+                    "isb_bytes": int(sc["isb_bytes"]),
+                    "sqlite_bytes": int(sc["sqlite_bytes"]),
+                    "sha256": str(sc["sha256"]),
+                    "schema_version": str(sc["schema_version"]),
+                    "norm_version": str(sc["norm_version"]),
+                }
+            else:
+                sidecar = {
+                    "book_id": book_id,
+                    "title": str(bm["title_ar"]),
+                    "author": str(bm.get("main_author_name_ar") or ""),
+                    "category": str(bm.get("category_name_ar") or ""),
+                    "page_count": 0,
+                    "isb_bytes": 0,
+                    "sqlite_bytes": 0,
+                    "sha256": _PLACEHOLDER_SHA256,
+                    "schema_version": "1",
+                    "norm_version": NORM_VERSION,
+                }
+            (sidecars_out / f"book_{book_id}.json").write_text(
+                json.dumps(sidecar, ensure_ascii=False, sort_keys=True),
+                encoding="utf-8",
+            )
+        return build_catalog_from_paths(
+            sidecars_dir=sidecars_out,
+            out_dir=out_dir,
+            catalog_version=catalog_version,
+            generated_at=generated_at,
+            book_metadata_path=book_metadata_path,
+            authors_path=authors_path,
+            categories_path=categories_path,
+            source_revision=source_revision,
+            base_url=base_url,
+            keep_sqlite=keep_sqlite,
+            pages_path_index=pages_path_index,
+        )

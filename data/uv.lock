@@ -174,28 +174,26 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "huggingface-hub" },
+    { name = "jsonschema" },
     { name = "polars" },
     { name = "zstandard" },
 ]
 
 [package.dev-dependencies]
 dev = [
-    { name = "jsonschema" },
     { name = "pytest" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "huggingface-hub", specifier = ">=1.32.0" },
+    { name = "jsonschema", specifier = ">=4.26.0" },
     { name = "polars", specifier = ">=1.44.2" },
     { name = "zstandard", specifier = ">=0.25.0" },
 ]
 
 [package.metadata.requires-dev]
-dev = [
-    { name = "jsonschema", specifier = ">=4.26.0" },
-    { name = "pytest", specifier = ">=9.1.1" },
-]
+dev = [{ name = "pytest", specifier = ">=9.1.1" }]
 
 [[package]]
 name = "jsonschema"

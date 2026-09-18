@@ -5,6 +5,7 @@ import 'package:ishamela/l10n/app_localizations.dart';
 import 'package:ishamela/core/models/models.dart';
 import 'package:ishamela/core/providers.dart';
 import 'package:ishamela/features/downloads/download_service.dart';
+import 'package:ishamela/features/reader/reader_page.dart';
 
 class DownloadsPage extends ConsumerStatefulWidget {
   const DownloadsPage({super.key});
@@ -45,8 +46,13 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
                 final progress = t.bytesTotal == null || t.bytesTotal == 0
                     ? null
                     : t.bytesDone / t.bytesTotal!;
+                final catalog = ref.watch(catalogRepositoryProvider).maybeWhen(
+                      data: (c) => c,
+                      orElse: () => null,
+                    );
+                final book = catalog?.bookById(t.bookId);
                 return ListTile(
-                  title: Text('book_${t.bookId}'),
+                  title: Text(book?.title ?? 'book_${t.bookId}'),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -54,10 +60,23 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
                       if (progress != null)
                         LinearProgressIndicator(value: progress.clamp(0, 1)),
                       if (t.error != null)
-                        Text(t.error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                        Text(
+                          t.error!,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
                     ],
                   ),
                   isThreeLine: true,
+                  onTap: t.status == DownloadStatus.done
+                      ? () => ReaderPage.open(
+                            context,
+                            bookId: t.bookId,
+                            title: book?.title,
+                            authorName: book?.authorName,
+                          )
+                      : null,
                   trailing: Wrap(
                     children: [
                       if (t.status == DownloadStatus.downloading ||
@@ -72,6 +91,17 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
                           tooltip: l10n.resume,
                           icon: const Icon(Icons.play_arrow),
                           onPressed: () => svc.resume(t.bookId),
+                        ),
+                      if (t.status == DownloadStatus.done)
+                        IconButton(
+                          tooltip: l10n.openBook,
+                          icon: const Icon(Icons.menu_book),
+                          onPressed: () => ReaderPage.open(
+                            context,
+                            bookId: t.bookId,
+                            title: book?.title,
+                            authorName: book?.authorName,
+                          ),
                         ),
                       IconButton(
                         tooltip: l10n.cancel,

@@ -1,0 +1,125 @@
+# SPEC-007: publish catalog + bundles to Hugging Face (manual).
+name: publish-bundles
+
+on:
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: HF dataset revision / branch
+        required: true
+        default: main
+        type: string
+      dry_run:
+        description: Validate only (no HF upload). Uses fixture dist when data/dist is absent.
+        required: true
+        default: true
+        type: boolean
+      enforce_size_gate:
+        description: Fail if catalog.sqlite.zst ≥ 15 MB
+        required: true
+        default: false
+        type: boolean
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: data
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Sync Python deps
+        run: uv sync
+
+      - name: Prepare dist (fixture smoke when missing)
+        run: |
+          if [ -f dist/catalog/catalog.json ] && [ -f dist/catalog/catalog.sqlite.zst ]; then
+            echo "Using existing data/dist"
+          else
+            if [ "${{ inputs.dry_run }}" != "true" ]; then
+              echo "Real publish requires pre-built data/dist (catalog + .isb files)."
+              exit 1
+            fi
+            python <<'PY'
+          from pathlib import Path
+          import hashlib, json
+          from ishamela_data.build_catalog import build_catalog_from_paths
+
+          root = Path(".")
+          meta = root / "tests/fixtures/catalog/meta"
+          sidecars = root / "ci_dist/sidecars"
+          books = root / "ci_dist/books"
+          catalog = root / "dist/catalog"
+          sidecars.mkdir(parents=True, exist_ok=True)
+          books.mkdir(parents=True, exist_ok=True)
+          catalog.mkdir(parents=True, exist_ok=True)
+          for book_id, title, author, category in [
+              (900001, "الْكِتَابُ الْمُبِينُ", "أحمد بن مثال", "العقيدة"),
+              (900002, "رسالة في التوحيد", "محمد بن مثال", "العقيدة"),
+              (900003, "شرح حديث", "أحمد بن مثال", "الحديث"),
+          ]:
+              payload = f"ci-isb-{book_id}\n".encode()
+              digest = hashlib.sha256(payload).hexdigest()
+              (books / f"book_{book_id}.isb").write_bytes(payload)
+              (sidecars / f"book_{book_id}.json").write_text(
+                  json.dumps(
+                      {
+                          "book_id": book_id,
+                          "title": title,
+                          "author": author,
+                          "category": category,
+                          "page_count": 10,
+                          "isb_bytes": len(payload),
+                          "sqlite_bytes": 4000,
+                          "sha256": digest,
+                          "schema_version": "1",
+                          "norm_version": "1.0.0",
+                      },
+                      ensure_ascii=False,
+                      sort_keys=True,
+                  ),
+                  encoding="utf-8",
+              )
+          build_catalog_from_paths(
+              sidecars_dir=sidecars,
+              out_dir=catalog,
+              catalog_version=1,
+              generated_at="2026-09-17T00:00:00Z",
+              base_url="https://huggingface.co/datasets/yassercherfaoui/ishamela-bundles/resolve/main/books/",
+              book_metadata_path=meta / "book_metadata.parquet",
+              authors_path=meta / "authors.parquet",
+              categories_path=meta / "categories.parquet",
+              source_revision="ci-fixture",
+          )
+          # Flatten books next to catalog for --books-dir ./dist
+          dist_books = root / "dist"
+          dist_books.mkdir(exist_ok=True)
+          for p in books.glob("book_*.isb"):
+              (dist_books / p.name).write_bytes(p.read_bytes())
+          print("Built fixture dist for dry-run")
+          PY
+          fi
+
+      - name: Publish (dry-run or upload)
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          ARGS=(
+            --catalog-dir ./dist/catalog
+            --books-dir ./dist
+            --repo yassercherfaoui/ishamela-bundles
+            --revision "${{ inputs.revision }}"
+          )
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            ARGS+=(--dry-run)
+          fi
+          if [ "${{ inputs.enforce_size_gate }}" = "true" ]; then
+            ARGS+=(--enforce-size-gate)
+          fi
+          uv run ishamela-publish "${ARGS[@]}"

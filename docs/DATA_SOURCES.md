@@ -34,15 +34,34 @@ Full dump: [`data/audit/out/d1_meta_schemas.txt`](../data/audit/out/d1_meta_sche
 
 | Parquet | Rows (approx) | Notes |
 |---|---|---|
-| `book_metadata.parquet` | 8,589 | Primary book index |
-| `categories.parquet` | 41 | |
-| `authors.parquet` | 3,187 | |
-| `root_dictionary.parquet` | 1,952,803 | `token: String`, `roots: List(String)` |
-| `narrators.parquet` | present | Hadith narrator metadata |
-| `hadith_xrefs.parquet` | present | Cross-refs |
-| `page_isnads.parquet` | present | |
-| `quran_verses.parquet` | present | |
-| `tafsir_xrefs.parquet` | present | |
+| `book_metadata.parquet` | 8,589 | Primary book index; **SPEC-003 catalog input** |
+| `categories.parquet` | 41 | **SPEC-003 catalog input** |
+| `authors.parquet` | 3,187 | **SPEC-003 catalog input** |
+| `root_dictionary.parquet` | 1,952,803 | `token: String`, `roots: List(String)` — post-v1 (ADR-001 §5) |
+| `narrators.parquet` | present | Hadith narrator metadata — not in catalog v1 |
+| `hadith_xrefs.parquet` | present | Cross-refs — not in catalog v1 |
+| `page_isnads.parquet` | present | not in catalog v1 |
+| `quran_verses.parquet` | present | not in catalog v1 |
+| `tafsir_xrefs.parquet` | present | not in catalog v1 |
+
+Resolve base: `https://huggingface.co/datasets/AuthenticIlm/Shamela4_Full_DB/resolve/main/`
+(files under `_meta/…`). Blob UI: `…/blob/main/_meta/categories.parquet` (etc.).
+
+#### Catalog mapping (SPEC-003) — pipeline only
+
+`ishamela-catalog` downloads these three parquets at **build** time (and indexes
+Hub `pages.jsonl` paths into `books.source_pages_path`). The app ships / syncs
+`catalog.sqlite.zst` and installs books by fetching `pages.jsonl` from Shamela4
+at the pinned revision (SPEC-008) — it does **not** read `_meta` parquets on device.
+
+| Hub path | → catalog.sqlite |
+|---|---|
+| `_meta/categories.parquet` (`id`, `name_ar`, `sort_order`) | `categories` |
+| `_meta/authors.parquet` (`id`, `name_ar`, `death_hijri`) | `authors` |
+| `_meta/book_metadata.parquet` (`book_id`, `category_id`, `main_author_id`, `volume_count_observed`) | FK / volume fields on `books` |
+
+Page counts for browse come from parquet/manifests or sidecars. Per-book
+`{NN}__…/{id}__…/pages.jsonl` is the on-device install source (SPEC-008).
 
 #### `book_metadata.parquet` columns
 

@@ -24,5 +24,43 @@
   "statusInstalling": "Installing",
   "statusDone": "Done",
   "statusError": "Error",
-  "statusPaused": "Paused"
+  "statusPaused": "Paused",
+  "select": "Select",
+  "downloadSelected": "Download selected",
+  "downloadAll": "Download all",
+  "confirmDownloadTitle": "Download books?",
+  "confirmDownloadBody": "{count} books · download {downloadSize} · installed ~{installSize}",
+  "@confirmDownloadBody": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "downloadSize": {"type": "String"},
+      "installSize": {"type": "String"}
+    }
+  },
+  "confirm": "Confirm",
+  "catalogFooter": "{bookCount} books · installed {installedSize}",
+  "@catalogFooter": {
+    "placeholders": {
+      "bookCount": {"type": "int"},
+      "installedSize": {"type": "String"}
+    }
+  },
+  "catalogStaleHint": "Catalog may be out of date. Pull to refresh when online.",
+  "pagesCount": "{count} pages",
+  "@pagesCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "openBook": "Open",
+  "jumpToPrintPage": "Print page number",
+  "go": "Go",
+  "pageNotFound": "Page not found",
+  "readerProgress": "{current} / {total}",
+  "@readerProgress": {
+    "placeholders": {
+      "current": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  }
 }

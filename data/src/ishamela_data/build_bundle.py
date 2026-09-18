@@ -131,6 +131,11 @@ def _insert_pages(conn: sqlite3.Connection, pages_path: Path) -> tuple[int, int]
     pages_rows: list[tuple[int, str | None, int | None, str]] = []
     fts_rows: list[tuple[int, str]] = []
 
+    # Prefer sequence_num; on collision allocate next free id (upstream can
+    # repeat sequence_num — e.g. book 8428 — which would violate PRIMARY KEY).
+    used_ids: set[int] = set()
+    next_free_id = 1
+
     for obj in _iter_pages(pages_path):
         try:
             page_id = int(obj["sequence_num"])
@@ -138,6 +143,14 @@ def _insert_pages(conn: sqlite3.Connection, pages_path: Path) -> tuple[int, int]
             raise BundleBuildError(
                 f"page missing valid sequence_num in {pages_path}"
             ) from exc
+        if page_id in used_ids:
+            while next_free_id in used_ids:
+                next_free_id += 1
+            page_id = next_free_id
+        used_ids.add(page_id)
+        if page_id >= next_free_id:
+            next_free_id = page_id + 1
+
         body = obj.get("body")
         if body is None:
             raise BundleBuildError(f"page {page_id} missing body in {pages_path}")

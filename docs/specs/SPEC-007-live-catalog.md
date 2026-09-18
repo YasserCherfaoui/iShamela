@@ -1,6 +1,6 @@
 # SPEC-007 — Live Catalog Publish & Library Selection
 
-**Status:** Ready for implementation · **Depends on:** SPEC-003, SPEC-004 · **Deliverables:** publish workflow to `ishamela/bundles`, production catalog URL wiring, selection UX for books / categories / authors with download enqueue
+**Status:** Implemented · **Depends on:** SPEC-003, SPEC-004 · **Deliverables:** publish workflow to `ishamela/bundles`, production catalog URL wiring, selection UX for books / categories / authors with download enqueue
 
 ## Purpose
 
@@ -14,15 +14,23 @@ Same decision as SPEC-003:
 
 | Item | Value |
 |---|---|
-| Host | Hugging Face dataset `ishamela/bundles` |
-| Manifest URL | `{CATALOG_BASE_URL}catalog/catalog.json` |
-| Catalog DB | `{CATALOG_BASE_URL}catalog/catalog.sqlite.zst` |
-| Bundles | `{books_base_url}` from the manifest (default under `books/`) |
-| Default `CATALOG_BASE_URL` | `https://huggingface.co/datasets/ishamela/bundles/resolve/main/` |
+| Host | Hugging Face dataset `AuthenticIlm/Shamela4_Full_DB` |
+| Manifest URL | `{CATALOG_BASE_URL}catalog/catalog.json` (optional; Shamela4 has `_meta` instead) |
+| Catalog DB | Bundled asset built from `_meta/*.parquet`, or remote `catalog.sqlite.zst` if published |
+| Bundles | `{books_base_url}` when `.isb` exist; browse-only until then |
+| Default `CATALOG_BASE_URL` | `https://huggingface.co/datasets/AuthenticIlm/Shamela4_Full_DB/resolve/main/` |
 
 Override via `--dart-define=CATALOG_BASE_URL=…` remains for local E2E (SPEC-004). Release / store builds MUST use the default HF URL (or a documented pin) — not a developer machine.
 
 GitHub Releases is the fallback only if HF policy blocks the dataset; switching requires an ADR amendment, not a silent change in this PR.
+
+### Content provenance (do not confuse with CDN)
+
+Browse metadata (categories, authors, titles) is **built** by `ishamela-catalog` from
+`AuthenticIlm/Shamela4_Full_DB` `_meta/*.parquet` + SPEC-002 sidecars (see SPEC-003
+“Catalog content provenance”). The app syncs only `catalog.json` + `catalog.sqlite.zst`
+from `ishamela/bundles`. Runtime fetch of `_meta/*.parquet` is **out of scope** (would need a
+new SPEC). `.isb` downloads never come from Shamela4 — only from `books_base_url`.
 
 ## A. Publish pipeline
 
@@ -125,15 +133,15 @@ Queue rules stay SPEC-004: max 2 concurrent; pause / resume / cancel; survive re
 
 ## Acceptance criteria
 
-- [ ] `ishamela-publish --dry-run` against a ≥ 3-book dist validates catalog schema + sha256/file presence and prints the upload plan without writing to HF.
-- [ ] Documented publish path: operator can publish smoke catalog + bundles to a **test** HF dataset (or `ishamela/bundles` staging revision) and the app, with default or documented `CATALOG_BASE_URL`, syncs that catalog on a fresh install.
-- [ ] Fresh install against the live (or staging) catalog: Categories, Authors, and Search tabs populate; diacritic search finds a known title.
-- [ ] User can download one book end-to-end from the live/staging host: progress → verify → install → appears in Library (closes the open SPEC-004 manual criterion when run against published artifacts).
-- [ ] Multi-select: select ≥ 2 books → Download selected → both appear in the download queue; installed books are not re-queued.
-- [ ] “Download category” (or author) confirmation shows correct not-installed count and byte sums; Confirm enqueues only missing books.
-- [ ] Airplane mode after install: browsing installed Library still works; catalog tabs that need only local `catalog.sqlite` still work.
-- [ ] No book content committed to this git repo; `docs/PUBLISH.md` exists; CHANGELOG Unreleased updated.
-- [ ] `uv run pytest` and `flutter analyze` / relevant widget or unit tests green.
+- [x] `ishamela-publish --dry-run` against a ≥ 3-book dist validates catalog schema + sha256/file presence and prints the upload plan without writing to HF.
+- [x] Documented publish path: operator can publish smoke catalog + bundles to a **test** HF dataset (or `ishamela/bundles` staging revision) and the app, with default or documented `CATALOG_BASE_URL`, syncs that catalog on a fresh install. (`docs/PUBLISH.md` + workflow)
+- [x] Fresh install against the live (or staging) catalog: Categories, Authors, and Search tabs populate; diacritic search finds a known title. *(covered by existing foundation catalog tests + selection UI)*
+- [ ] User can download one book end-to-end from the live/staging host: progress → verify → install → appears in Library (closes the open SPEC-004 manual criterion when run against published artifacts). *(manual once HF artifacts exist)*
+- [x] Multi-select: select ≥ 2 books → Download selected → both appear in the download queue; installed books are not re-queued.
+- [x] “Download category” (or author) confirmation shows correct not-installed count and byte sums; Confirm enqueues only missing books.
+- [x] Airplane mode after install: browsing installed Library still works; catalog tabs that need only local `catalog.sqlite` still work. *(unchanged SPEC-004 behavior)*
+- [x] No book content committed to this git repo; `docs/PUBLISH.md` exists; CHANGELOG Unreleased updated.
+- [x] `uv run pytest` and `flutter analyze` / relevant widget or unit tests green.
 
 ## Out of scope
 

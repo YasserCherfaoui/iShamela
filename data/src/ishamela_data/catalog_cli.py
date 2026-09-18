@@ -24,8 +24,8 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--sidecars",
         type=Path,
-        required=True,
-        help="Directory containing book_*.json sidecars",
+        required=False,
+        help="Directory containing book_*.json sidecars (omit with --from-meta-only)",
     )
     parser.add_argument(
         "--out",
@@ -65,14 +65,28 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Also write uncompressed catalog.sqlite next to the .zst",
     )
+    parser.add_argument(
+        "--from-meta-only",
+        action="store_true",
+        help=(
+            "Build browse catalog from Shamela4 _meta; if --sidecars is also "
+            "set, overlay real .isb download fields for those books"
+        ),
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
+    if not args.from_meta_only and not args.sidecars:
+        print(
+            "ishamela-catalog: --sidecars is required unless --from-meta-only",
+            file=sys.stderr,
+        )
+        return 1
     try:
         result = build_catalog(
-            sidecars_dir=args.sidecars,
+            sidecars_dir=args.sidecars or Path("."),
             out_dir=args.out,
             catalog_version=args.catalog_version,
             generated_at=args.generated_at,
@@ -80,6 +94,8 @@ def main(argv: list[str] | None = None) -> int:
             revision=args.revision,
             base_url=args.base_url,
             keep_sqlite=args.keep_sqlite,
+            from_meta_only=args.from_meta_only,
+            overlay_sidecars=args.sidecars if args.from_meta_only else None,
         )
         print(
             f"built {result.manifest_path} + {result.zst_path} "

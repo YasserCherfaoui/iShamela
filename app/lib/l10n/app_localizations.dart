@@ -249,6 +249,94 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'متوقف'**
   String get statusPaused;
+
+  /// No description provided for @select.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحديد'**
+  String get select;
+
+  /// No description provided for @downloadSelected.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنزيل المحدد'**
+  String get downloadSelected;
+
+  /// No description provided for @downloadAll.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنزيل الكل'**
+  String get downloadAll;
+
+  /// No description provided for @confirmDownloadTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنزيل الكتب؟'**
+  String get confirmDownloadTitle;
+
+  /// No description provided for @confirmDownloadBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count} كتاب · تنزيل {downloadSize} · تثبيت ≈ {installSize}'**
+  String confirmDownloadBody(
+    int count,
+    String downloadSize,
+    String installSize,
+  );
+
+  /// No description provided for @confirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'تأكيد'**
+  String get confirm;
+
+  /// No description provided for @catalogFooter.
+  ///
+  /// In ar, this message translates to:
+  /// **'{bookCount} كتاب · المثبّت {installedSize}'**
+  String catalogFooter(int bookCount, String installedSize);
+
+  /// No description provided for @catalogStaleHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'قد يكون الفهرس قديماً. حدّث عند الاتصال بالشبكة.'**
+  String get catalogStaleHint;
+
+  /// No description provided for @pagesCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count} صفحة'**
+  String pagesCount(int count);
+
+  /// No description provided for @openBook.
+  ///
+  /// In ar, this message translates to:
+  /// **'فتح'**
+  String get openBook;
+
+  /// No description provided for @jumpToPrintPage.
+  ///
+  /// In ar, this message translates to:
+  /// **'رقم الصفحة المطبوعة'**
+  String get jumpToPrintPage;
+
+  /// No description provided for @go.
+  ///
+  /// In ar, this message translates to:
+  /// **'انتقال'**
+  String get go;
+
+  /// No description provided for @pageNotFound.
+  ///
+  /// In ar, this message translates to:
+  /// **'الصفحة غير موجودة'**
+  String get pageNotFound;
+
+  /// No description provided for @readerProgress.
+  ///
+  /// In ar, this message translates to:
+  /// **'{current} / {total}'**
+  String readerProgress(int current, int total);
 }
 
 class _AppLocalizationsDelegate

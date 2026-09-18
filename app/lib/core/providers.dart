@@ -50,19 +50,12 @@ final downloadServiceProvider = FutureProvider<DownloadService>((ref) async {
   final paths = await ref.watch(appPathsProvider.future);
   final state = await ref.watch(stateDatabaseProvider.future);
   final catalog = await ref.watch(catalogRepositoryProvider.future);
-  final booksBase = () {
-    if (catalogBaseUrl.endsWith('/')) {
-      return '${catalogBaseUrl}books/';
-    }
-    return '$catalogBaseUrl/books/';
-  }();
   final service = DownloadService(
     downloader: ref.watch(bundleDownloaderProvider),
     paths: paths,
     state: state,
     catalog: catalog,
-    zstd: ref.watch(zstdProvider),
-    booksBaseUrl: booksBase,
+    pagesBaseUrl: pagesBaseUrl,
   );
   service.recoverQueue();
   return service;

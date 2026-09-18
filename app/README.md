@@ -10,21 +10,17 @@ flutter pub get
 flutter analyze
 flutter test
 
-# Local E2E against data/dist (after building catalog + book_1.isb):
-#
-#   Terminal 1 — must be running while the app syncs:
-#     cd data/dist && python3 -m http.server 8000
-#   Terminal 2 — full rebuild so macOS entitlements pick up network.client:
-#     cd app && flutter run -d macos --dart-define=CATALOG_BASE_URL=http://127.0.0.1:8000/
-#
-# Expect GET http://127.0.0.1:8000/catalog/catalog.json then catalog.sqlite.zst.
-# Without the local server (or without network.client entitlement) the UI shows
-# the offline empty state by design (SPEC-004: silent sync failure).
-flutter run -d macos --dart-define=CATALOG_BASE_URL=http://127.0.0.1:8000/
+# Default CDN = AuthenticIlm/Shamela4_Full_DB
+flutter run -d macos
 ```
 
-Default catalog URL: `https://huggingface.co/datasets/ishamela/bundles/resolve/main/` (SPEC-007 publish).
+Catalog (8,589 books / 40 categories) is built from that dataset’s `_meta`
+parquets and shipped in `assets/catalog/`. Refresh installs the bundled catalog
+when the Hub has no `catalog.json` (normal for Shamela4 today).
+
+Local override (optional smoke server):
+`--dart-define=CATALOG_BASE_URL=http://127.0.0.1:8000/`
 
 ## Layout
 
-See `docs/specs/SPEC-004-app-foundation.md`. Zstd choice: `docs/ZSTD.md`.
+See `docs/specs/SPEC-004-app-foundation.md`. Zstd: `docs/ZSTD.md`.

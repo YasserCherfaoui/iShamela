@@ -17,6 +17,7 @@ class IshamelaApp extends ConsumerWidget {
     ref.watch(catalogSyncTickProvider);
 
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       locale: const Locale('ar'),
       supportedLocales: AppLocalizations.supportedLocales,

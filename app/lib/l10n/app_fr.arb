@@ -24,5 +24,43 @@
   "statusInstalling": "Installation",
   "statusDone": "Terminé",
   "statusError": "Erreur",
-  "statusPaused": "En pause"
+  "statusPaused": "En pause",
+  "select": "Sélectionner",
+  "downloadSelected": "Télécharger la sélection",
+  "downloadAll": "Tout télécharger",
+  "confirmDownloadTitle": "Télécharger les livres ?",
+  "confirmDownloadBody": "{count} livres · téléchargement {downloadSize} · installé ~{installSize}",
+  "@confirmDownloadBody": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "downloadSize": {"type": "String"},
+      "installSize": {"type": "String"}
+    }
+  },
+  "confirm": "Confirmer",
+  "catalogFooter": "{bookCount} livres · installé {installedSize}",
+  "@catalogFooter": {
+    "placeholders": {
+      "bookCount": {"type": "int"},
+      "installedSize": {"type": "String"}
+    }
+  },
+  "catalogStaleHint": "Le catalogue est peut-être obsolète. Actualisez en ligne.",
+  "pagesCount": "{count} pages",
+  "@pagesCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "openBook": "Ouvrir",
+  "jumpToPrintPage": "Numéro de page imprimée",
+  "go": "Aller",
+  "pageNotFound": "Page introuvable",
+  "readerProgress": "{current} / {total}",
+  "@readerProgress": {
+    "placeholders": {
+      "current": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  }
 }

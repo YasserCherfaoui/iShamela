@@ -24,5 +24,43 @@
   "statusInstalling": "جارٍ التثبيت",
   "statusDone": "مكتمل",
   "statusError": "خطأ",
-  "statusPaused": "متوقف"
+  "statusPaused": "متوقف",
+  "select": "تحديد",
+  "downloadSelected": "تنزيل المحدد",
+  "downloadAll": "تنزيل الكل",
+  "confirmDownloadTitle": "تنزيل الكتب؟",
+  "confirmDownloadBody": "{count} كتاب · تنزيل {downloadSize} · تثبيت ≈ {installSize}",
+  "@confirmDownloadBody": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "downloadSize": {"type": "String"},
+      "installSize": {"type": "String"}
+    }
+  },
+  "confirm": "تأكيد",
+  "catalogFooter": "{bookCount} كتاب · المثبّت {installedSize}",
+  "@catalogFooter": {
+    "placeholders": {
+      "bookCount": {"type": "int"},
+      "installedSize": {"type": "String"}
+    }
+  },
+  "catalogStaleHint": "قد يكون الفهرس قديماً. حدّث عند الاتصال بالشبكة.",
+  "pagesCount": "{count} صفحة",
+  "@pagesCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "openBook": "فتح",
+  "jumpToPrintPage": "رقم الصفحة المطبوعة",
+  "go": "انتقال",
+  "pageNotFound": "الصفحة غير موجودة",
+  "readerProgress": "{current} / {total}",
+  "@readerProgress": {
+    "placeholders": {
+      "current": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  }
 }

@@ -31,3 +31,6 @@ dev_dependencies:
 flutter:
   generate: true
   uses-material-design: true
+  assets:
+    - assets/catalog/catalog.sqlite.zst
+    - assets/catalog/catalog.json

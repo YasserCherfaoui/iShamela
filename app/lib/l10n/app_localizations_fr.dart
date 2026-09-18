@@ -83,4 +83,59 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get statusPaused => 'En pause';
+
+  @override
+  String get select => 'Sélectionner';
+
+  @override
+  String get downloadSelected => 'Télécharger la sélection';
+
+  @override
+  String get downloadAll => 'Tout télécharger';
+
+  @override
+  String get confirmDownloadTitle => 'Télécharger les livres ?';
+
+  @override
+  String confirmDownloadBody(
+    int count,
+    String downloadSize,
+    String installSize,
+  ) {
+    return '$count livres · téléchargement $downloadSize · installé ~$installSize';
+  }
+
+  @override
+  String get confirm => 'Confirmer';
+
+  @override
+  String catalogFooter(int bookCount, String installedSize) {
+    return '$bookCount livres · installé $installedSize';
+  }
+
+  @override
+  String get catalogStaleHint =>
+      'Le catalogue est peut-être obsolète. Actualisez en ligne.';
+
+  @override
+  String pagesCount(int count) {
+    return '$count pages';
+  }
+
+  @override
+  String get openBook => 'Ouvrir';
+
+  @override
+  String get jumpToPrintPage => 'Numéro de page imprimée';
+
+  @override
+  String get go => 'Aller';
+
+  @override
+  String get pageNotFound => 'Page introuvable';
+
+  @override
+  String readerProgress(int current, int total) {
+    return '$current / $total';
+  }
 }

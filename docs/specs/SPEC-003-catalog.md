@@ -40,7 +40,7 @@ ishamela/bundles (HF dataset)
 
 App logic: if local `catalog_version` < remote, download and swap `catalog.sqlite`. The manifest MUST stay < 2 KB; it is the only unconditional network call in the app (SPEC-004).
 
-## `catalog.sqlite` schema (`CATALOG_SCHEMA_VERSION = 1`)
+## Catalog schema (`CATALOG_SCHEMA_VERSION = 2`)
 
 ```sql
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -63,8 +63,9 @@ CREATE TABLE books (
   volume_count INTEGER,
   isb_bytes INTEGER NOT NULL,
   sqlite_bytes INTEGER NOT NULL,      -- decompressed size, for storage UI
-  sha256 TEXT NOT NULL,               -- of the .isb file
-  filename TEXT NOT NULL              -- e.g. book_43.isb
+  sha256 TEXT NOT NULL,               -- of the .isb file (or placeholder zeros)
+  filename TEXT NOT NULL,             -- e.g. book_43.isb
+  source_pages_path TEXT              -- SPEC-008: Hub-relative pages.jsonl path
 );
 
 CREATE VIRTUAL TABLE books_fts USING fts5(
@@ -73,7 +74,49 @@ CREATE VIRTUAL TABLE books_fts USING fts5(
 -- rowid == books.book_id; *_norm produced by SPEC-001 normalize()
 ```
 
-Upstream author/category fields come from `_meta/*.parquet`; exact columns confirmed by SPEC-002's schema verification gate — extend `docs/DATA_SOURCES.md` if author metadata lives elsewhere. If `death_year_hijri` is unavailable upstream, keep the column NULL; do not scrape other sources.
+On-device install (SPEC-008) uses `source_pages_path` to fetch from Shamela4; see [`SPEC-008-on-device-install.md`](SPEC-008-on-device-install.md).
+
+## Catalog content provenance (source vs CDN)
+
+**Source of truth for browse metadata** is `AuthenticIlm/Shamela4_Full_DB` `_meta/*.parquet`
+(audited in [`docs/DATA_SOURCES.md`](../DATA_SOURCES.md)). **`ishamela/bundles` is only the
+distribution CDN** for the *built* catalog + `.isb` books. The Flutter app MUST NOT download
+parquet at runtime (offline-first: one unconditional network call remains `catalog.json` per
+SPEC-004).
+
+Hub resolve URLs (trailing path under `…/resolve/main/` or a pinned revision):
+
+| Upstream file | Resolve path |
+|---|---|
+| Categories | `_meta/categories.parquet` |
+| Authors | `_meta/authors.parquet` |
+| Book index | `_meta/book_metadata.parquet` |
+
+Example: `https://huggingface.co/datasets/AuthenticIlm/Shamela4_Full_DB/resolve/main/_meta/categories.parquet`
+
+### Column → `catalog.sqlite` mapping
+
+| Upstream | Columns used | Catalog table / field |
+|---|---|---|
+| `categories.parquet` | `id`, `name_ar`, `sort_order` | `categories(id, name, position)` |
+| `authors.parquet` | `id`, `name_ar`, `death_hijri` | `authors(id, name, death_year_hijri)` — NULL if missing |
+| `book_metadata.parquet` | `book_id`, `category_id`, `main_author_id`, `volume_count_observed` | joins sidecars into `books`; title/page_count/sizes/sha256 come from SPEC-002 sidecars |
+| SPEC-002 `book_*.json` | `title`, `page_count`, `isb_bytes`, `sqlite_bytes`, `sha256`, … | `books` download metadata + FTS norms |
+
+Only authors/categories **referenced by the sidecar set** are inserted (subset of full `_meta`).
+
+### Out of catalog scope (still on `_meta`)
+
+`root_dictionary`, `narrators`, `hadith_xrefs`, `page_isnads`, `quran_verses`, `tafsir_xrefs` —
+interesting for later features (ADR-001 §5 root search); **not** part of `CATALOG_SCHEMA_VERSION = 1`.
+
+### Book downloads
+
+Shamela4 hosts `pages.jsonl` source text, **not** `.isb` bundles. Book bytes always come from
+`catalog.json` → `books_base_url` on `ishamela/bundles` (or a documented override).
+
+Exact upstream dtypes: SPEC-006 / `docs/DATA_SOURCES.md`. If author metadata moves, update that
+doc — do not scrape other sources. If `death_year_hijri` is unavailable upstream, keep NULL.
 
 ## CLI contract
 

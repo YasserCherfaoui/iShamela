@@ -82,4 +82,59 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get statusPaused => 'متوقف';
+
+  @override
+  String get select => 'تحديد';
+
+  @override
+  String get downloadSelected => 'تنزيل المحدد';
+
+  @override
+  String get downloadAll => 'تنزيل الكل';
+
+  @override
+  String get confirmDownloadTitle => 'تنزيل الكتب؟';
+
+  @override
+  String confirmDownloadBody(
+    int count,
+    String downloadSize,
+    String installSize,
+  ) {
+    return '$count كتاب · تنزيل $downloadSize · تثبيت ≈ $installSize';
+  }
+
+  @override
+  String get confirm => 'تأكيد';
+
+  @override
+  String catalogFooter(int bookCount, String installedSize) {
+    return '$bookCount كتاب · المثبّت $installedSize';
+  }
+
+  @override
+  String get catalogStaleHint =>
+      'قد يكون الفهرس قديماً. حدّث عند الاتصال بالشبكة.';
+
+  @override
+  String pagesCount(int count) {
+    return '$count صفحة';
+  }
+
+  @override
+  String get openBook => 'فتح';
+
+  @override
+  String get jumpToPrintPage => 'رقم الصفحة المطبوعة';
+
+  @override
+  String get go => 'انتقال';
+
+  @override
+  String get pageNotFound => 'الصفحة غير موجودة';
+
+  @override
+  String readerProgress(int current, int total) {
+    return '$current / $total';
+  }
 }
