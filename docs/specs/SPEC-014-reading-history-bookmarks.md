@@ -91,7 +91,8 @@ Visual language: DESIGN-001 / DESIGN-002 §2–3. RTL-first.
 
 ### Library
 
-- Continue-reading hero eyebrow: **متابعة القراءة · السجل** — “السجل” is a text button / tappable that pushes History; card body still opens the latest book at its position.
+- Header (outside the green continue-reading card): text button **سجل القراءة** (`historyTitle`) that pushes History.
+- Continue-reading hero eyebrow: **متابعة القراءة** only; card body opens the latest book at its position.
 - Hero data = newest `reading_history` row (`ORDER BY opened_at DESC LIMIT 1`), joined to catalog for title/spine; if none, keep current empty/hero-hidden behavior.
 
 ### History screen (pushed)

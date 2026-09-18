@@ -275,6 +275,17 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
                                   ),
                                 ),
                               ),
+                              TextButton(
+                                onPressed: () => HistoryPage.open(context),
+                                child: Text(
+                                  l10n.historyTitle,
+                                  style: TextStyle(
+                                    fontFamily: kFontUi,
+                                    fontWeight: FontWeight.w600,
+                                    color: t.green700,
+                                  ),
+                                ),
+                              ),
                               if (_selecting) ...[
                                 IconButton(
                                   tooltip: l10n.selectAll,
@@ -861,40 +872,14 @@ class _ContinueReadingHero extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    children: [
-                      Text(
-                        l10n.continueReading,
-                        style: TextStyle(
-                          fontFamily: kFontUi,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 11,
-                          color: t.goldSoft,
-                        ),
-                      ),
-                      Text(
-                        ' · ',
-                        style: TextStyle(
-                          fontFamily: kFontUi,
-                          fontSize: 11,
-                          color: t.goldSoft,
-                        ),
-                      ),
-                      InkWell(
-                        onTap: () => HistoryPage.open(context),
-                        child: Text(
-                          l10n.historyLink,
-                          style: TextStyle(
-                            fontFamily: kFontUi,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 11,
-                            color: t.gold,
-                            decoration: TextDecoration.underline,
-                            decorationColor: t.gold,
-                          ),
-                        ),
-                      ),
-                    ],
+                  Text(
+                    l10n.continueReading,
+                    style: TextStyle(
+                      fontFamily: kFontUi,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 11,
+                      color: t.goldSoft,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   InkWell(
