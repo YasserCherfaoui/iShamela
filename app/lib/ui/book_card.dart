@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:ishamela/ui/book_spine.dart';
+import 'package:ishamela/ui/highlighted_text.dart';
 import 'package:ishamela/ui/meta_chip.dart';
 import 'package:ishamela/ui/theme/ishamela_tokens.dart';
 import 'package:ishamela/ui/theme/ishamela_theme.dart';
@@ -21,6 +22,7 @@ class BookCard extends StatelessWidget {
     this.progress,
     this.selected,
     this.onSelectedChanged,
+    this.highlightQuery,
   });
 
   final String title;
@@ -37,6 +39,7 @@ class BookCard extends StatelessWidget {
   final double? progress;
   final bool? selected;
   final ValueChanged<bool?>? onSelectedChanged;
+  final String? highlightQuery;
 
   @override
   Widget build(BuildContext context) {
@@ -83,6 +86,20 @@ class BookCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                    if (highlightQuery != null &&
+                        highlightQuery!.trim().isNotEmpty)
+                      HighlightedText(
+                        text: title,
+                        query: highlightQuery!,
+                        style: TextStyle(
+                          fontFamily: kFontAmiri,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                          color: available ? t.ink : t.muted,
+                          height: 1.35,
+                        ),
+                      )
+                    else
                       Text(
                         title,
                         maxLines: 2,
@@ -132,14 +149,30 @@ class BookCard extends StatelessWidget {
                       ],
                       if (progress != null) ...[
                         const SizedBox(height: 8),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(999),
-                          child: LinearProgressIndicator(
-                            value: progress!.clamp(0.0, 1.0),
-                            minHeight: 3,
-                            backgroundColor: t.segmentTrack,
-                            color: t.goldSoft,
-                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(999),
+                                child: LinearProgressIndicator(
+                                  value: progress!.clamp(0.0, 1.0),
+                                  minHeight: 3,
+                                  backgroundColor: t.segmentTrack,
+                                  color: t.goldSoft,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${(progress!.clamp(0.0, 1.0) * 100).round()}٪',
+                              style: TextStyle(
+                                fontFamily: kFontUi,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: t.muted,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ],

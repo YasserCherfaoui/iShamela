@@ -154,5 +154,18 @@
       "count": {"type": "int"}
     }
   },
-  "catalogStaleAction": "Update now"
+  "catalogStaleAction": "Update now",
+  "catalogStaleDays": "Last updated {days} days ago — update now",
+  "@catalogStaleDays": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+  "volumesCount": "{count} vols",
+  "@volumesCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "copyBibliography": "Copy citation"
 }

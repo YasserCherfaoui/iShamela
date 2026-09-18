@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ishamela/l10n/app_localizations.dart';
 
+import 'package:ishamela/core/author_line.dart';
 import 'package:ishamela/core/models/models.dart';
 import 'package:ishamela/core/providers.dart';
 import 'package:ishamela/core/db/state_database.dart';
@@ -599,8 +600,13 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
             child: BookCard(
               title: book.title,
               categoryId: book.categoryId,
-              author: book.authorName,
+              author: formatAuthorLine(
+                book.authorName,
+                book.authorDeathYearHijri,
+              ),
               meta: [
+                if (book.volumeCount != null && book.volumeCount! > 0)
+                  l10n.volumesCount(book.volumeCount!),
                 if (book.categoryName != null && book.categoryName!.isNotEmpty)
                   book.categoryName!,
                 if (total > 0) l10n.pagesCount(total),

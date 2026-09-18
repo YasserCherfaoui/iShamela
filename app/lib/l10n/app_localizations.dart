@@ -751,6 +751,24 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'حدّث الآن'**
   String get catalogStaleAction;
+
+  /// No description provided for @catalogStaleDays.
+  ///
+  /// In ar, this message translates to:
+  /// **'آخر تحديث قبل {days} يومًا — حدّث الآن'**
+  String catalogStaleDays(int days);
+
+  /// No description provided for @volumesCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count} أجزاء'**
+  String volumesCount(int count);
+
+  /// No description provided for @copyBibliography.
+  ///
+  /// In ar, this message translates to:
+  /// **'نسخ التوثيق'**
+  String get copyBibliography;
 }
 
 class _AppLocalizationsDelegate

@@ -5,8 +5,11 @@ import 'package:ishamela/l10n/app_localizations.dart';
 import 'package:ishamela/core/db/state_database.dart';
 import 'package:ishamela/features/reader/body_display_map.dart';
 import 'package:ishamela/features/reader/citation.dart';
+import 'package:ishamela/features/reader/role_color.dart';
 import 'package:ishamela/features/reader/reader_styles.dart';
 import 'package:ishamela/features/reader/text_roles.dart';
+import 'package:ishamela/ui/selection_toolbar.dart';
+import 'package:ishamela/ui/theme/reader_theme_tokens.dart';
 
 /// Selectable body with SPEC-010/011/012 annotations, roles, note badges.
 class AnnotatedBody extends StatefulWidget {
@@ -97,108 +100,9 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
 
   TextStyle _baseStyle(ReaderTextStyles styles) => TextStyle(
         fontSize: styles.fontSize,
-        height: 1.8,
+        height: 1.9,
         fontFamily: styles.font.familyName,
       );
-
-  (List<InlineSpan>, List<int>) _buildSpansAndMap() {
-    final display = _map.display;
-    final styles = widget.textStyles ?? ReaderTextStyles.defaults();
-    final base = _baseStyle(styles);
-    final hl = List<Color?>.filled(display.length, null);
-    final noteFlags = List<bool>.filled(display.length, false);
-    final badgeAt = <int, int>{}; // display index → note index
-
-    for (final h in _highlights) {
-      final start = h['start_offset'] as int;
-      final end = h['end_offset'] as int;
-      final colorId = h['color'] as String;
-      final argb = highlightColors[colorId] ?? highlightColors['yellow']!;
-      final c = Color(argb);
-      final (ds, de) = _map.toDisplayRange(start, end);
-      for (var i = ds; i < de && i < display.length; i++) {
-        hl[i] = c;
-      }
-    }
-    for (final n in _notes) {
-      final id = n['id'] as int;
-      final start = n['start_offset'] as int;
-      final end = n['end_offset'] as int;
-      final (ds, de) = _map.toDisplayRange(start, end);
-      final idx = _noteIndexById[id] ?? 0;
-      if (ds < display.length && idx > 0) {
-        badgeAt[ds] = idx;
-      }
-      for (var i = ds; i < de && i < display.length; i++) {
-        noteFlags[i] = true;
-      }
-    }
-
-    final out = <InlineSpan>[];
-    final selMap = <int>[];
-    var i = 0;
-    while (i < display.length) {
-      if (badgeAt.containsKey(i)) {
-        final n = badgeAt[i]!;
-        out.add(
-          WidgetSpan(
-            alignment: PlaceholderAlignment.middle,
-            child: _NoteBadge(
-              index: n,
-              onTap: () {
-                Map<String, Object?>? note;
-                for (final x in _notes) {
-                  if (_noteIndexById[x['id']] == n) {
-                    note = x;
-                    break;
-                  }
-                }
-                if (note != null) {
-                  _editNote(note['id'] as int, note['note'] as String);
-                }
-              },
-            ),
-          ),
-        );
-        selMap.add(-1);
-      }
-      final role = _roles.roleAt(i);
-      final bg = hl[i];
-      final note = noteFlags[i];
-      var j = i + 1;
-      while (j < display.length &&
-          !badgeAt.containsKey(j) &&
-          _roles.roleAt(j) == role &&
-          hl[j] == bg &&
-          noteFlags[j] == note) {
-        j++;
-      }
-      final rs = styles.styleFor(role);
-      var style = base.copyWith(
-        color: rs.color,
-        fontWeight: rs.bold ? FontWeight.bold : FontWeight.normal,
-      );
-      if (bg != null) {
-        style = style.copyWith(backgroundColor: bg);
-      }
-      if (note) {
-        style = style.copyWith(
-          decoration: TextDecoration.underline,
-          decorationStyle: TextDecorationStyle.dashed,
-          decorationColor: Theme.of(context).colorScheme.primary,
-        );
-      }
-      out.add(TextSpan(text: display.substring(i, j), style: style));
-      for (var k = i; k < j; k++) {
-        selMap.add(k);
-      }
-      i = j;
-    }
-    if (out.isEmpty) {
-      out.add(TextSpan(text: display, style: base));
-    }
-    return (out, selMap);
-  }
 
   (int, int)? _selectionToBody(TextSelection sel) {
     if (!sel.isValid || sel.isCollapsed) return null;
@@ -313,82 +217,162 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     final styles = widget.textStyles ?? ReaderTextStyles.defaults();
     final fontSize = styles.fontSize;
-    final (spans, selMap) = _buildSpansAndMap();
+    final reader = ReaderThemeTokens.of(context);
+    final (spans, selMap) = _buildSpansAndMap(styles, reader);
     _selToDisplay = selMap;
     return SelectableText.rich(
       TextSpan(children: spans),
       textAlign: TextAlign.justify,
       style: TextStyle(
         fontSize: fontSize,
-        height: 1.8,
+        height: 1.9,
         fontFamily: styles.font.familyName,
+        color: reader.body,
       ),
       strutStyle: StrutStyle(
         fontSize: fontSize,
-        height: 1.8,
+        height: 1.9,
         fontFamily: styles.font.familyName,
         forceStrutHeight: true,
       ),
       contextMenuBuilder: (context, editableTextState) {
         final sel = editableTextState.textEditingValue.selection;
-        final items = <ContextMenuButtonItem>[
-          ...editableTextState.contextMenuButtonItems,
-        ];
-        if (sel.isValid && !sel.isCollapsed) {
-          for (final e in highlightColors.entries) {
-            items.add(
-              ContextMenuButtonItem(
-                label: '${l10n.highlight}: ${_colorLabel(l10n, e.key)}',
-                onPressed: () {
-                  ContextMenuController.removeAny();
-                  _highlight(sel, e.key);
-                },
-              ),
-            );
-          }
-          items.add(
-            ContextMenuButtonItem(
-              label: l10n.addNote,
-              onPressed: () {
-                ContextMenuController.removeAny();
-                _addNote(sel);
-              },
-            ),
-          );
-          items.add(
-            ContextMenuButtonItem(
-              label: l10n.copyWithReference,
-              onPressed: () {
-                ContextMenuController.removeAny();
-                _copyCitation(sel);
-              },
-            ),
+        if (!sel.isValid || sel.isCollapsed) {
+          return AdaptiveTextSelectionToolbar.buttonItems(
+            anchors: editableTextState.contextMenuAnchors,
+            buttonItems: editableTextState.contextMenuButtonItems,
           );
         }
-        for (final n in _notes) {
-          final id = n['id'] as int;
-          final preview = n['note'] as String;
-          final idx = _noteIndexById[id];
-          items.add(
-            ContextMenuButtonItem(
-              label:
-                  '${idx != null ? '#$idx ' : ''}${preview.length > 24 ? '${preview.substring(0, 24)}…' : preview}',
-              onPressed: () {
-                ContextMenuController.removeAny();
-                _editNote(id, preview);
-              },
-            ),
-          );
-        }
-        return AdaptiveTextSelectionToolbar.buttonItems(
+        return SelectionToolbar(
           anchors: editableTextState.contextMenuAnchors,
-          buttonItems: items,
+          onHighlight: (color) {
+            ContextMenuController.removeAny();
+            _highlight(sel, color);
+          },
+          onNote: () {
+            ContextMenuController.removeAny();
+            _addNote(sel);
+          },
+          onCite: () {
+            ContextMenuController.removeAny();
+            _copyCitation(sel);
+          },
         );
       },
     );
+  }
+
+  Color _roleColor(TextRole role, ReaderTextStyles styles, ReaderThemeTokens theme) {
+    return resolveRoleColor(role, styles.styleFor(role), theme);
+  }
+
+  (List<InlineSpan>, List<int>) _buildSpansAndMap(
+    ReaderTextStyles styles,
+    ReaderThemeTokens reader,
+  ) {
+    final display = _map.display;
+    final base = _baseStyle(styles);
+    final hl = List<Color?>.filled(display.length, null);
+    final noteFlags = List<bool>.filled(display.length, false);
+    final badgeAt = <int, int>{};
+    final night = reader.atmosphere == ReadingAtmosphere.night;
+    final palette = night ? highlightColorsNight : highlightColors;
+
+    for (final h in _highlights) {
+      final start = h['start_offset'] as int;
+      final end = h['end_offset'] as int;
+      final colorId = h['color'] as String;
+      final argb = palette[colorId] ?? palette['yellow']!;
+      final c = Color(argb);
+      final (ds, de) = _map.toDisplayRange(start, end);
+      for (var i = ds; i < de && i < display.length; i++) {
+        hl[i] = c;
+      }
+    }
+    for (final n in _notes) {
+      final id = n['id'] as int;
+      final start = n['start_offset'] as int;
+      final end = n['end_offset'] as int;
+      final (ds, de) = _map.toDisplayRange(start, end);
+      final idx = _noteIndexById[id] ?? 0;
+      if (ds < display.length && idx > 0) {
+        badgeAt[ds] = idx;
+      }
+      for (var i = ds; i < de && i < display.length; i++) {
+        noteFlags[i] = true;
+      }
+    }
+
+    final out = <InlineSpan>[];
+    final selMap = <int>[];
+    var i = 0;
+    while (i < display.length) {
+      if (badgeAt.containsKey(i)) {
+        final n = badgeAt[i]!;
+        out.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: _NoteBadge(
+              index: n,
+              gold: true,
+              onTap: () {
+                Map<String, Object?>? note;
+                for (final x in _notes) {
+                  if (_noteIndexById[x['id']] == n) {
+                    note = x;
+                    break;
+                  }
+                }
+                if (note != null) {
+                  _editNote(note['id'] as int, note['note'] as String);
+                }
+              },
+            ),
+          ),
+        );
+        selMap.add(-1);
+      }
+      final role = _roles.roleAt(i);
+      final bg = hl[i];
+      final note = noteFlags[i];
+      var j = i + 1;
+      while (j < display.length &&
+          !badgeAt.containsKey(j) &&
+          _roles.roleAt(j) == role &&
+          hl[j] == bg &&
+          noteFlags[j] == note) {
+        j++;
+      }
+      final rs = styles.styleFor(role);
+      var style = base.copyWith(
+        color: _roleColor(role, styles, reader),
+        fontWeight: rs.bold ? FontWeight.bold : FontWeight.normal,
+      );
+      if (bg != null) {
+        style = style.copyWith(backgroundColor: bg);
+        if (night && reader.highlightUnderline != null) {
+          style = style.copyWith(
+            decoration: TextDecoration.underline,
+            decorationColor: reader.highlightUnderline,
+            decorationThickness: 2,
+          );
+        }
+      }
+      if (note) {
+        style = style.copyWith(
+          decoration: TextDecoration.underline,
+          decorationStyle: TextDecorationStyle.dashed,
+        );
+      }
+      out.add(TextSpan(text: display.substring(i, j), style: style));
+      for (var k = i; k < j; k++) {
+        selMap.add(k);
+      }
+      i = j;
+    }
+    return (out, selMap);
   }
 
   Future<void> _editNote(int id, String current) async {
@@ -426,45 +410,36 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
     }
     _reload();
   }
-
-  String _colorLabel(AppLocalizations l10n, String id) {
-    switch (id) {
-      case 'green':
-        return l10n.colorGreen;
-      case 'blue':
-        return l10n.colorBlue;
-      case 'pink':
-        return l10n.colorPink;
-      case 'orange':
-        return l10n.colorOrange;
-      default:
-        return l10n.colorYellow;
-    }
-  }
 }
 
 class _NoteBadge extends StatelessWidget {
-  const _NoteBadge({required this.index, required this.onTap});
+  const _NoteBadge({
+    required this.index,
+    required this.onTap,
+    this.gold = false,
+  });
 
   final int index;
   final VoidCallback onTap;
+  final bool gold;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final bg =
+        gold ? const Color(0xFFA67C2E) : Theme.of(context).colorScheme.primary;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 1),
         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
         decoration: BoxDecoration(
-          color: scheme.primary,
+          color: bg,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text(
           '$index',
-          style: TextStyle(
-            color: scheme.onPrimary,
+          style: const TextStyle(
+            color: Colors.white,
             fontSize: 10,
             height: 1.2,
             fontWeight: FontWeight.bold,

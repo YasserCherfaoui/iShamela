@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ishamela/l10n/app_localizations.dart';
 
@@ -14,6 +15,7 @@ import 'package:ishamela/ui/app_search_field.dart';
 import 'package:ishamela/ui/jump_sheet.dart';
 import 'package:ishamela/ui/page_pill.dart';
 import 'package:ishamela/ui/rosette_divider.dart';
+import 'package:ishamela/ui/theme/ishamela_theme.dart';
 import 'package:ishamela/ui/theme/ishamela_tokens.dart';
 import 'package:ishamela/ui/theme/reader_theme_tokens.dart';
 import 'package:ishamela/ui/tonal_icon_button.dart';
@@ -222,7 +224,11 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final title = widget.title ?? _db?.meta('title') ?? 'book_${widget.bookId}';
-    final wide = MediaQuery.sizeOf(context).width >= 800;
+    final width = MediaQuery.sizeOf(context).width;
+    final wide = width >= 800;
+    final veryWide = width >= 1200;
+    final showToc = wide && (veryWide || _showToc);
+    final showCard = wide && (veryWide || _showCard);
     final reader = ReaderThemeTokens.of(context);
     final page = (_db != null && _ids.isNotEmpty)
         ? _db!.pageById(_ids[_index])
@@ -263,11 +269,28 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
           ),
           centerTitle: true,
           actions: [
-            IconButton(
-              tooltip: l10n.searchInBook,
-              icon: const Icon(Icons.search),
-              onPressed: () => _openSearchSheet(l10n),
-            ),
+            if (wide)
+              SizedBox(
+                width: 200,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: AppSearchField(
+                    hintText: l10n.searchInBook,
+                    initialQuery: _searchCtrl.text,
+                    onChanged: (v) => _searchCtrl.text = v,
+                    onSubmitted: (_) {
+                      _runSearch();
+                      setState(() {});
+                    },
+                  ),
+                ),
+              )
+            else
+              IconButton(
+                tooltip: l10n.searchInBook,
+                icon: const Icon(Icons.search),
+                onPressed: () => _openSearchSheet(l10n),
+              ),
             if (wide)
               TextButton(
                 onPressed: () => setState(() => _showToc = !_showToc),
@@ -278,6 +301,11 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                 tooltip: l10n.toc,
                 icon: const Icon(Icons.list_alt),
                 onPressed: () => _openTocSheet(context, l10n),
+              ),
+            if (wide)
+              TextButton(
+                onPressed: () => setState(() => _showCard = !_showCard),
+                child: Text(l10n.bookCard),
               ),
             PopupMenuButton<String>(
               onSelected: (v) {
@@ -309,8 +337,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                 }
               },
               itemBuilder: (_) => [
-                PopupMenuItem(value: 'card', child: Text(l10n.bookCard)),
-                const PopupMenuDivider(),
+                if (!wide)
+                  PopupMenuItem(value: 'card', child: Text(l10n.bookCard)),
+                if (!wide) const PopupMenuDivider(),
                 PopupMenuItem(value: 'mode_h', child: Text(l10n.modePagedH)),
                 PopupMenuItem(value: 'mode_v', child: Text(l10n.modePagedV)),
                 PopupMenuItem(
@@ -344,13 +373,12 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                       Expanded(
                         child: Row(
                           children: [
-                            if (wide && _showToc)
+                            if (showToc)
                               SizedBox(
                                 width: 300,
                                 child: _sideIndexPane(l10n),
                               ),
-                            if (wide && _showToc)
-                              const VerticalDivider(width: 1),
+                            if (showToc) const VerticalDivider(width: 1),
                             Expanded(
                               child: Center(
                                 child: ConstrainedBox(
@@ -361,9 +389,8 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                                 ),
                               ),
                             ),
-                            if (wide && _showCard)
-                              const VerticalDivider(width: 1),
-                            if (wide && _showCard)
+                            if (showCard) const VerticalDivider(width: 1),
+                            if (showCard)
                               SizedBox(
                                 width: 300,
                                 child: _cardPane(l10n, title),
@@ -609,6 +636,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   }
 
   Widget _sideIndexPane(AppLocalizations l10n) {
+    // Depend on tick so badge rebuilds when annotations change.
+    final _ = _notesTick;
+    final noteCount = _state?.notesForBook(widget.bookId).length ?? 0;
     return DefaultTabController(
       length: 2,
       child: Column(
@@ -616,7 +646,24 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
           TabBar(
             tabs: [
               Tab(text: l10n.toc),
-              Tab(text: l10n.notesTab),
+              Tab(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(l10n.notesTab),
+                    if (noteCount > 0) ...[
+                      const SizedBox(width: 6),
+                      Badge(
+                        backgroundColor: IshamelaTokens.of(context).gold,
+                        label: Text(
+                          '$noteCount',
+                          style: const TextStyle(fontSize: 10),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ],
           ),
           Expanded(
@@ -641,19 +688,59 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
       _toc.map((e) => e.pageId).toList(),
       currentId,
     );
+    final depths = tocIndentDepths(
+      ids: _toc.map((e) => e.id).toList(),
+      parentIds: _toc.map((e) => e.parentId).toList(),
+    );
+    final t = IshamelaTokens.of(context);
     return ListView.builder(
       itemCount: _toc.length,
       itemBuilder: (context, i) {
         final e = _toc[i];
-        return ListTile(
-          dense: true,
-          selected: i == active,
-          selectedTileColor:
-              Theme.of(context).colorScheme.primaryContainer.withValues(
-                    alpha: 0.45,
-                  ),
-          title: Text(e.title, maxLines: 2, overflow: TextOverflow.ellipsis),
-          onTap: () => _jumpToId(e.pageId),
+        final selected = i == active;
+        final printNo = _db?.pageById(e.pageId)?.pageNumber?.toString() ?? '—';
+        final depth = depths[i].clamp(0, 6);
+        return Padding(
+          padding: EdgeInsetsDirectional.only(start: 8.0 + depth * 14),
+          child: Material(
+            color: selected ? t.green100 : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () => _jumpToId(e.pageId),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        e.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'Amiri',
+                          fontWeight:
+                              selected ? FontWeight.w700 : FontWeight.w400,
+                          fontSize: 14,
+                          color: selected ? t.green900 : t.ink,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      printNo,
+                      style: TextStyle(
+                        fontFamily: kFontUi,
+                        fontSize: 11,
+                        color: t.muted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         );
       },
     );
@@ -700,6 +787,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     final author = widget.authorName ?? _db?.meta('author') ?? '';
     final category = _db?.meta('category_name') ?? '';
     final pages = _db?.meta('page_count') ?? '${_ids.length}';
+    final t = IshamelaTokens.of(context);
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
@@ -709,7 +797,27 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         if (author.isNotEmpty) Text(author),
         if (category.isNotEmpty) Text(category),
         Text(l10n.pagesCount(int.tryParse(pages) ?? _ids.length)),
-        const Divider(),
+        const SizedBox(height: 8),
+        FilledButton.tonal(
+          onPressed: () async {
+            final arabic = Localizations.localeOf(context).languageCode == 'ar';
+            final page = _ids.isNotEmpty ? _db?.pageById(_ids[_index]) : null;
+            final printNo = page?.pageNumber?.toString() ?? '—';
+            final partBit = (page?.part != null && page!.part!.isNotEmpty)
+                ? (arabic ? '، ج${page.part}' : ', vol. ${page.part}')
+                : '';
+            final text = arabic
+                ? '$title، $author$partBit، ص$printNo'
+                : '$title, $author$partBit, p. $printNo';
+            await Clipboard.setData(ClipboardData(text: text));
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.copiedCitation)),
+            );
+          },
+          child: Text(l10n.copyBibliography),
+        ),
+        Divider(color: t.hairline),
         if (betaka != null && betaka.isNotEmpty)
           SelectableText(betaka, style: const TextStyle(height: 1.6))
         else
@@ -792,21 +900,22 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                             )),
                   if (footnotes != null && footnotes.isNotEmpty) ...[
                     const SizedBox(height: 24),
-                    const Divider(),
+                    Divider(color: ReaderThemeTokens.of(context).hairline),
                     Text(
                       l10n.footnotes,
-                      style: Theme.of(context).textTheme.titleSmall,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: IshamelaTokens.of(context).gold,
+                            fontFamily: 'Amiri',
+                            fontWeight: FontWeight.w700,
+                          ),
                     ),
                     const SizedBox(height: 8),
-                    buildBodyDisplay(
-                      footnotes,
-                      style: TextStyle(
-                        fontSize: (ref.watch(readerTextStylesProvider).fontSize) *
-                            0.9,
-                        height: 1.7,
-                        fontFamily:
-                            ref.watch(readerTextStylesProvider).font.familyName,
-                      ),
+                    _FootnotesBlock(
+                      text: footnotes,
+                      fontSize:
+                          (ref.watch(readerTextStylesProvider).fontSize) * 0.9,
+                      fontFamily:
+                          ref.watch(readerTextStylesProvider).font.familyName,
                     ),
                   ],
                 ],
@@ -829,14 +938,23 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
       ranges.addAll(findHighlightRanges(nr, t));
     }
     ranges.sort((a, b) => a.start.compareTo(b.start));
-    // Prefer HTML display when no overlaps complicate; fall back to plain spans.
     if (ranges.isEmpty) return buildBodyDisplay(body);
+    final reader = ReaderThemeTokens.of(context);
     final spans = <InlineSpan>[];
     var cursor = 0;
-    final base = const TextStyle(fontSize: 20, height: 1.8);
-    final hi = base.copyWith(
-      backgroundColor: Colors.yellow.shade200,
+    final base = TextStyle(
+      fontSize: 20,
+      height: 1.9,
+      color: reader.body,
     );
+    var hi = base.copyWith(backgroundColor: reader.highlight);
+    if (reader.highlightUnderline != null) {
+      hi = hi.copyWith(
+        decoration: TextDecoration.underline,
+        decorationColor: reader.highlightUnderline,
+        decorationThickness: 2,
+      );
+    }
     for (final r in ranges) {
       if (r.start < cursor) continue;
       if (r.start > cursor) {
@@ -884,5 +1002,54 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         ),
       ),
     );
+  }
+}
+
+/// Footnotes zone: gold-tint existing leading markers; never invent numbers (SPEC-012).
+class _FootnotesBlock extends StatelessWidget {
+  const _FootnotesBlock({
+    required this.text,
+    required this.fontSize,
+    this.fontFamily,
+  });
+
+  final String text;
+  final double fontSize;
+  final String? fontFamily;
+
+  static final _marker = RegExp(
+    r'^([\(\[]?\s*[0-9٠-٩۰-۹]+\s*[\)\].:\-–—]?\s*)',
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final gold = IshamelaTokens.of(context).gold;
+    final base = TextStyle(
+      fontSize: fontSize,
+      height: 1.8,
+      fontFamily: fontFamily,
+    );
+    final lines = text.split('\n');
+    final spans = <InlineSpan>[];
+    for (var i = 0; i < lines.length; i++) {
+      if (i > 0) spans.add(const TextSpan(text: '\n'));
+      final line = lines[i];
+      final m = _marker.firstMatch(line);
+      if (m != null) {
+        spans.add(
+          TextSpan(
+            text: m.group(1),
+            style: base.copyWith(
+              color: gold,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        );
+        spans.add(TextSpan(text: line.substring(m.end), style: base));
+      } else {
+        spans.add(TextSpan(text: line, style: base));
+      }
+    }
+    return SelectableText.rich(TextSpan(children: spans));
   }
 }

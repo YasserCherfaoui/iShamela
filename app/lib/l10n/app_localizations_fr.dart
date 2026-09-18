@@ -355,4 +355,17 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get catalogStaleAction => 'Mettre à jour';
+
+  @override
+  String catalogStaleDays(int days) {
+    return 'Dernière mise à jour il y a $days jours — actualiser';
+  }
+
+  @override
+  String volumesCount(int count) {
+    return '$count vol.';
+  }
+
+  @override
+  String get copyBibliography => 'Copier la référence';
 }

@@ -1,4 +1,4 @@
-/// Sticky TOC selection (SPEC-012).
+/// Sticky TOC selection (SPEC-012) + DESIGN-001 indent depths.
 library;
 
 /// Returns the TOC list index that should stay highlighted for [currentPageId].
@@ -19,4 +19,30 @@ int stickyTocIndex(List<int> tocPageIds, int currentPageId) {
     }
   }
   return found ? best : 0;
+}
+
+/// Nesting depth for each TOC row from `parent_id` links (0 = root).
+List<int> tocIndentDepths({
+  required List<int> ids,
+  required List<int?> parentIds,
+}) {
+  assert(ids.length == parentIds.length);
+  final byId = <int, int>{};
+  for (var i = 0; i < ids.length; i++) {
+    byId[ids[i]] = i;
+  }
+  int depthAt(int i) {
+    var d = 0;
+    var cur = parentIds[i];
+    final seen = <int>{ids[i]};
+    while (cur != null) {
+      final pi = byId[cur];
+      if (pi == null || !seen.add(cur)) break;
+      d++;
+      cur = parentIds[pi];
+    }
+    return d;
+  }
+
+  return [for (var i = 0; i < ids.length; i++) depthAt(i)];
 }

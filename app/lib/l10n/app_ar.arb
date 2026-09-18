@@ -154,5 +154,18 @@
       "count": {"type": "int"}
     }
   },
-  "catalogStaleAction": "حدّث الآن"
+  "catalogStaleAction": "حدّث الآن",
+  "catalogStaleDays": "آخر تحديث قبل {days} يومًا — حدّث الآن",
+  "@catalogStaleDays": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+  "volumesCount": "{count} أجزاء",
+  "@volumesCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "copyBibliography": "نسخ التوثيق"
 }

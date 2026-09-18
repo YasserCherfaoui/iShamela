@@ -4,6 +4,7 @@ import 'package:ishamela/l10n/app_localizations.dart';
 
 import 'package:ishamela/core/providers.dart';
 import 'package:ishamela/features/reader/reader_styles.dart';
+import 'package:ishamela/features/reader/role_color.dart';
 import 'package:ishamela/features/reader/text_roles.dart';
 import 'package:ishamela/ui/theme/ishamela_theme.dart';
 import 'package:ishamela/ui/theme/ishamela_tokens.dart';
@@ -182,7 +183,14 @@ class SettingsPage extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: _RoleStyleTile(
-              style: styles.styleFor(role),
+              style: RoleStyle(
+                color: resolveRoleColor(
+                  role,
+                  styles.styleFor(role),
+                  ReaderThemeTokens.of(context),
+                ),
+                bold: styles.styleFor(role).bold,
+              ),
               label: _roleLabel(l10n, role),
               previewFont: styles.font.familyName,
               onChanged: (next) {

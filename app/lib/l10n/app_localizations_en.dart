@@ -354,4 +354,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get catalogStaleAction => 'Update now';
+
+  @override
+  String catalogStaleDays(int days) {
+    return 'Last updated $days days ago — update now';
+  }
+
+  @override
+  String volumesCount(int count) {
+    return '$count vols';
+  }
+
+  @override
+  String get copyBibliography => 'Copy citation';
 }

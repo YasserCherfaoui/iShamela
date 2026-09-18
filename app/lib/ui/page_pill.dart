@@ -18,6 +18,7 @@ class PagePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = IshamelaTokens.of(context);
+    final reduce = MediaQuery.disableAnimationsOf(context);
     return Material(
       color: t.card,
       shape: StadiumBorder(side: BorderSide(color: t.hairline)),
@@ -26,15 +27,19 @@ class PagePill extends StatelessWidget {
         customBorder: const StadiumBorder(),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontFamily: kFontUi,
-              fontWeight: FontWeight.w600,
-              fontSize: 13,
-              color: t.ink,
+          child: AnimatedSwitcher(
+            duration: reduce ? Duration.zero : const Duration(milliseconds: 150),
+            child: Text(
+              label,
+              key: ValueKey(label),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: kFontUi,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                color: t.ink,
+              ),
             ),
           ),
         ),

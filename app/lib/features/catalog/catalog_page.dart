@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ishamela/l10n/app_localizations.dart';
 
+import 'package:ishamela/core/author_line.dart';
 import 'package:ishamela/core/format_bytes.dart';
 import 'package:ishamela/core/models/models.dart';
 import 'package:ishamela/core/providers.dart';
@@ -11,6 +12,7 @@ import 'package:ishamela/features/downloads/download_service.dart';
 import 'package:ishamela/features/reader/reader_page.dart';
 import 'package:ishamela/ui/book_card.dart';
 import 'package:ishamela/ui/empty_state.dart';
+import 'package:ishamela/ui/highlighted_text.dart';
 import 'package:ishamela/ui/progress_ring.dart';
 import 'package:ishamela/ui/rosette_divider.dart';
 import 'package:ishamela/ui/section_label.dart';
@@ -60,6 +62,7 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
             }
 
             final showStale = catalog.isCatalogStale();
+            final staleDays = catalog.catalogAgeDays() ?? 30;
             final bookCount = catalog.bookCount();
             final installedBytes = stateAsync.maybeWhen(
               data: (s) => s.installedSqliteBytesTotal,
@@ -128,7 +131,7 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
                         if (showStale) ...[
                           const SizedBox(height: 12),
                           _StaleBanner(
-                            message: l10n.catalogStaleHint,
+                            message: l10n.catalogStaleDays(staleDays),
                             action: l10n.catalogStaleAction,
                             onAction: _refresh,
                           ),
@@ -276,10 +279,14 @@ class _BrowseEntityCard extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.onTap,
+    this.subtitle,
+    this.titleQuery,
   });
 
   final IconData icon;
   final String title;
+  final String? subtitle;
+  final String? titleQuery;
   final VoidCallback onTap;
 
   @override
@@ -305,14 +312,33 @@ class _BrowseEntityCard extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontFamily: kFontAmiri,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                    color: t.ink,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (titleQuery != null && titleQuery!.trim().isNotEmpty)
+                      HighlightedText(text: title, query: titleQuery!)
+                    else
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontFamily: kFontAmiri,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                          color: t.ink,
+                        ),
+                      ),
+                    if (subtitle != null && subtitle!.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle!,
+                        style: TextStyle(
+                          fontFamily: kFontUi,
+                          fontSize: 12,
+                          color: t.muted,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
               Icon(Icons.chevron_left, color: t.muted),
@@ -374,6 +400,7 @@ class _AuthorSliver extends StatelessWidget {
           return _BrowseEntityCard(
             icon: Icons.person_outline,
             title: a.name,
+            subtitle: a.deathYearHijri != null ? 'ت ${a.deathYearHijri}هـ' : null,
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (_) => BookListPage(
@@ -422,6 +449,7 @@ class _SearchResultsSliver extends StatelessWidget {
               child: _BrowseEntityCard(
                 icon: Icons.folder_outlined,
                 title: c.name,
+                titleQuery: query,
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => BookListPage(
@@ -444,6 +472,9 @@ class _SearchResultsSliver extends StatelessWidget {
               child: _BrowseEntityCard(
                 icon: Icons.person_outline,
                 title: a.name,
+                titleQuery: query,
+                subtitle:
+                    a.deathYearHijri != null ? 'ت ${a.deathYearHijri}هـ' : null,
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => BookListPage(
@@ -460,7 +491,11 @@ class _SearchResultsSliver extends StatelessWidget {
           SectionLabel(
             label: l10n.sectionWithCount(l10n.books, hits.books.length),
           ),
-          BookListView(books: hits.books, shrinkWrap: true),
+          BookListView(
+            books: hits.books,
+            shrinkWrap: true,
+            highlightQuery: query,
+          ),
         ],
       ]),
     );
@@ -720,11 +755,13 @@ class BookListView extends ConsumerWidget {
     this.onToggle,
     this.onLongPressSelect,
     this.shrinkWrap = false,
+    this.highlightQuery,
   });
 
   final List<Book> books;
   final bool selecting;
   final Set<int> selected;
+  final String? highlightQuery;
   final void Function(int bookId)? onToggle;
   final void Function(int bookId)? onLongPressSelect;
   final bool shrinkWrap;
@@ -735,7 +772,7 @@ class BookListView extends ConsumerWidget {
     final stateAsync = ref.watch(stateDatabaseProvider);
     final downloadsAsync = ref.watch(downloadServiceProvider);
     final width = MediaQuery.sizeOf(context).width;
-    final cols = width >= 800 ? 2 : 1;
+    final cols = width >= 1200 ? 3 : width >= 600 ? 2 : 1;
 
     if (books.isEmpty) {
       return EmptyState(message: l10n.noBooks);
@@ -757,6 +794,8 @@ class BookListView extends ConsumerWidget {
       final displayPages =
           book.pageCount > 0 ? book.pageCount : (installedPages ?? 0);
       final meta = <String>[
+        if (book.volumeCount != null && book.volumeCount! > 0)
+          l10n.volumesCount(book.volumeCount!),
         if (displayPages > 0) l10n.pagesCount(displayPages),
         if (book.isbBytes > 0) formatBytes(book.isbBytes),
         if (book.categoryName != null && book.categoryName!.isNotEmpty)
@@ -793,8 +832,9 @@ class BookListView extends ConsumerWidget {
         child: BookCard(
           title: book.title,
           categoryId: book.categoryId,
-          author: book.authorName,
+          author: formatAuthorLine(book.authorName, book.authorDeathYearHijri),
           meta: meta,
+          highlightQuery: highlightQuery,
           available: canDownload || installed,
           unavailableLabel:
               canDownload || installed ? null : l10n.unavailableForDownload,
@@ -827,9 +867,9 @@ class BookListView extends ConsumerWidget {
     if (cols > 1) {
       return GridView.builder(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisExtent: 140,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: cols,
+          mainAxisExtent: 148,
           crossAxisSpacing: 12,
           mainAxisSpacing: 4,
         ),

@@ -1,6 +1,6 @@
 # DESIGN-001 — iShamela "Warm Manuscript" UI Redesign
 
-**Status:** Implemented (foundation + screen restyles) · **Companion preview:** Claude Design canvas "iShamela UI Redesign" (artboards: design language, 8 phone screens, 1 desktop reader)
+**Status:** Implemented · **Companion preview:** Claude Design canvas "iShamela UI Redesign" (artboards: design language, 8 phone screens, 1 desktop reader)
 **Scope:** Visual system + screen redesign for the surfaces in `docs/CURRENT-UI-INVENTORY` §1. Preserves every functional behavior in inventory §12; targets every weakness in §13. No new product features beyond SPEC-005…013 (the sepia theme realizes SPEC-005's historical mention).
 
 ---

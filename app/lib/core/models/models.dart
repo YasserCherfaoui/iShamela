@@ -66,6 +66,7 @@ class Book {
     required this.filename,
     this.authorId,
     this.authorName,
+    this.authorDeathYearHijri,
     this.categoryName,
     this.volumeCount,
     this.sourcePagesPath,
@@ -76,6 +77,9 @@ class Book {
   final String title;
   final int? authorId;
   final String? authorName;
+
+  /// Author death year (Hijri) from catalog join; used for `ت XXXهـ`.
+  final int? authorDeathYearHijri;
   final int categoryId;
   final String? categoryName;
   final int pageCount;

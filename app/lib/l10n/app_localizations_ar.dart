@@ -353,4 +353,17 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get catalogStaleAction => 'حدّث الآن';
+
+  @override
+  String catalogStaleDays(int days) {
+    return 'آخر تحديث قبل $days يومًا — حدّث الآن';
+  }
+
+  @override
+  String volumesCount(int count) {
+    return '$count أجزاء';
+  }
+
+  @override
+  String get copyBibliography => 'نسخ التوثيق';
 }

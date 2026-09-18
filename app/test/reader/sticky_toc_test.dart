@@ -13,4 +13,12 @@ void main() {
     expect(stickyTocIndex(ids, 30), 2);
     expect(stickyTocIndex(ids, 99), 2);
   });
+
+  test('tocIndentDepths follows parent_id chain', () {
+    final depths = tocIndentDepths(
+      ids: [1, 2, 3, 4],
+      parentIds: [null, 1, 1, 2],
+    );
+    expect(depths, [0, 1, 1, 2]);
+  });
 }

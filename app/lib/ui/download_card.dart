@@ -103,13 +103,19 @@ class DownloadCard extends StatelessWidget {
                     ),
                     if (barColor != null && progress != null) ...[
                       const SizedBox(height: 8),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(999),
-                        child: LinearProgressIndicator(
-                          value: progress!.clamp(0.0, 1.0),
-                          minHeight: 5,
-                          backgroundColor: t.segmentTrack,
-                          color: barColor,
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0, end: progress!.clamp(0.0, 1.0)),
+                        duration: MediaQuery.disableAnimationsOf(context)
+                            ? Duration.zero
+                            : const Duration(milliseconds: 200),
+                        builder: (context, value, _) => ClipRRect(
+                          borderRadius: BorderRadius.circular(999),
+                          child: LinearProgressIndicator(
+                            value: value,
+                            minHeight: 5,
+                            backgroundColor: t.segmentTrack,
+                            color: barColor,
+                          ),
                         ),
                       ),
                     ],

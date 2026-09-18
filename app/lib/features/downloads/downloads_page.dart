@@ -314,6 +314,7 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
     Widget cardFor(DownloadTask task) {
       final book = catalog?.bookById(task.bookId);
       final title = book?.title ?? 'book_${task.bookId}';
+      final tokens = IshamelaTokens.of(context);
       final showBar = showDownloadProgress(task.status) &&
           task.bytesTotal != null &&
           task.bytesTotal! > 0;
@@ -370,24 +371,25 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
           onPressed: () => svc.cancel(task.bookId),
         );
       } else if (task.status == DownloadStatus.done) {
-        primary = TonalIconButton(
-          tooltip: l10n.openBook,
-          icon: Icons.menu_book,
-          onPressed: () => ReaderPage.open(
-            context,
-            bookId: task.bookId,
-            title: book?.title,
-            authorName: book?.authorName,
+        primary = Padding(
+          padding: const EdgeInsetsDirectional.only(start: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.check_circle, color: tokens.green700, size: 22),
+              TextButton(
+                onPressed: () => ReaderPage.open(
+                  context,
+                  bookId: task.bookId,
+                  title: book?.title,
+                  authorName: book?.authorName,
+                ),
+                child: Text(l10n.openBook),
+              ),
+            ],
           ),
         );
-        secondary = TonalIconButton(
-          tooltip: l10n.delete,
-          icon: Icons.delete_outline,
-          onPressed: () async {
-            final ok = await _confirmDelete(l10n);
-            if (ok == true) await svc.deleteInstalled(task.bookId);
-          },
-        );
+        secondary = null;
       }
 
       return Padding(

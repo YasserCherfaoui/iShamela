@@ -77,13 +77,23 @@ class _NavIcon extends StatelessWidget {
     final t = IshamelaTokens.of(context);
     Widget child = Icon(icon);
     if (selected) {
-      child = Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: t.green100,
-          borderRadius: BorderRadius.circular(999),
+      final reduce = MediaQuery.disableAnimationsOf(context);
+      child = TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.85, end: 1),
+        duration: reduce ? Duration.zero : const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        builder: (context, scale, c) => Transform.scale(
+          scale: scale,
+          child: c,
         ),
-        child: Icon(icon, color: t.green900),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: t.green100,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Icon(icon, color: t.green900),
+        ),
       );
     }
     final count = badgeCount ?? 0;

@@ -187,17 +187,24 @@ class CatalogRepository {
     }
   }
 
+  /// Age of catalog `generated_at` (or file mtime) in whole days; null if unknown.
+  int? catalogAgeDays() {
+    final raw = generatedAt;
+    DateTime? when;
+    if (raw != null) {
+      when = DateTime.tryParse(raw);
+    } else if (hasCatalog) {
+      when = paths.catalogSqlite.statSync().modified;
+    }
+    if (when == null) return null;
+    return DateTime.now().toUtc().difference(when.toUtc()).inDays;
+  }
+
   /// True when catalog `generated_at` is older than [maxAge] (SPEC-007 stale hint).
   bool isCatalogStale({Duration maxAge = const Duration(days: 30)}) {
-    final raw = generatedAt;
-    if (raw == null) {
-      if (!hasCatalog) return false;
-      final mtime = paths.catalogSqlite.statSync().modified;
-      return DateTime.now().toUtc().difference(mtime.toUtc()) > maxAge;
-    }
-    final parsed = DateTime.tryParse(raw);
-    if (parsed == null) return false;
-    return DateTime.now().toUtc().difference(parsed.toUtc()) > maxAge;
+    final days = catalogAgeDays();
+    if (days == null) return false;
+    return days > maxAge.inDays;
   }
 
   List<Category> categories() {
@@ -246,7 +253,7 @@ class CatalogRepository {
       return db
           .select(
             '''
-            SELECT b.*, a.name AS author_name, c.name AS category_name
+            SELECT b.*, a.name AS author_name, a.death_year_hijri AS author_death_year, c.name AS category_name
             FROM books b
             LEFT JOIN authors a ON a.id = b.author_id
             JOIN categories c ON c.id = b.category_id
@@ -268,7 +275,7 @@ class CatalogRepository {
       return db
           .select(
             '''
-            SELECT b.*, a.name AS author_name, c.name AS category_name
+            SELECT b.*, a.name AS author_name, a.death_year_hijri AS author_death_year, c.name AS category_name
             FROM books b
             LEFT JOIN authors a ON a.id = b.author_id
             JOIN categories c ON c.id = b.category_id
@@ -289,7 +296,7 @@ class CatalogRepository {
     try {
       final rows = db.select(
         '''
-        SELECT b.*, a.name AS author_name, c.name AS category_name
+        SELECT b.*, a.name AS author_name, a.death_year_hijri AS author_death_year, c.name AS category_name
         FROM books b
         LEFT JOIN authors a ON a.id = b.author_id
         JOIN categories c ON c.id = b.category_id
@@ -315,7 +322,7 @@ class CatalogRepository {
         final placeholders = List.filled(chunk.length, '?').join(',');
         final rows = db.select(
           '''
-          SELECT b.*, a.name AS author_name, c.name AS category_name
+          SELECT b.*, a.name AS author_name, a.death_year_hijri AS author_death_year, c.name AS category_name
           FROM books b
           LEFT JOIN authors a ON a.id = b.author_id
           JOIN categories c ON c.id = b.category_id
@@ -453,7 +460,7 @@ class CatalogRepository {
         final placeholders = List.filled(chunk.length, '?').join(',');
         final rows = db.select(
           '''
-          SELECT b.*, a.name AS author_name, c.name AS category_name
+          SELECT b.*, a.name AS author_name, a.death_year_hijri AS author_death_year, c.name AS category_name
           FROM books b
           LEFT JOIN authors a ON a.id = b.author_id
           JOIN categories c ON c.id = b.category_id
@@ -480,7 +487,7 @@ class CatalogRepository {
         final placeholders = List.filled(chunk.length, '?').join(',');
         final rows = db.select(
           '''
-          SELECT b.*, a.name AS author_name, c.name AS category_name
+          SELECT b.*, a.name AS author_name, a.death_year_hijri AS author_death_year, c.name AS category_name
           FROM books b
           LEFT JOIN authors a ON a.id = b.author_id
           JOIN categories c ON c.id = b.category_id
@@ -531,7 +538,7 @@ class CatalogRepository {
           books = db
               .select(
                 '''
-                SELECT b.*, a.name AS author_name, c.name AS category_name
+                SELECT b.*, a.name AS author_name, a.death_year_hijri AS author_death_year, c.name AS category_name
                 FROM books_fts
                 JOIN books b ON b.book_id = books_fts.rowid
                 LEFT JOIN authors a ON a.id = b.author_id
@@ -618,6 +625,7 @@ class CatalogRepository {
       title: r['title'] as String,
       authorId: r['author_id'] as int?,
       authorName: r['author_name'] as String?,
+      authorDeathYearHijri: r['author_death_year'] as int?,
       categoryId: r['category_id'] as int,
       categoryName: r['category_name'] as String?,
       pageCount: r['page_count'] as int,

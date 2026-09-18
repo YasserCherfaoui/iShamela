@@ -22,9 +22,18 @@ String formatCitation({
 }
 
 const highlightColors = <String, int>{
-  'yellow': 0xFFFFE082, // amber.200-ish
+  'yellow': 0xFFFFE082,
   'green': 0xFFA5D6A7,
   'blue': 0xFF81D4FA,
   'pink': 0xFFF48FB1,
   'orange': 0xFFFFCC80,
+};
+
+/// Desaturated night variants (DESIGN-001 §2.2).
+const highlightColorsNight = <String, int>{
+  'yellow': 0xFF6B5A2E,
+  'green': 0xFF3D5A40,
+  'blue': 0xFF2E4A5A,
+  'pink': 0xFF5A3A48,
+  'orange': 0xFF5A4528,
 };

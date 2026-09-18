@@ -154,5 +154,18 @@
       "count": {"type": "int"}
     }
   },
-  "catalogStaleAction": "Mettre à jour"
+  "catalogStaleAction": "Mettre à jour",
+  "catalogStaleDays": "Dernière mise à jour il y a {days} jours — actualiser",
+  "@catalogStaleDays": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+  "volumesCount": "{count} vol.",
+  "@volumesCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "copyBibliography": "Copier la référence"
 }
