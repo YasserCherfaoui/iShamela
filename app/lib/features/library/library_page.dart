@@ -6,10 +6,18 @@ import 'package:ishamela/l10n/app_localizations.dart';
 
 import 'package:ishamela/core/models/models.dart';
 import 'package:ishamela/core/providers.dart';
+import 'package:ishamela/core/db/state_database.dart';
 import 'package:ishamela/core/search/normalizer.dart';
 import 'package:ishamela/features/catalog/catalog_service.dart';
 import 'package:ishamela/features/downloads/download_service.dart';
 import 'package:ishamela/features/reader/reader_page.dart';
+import 'package:ishamela/ui/app_search_field.dart';
+import 'package:ishamela/ui/book_card.dart';
+import 'package:ishamela/ui/book_spine.dart';
+import 'package:ishamela/ui/empty_state.dart';
+import 'package:ishamela/ui/segmented_pills.dart';
+import 'package:ishamela/ui/theme/ishamela_theme.dart';
+import 'package:ishamela/ui/theme/ishamela_tokens.dart';
 
 /// Library browse (SPEC-013) — lazy: only the active tab is built and loaded;
 /// catalog queries are batched (no per-row SQLite opens).
@@ -218,72 +226,24 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(l10n.tabLibrary),
-          bottom: TabBar(
-            controller: _tabs,
-            tabs: [
-              Tab(text: l10n.categories),
-              Tab(text: l10n.authors),
-              Tab(text: l10n.libraryAllBooks),
-            ],
-          ),
-          actions: [
-            if (_selecting) ...[
-              IconButton(
-                tooltip: l10n.selectAll,
-                icon: const Icon(Icons.select_all),
-                onPressed: () {
-                  final books = _currentBooks();
-                  setState(() {
-                    _selected
-                      ..clear()
-                      ..addAll(books.map((b) => b.bookId));
-                  });
-                },
-              ),
-              IconButton(
-                tooltip: l10n.deselectAll,
-                icon: const Icon(Icons.deselect),
-                onPressed: () => setState(() => _selected.clear()),
-              ),
-              IconButton(
-                tooltip: l10n.delete,
-                icon: const Icon(Icons.delete_outline),
-                onPressed: _selected.isEmpty
-                    ? null
-                    : () => _bulkDelete(l10n, downloadsAsync),
-              ),
-              IconButton(
-                tooltip: l10n.cancel,
-                icon: const Icon(Icons.close),
-                onPressed: () => setState(() {
-                  _selecting = false;
-                  _selected.clear();
-                }),
-              ),
-            ] else if (_showingBooksList)
-              IconButton(
-                tooltip: l10n.select,
-                icon: const Icon(Icons.checklist),
-                onPressed: () => setState(() => _selecting = true),
-              ),
-          ],
-        ),
         body: stateAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Center(child: Text('$e')),
           data: (state) {
             final ids = state.installedBookIds().toSet();
             if (ids.isEmpty) {
-              return Center(child: Text(l10n.noBooks));
+              return EmptyState(
+                message: l10n.libraryEmptyHint,
+                actionLabel: l10n.browseCatalog,
+                onAction: () =>
+                    ref.read(homeTabIndexProvider.notifier).go(0),
+              );
             }
             return catalogAsync.when(
               loading: () =>
                   const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('$e')),
               data: (catalog) {
-                // Kick off first load once providers are ready.
                 if (_categories == null &&
                     _authors == null &&
                     _allBooks == null &&
@@ -292,24 +252,92 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
                     if (mounted) unawaited(_loadActive(catalog, ids));
                   });
                 }
+                final t = IshamelaTokens.of(context);
                 return Column(
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                      child: TextField(
-                        controller: _searchCtrl,
-                        decoration: InputDecoration(
-                          hintText: l10n.searchHint,
-                          prefixIcon: const Icon(Icons.search),
-                          border: const OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                        onChanged: _onSearchChanged,
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  l10n.tabLibrary,
+                                  style: TextStyle(
+                                    fontFamily: kFontAmiri,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 26,
+                                    color: t.ink,
+                                  ),
+                                ),
+                              ),
+                              if (_selecting) ...[
+                                IconButton(
+                                  tooltip: l10n.selectAll,
+                                  icon: const Icon(Icons.select_all),
+                                  onPressed: () {
+                                    final books = _currentBooks();
+                                    setState(() {
+                                      _selected
+                                        ..clear()
+                                        ..addAll(books.map((b) => b.bookId));
+                                    });
+                                  },
+                                ),
+                                IconButton(
+                                  tooltip: l10n.delete,
+                                  icon: const Icon(Icons.delete_outline),
+                                  onPressed: _selected.isEmpty
+                                      ? null
+                                      : () =>
+                                          _bulkDelete(l10n, downloadsAsync),
+                                ),
+                                IconButton(
+                                  tooltip: l10n.cancel,
+                                  icon: const Icon(Icons.close),
+                                  onPressed: () => setState(() {
+                                    _selecting = false;
+                                    _selected.clear();
+                                  }),
+                                ),
+                              ] else if (_showingBooksList)
+                                IconButton(
+                                  tooltip: l10n.select,
+                                  icon: const Icon(Icons.checklist),
+                                  onPressed: () =>
+                                      setState(() => _selecting = true),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          _ContinueReadingHero(state: state, catalog: catalog),
+                          const SizedBox(height: 12),
+                          AppSearchField(
+                            key: ValueKey('lib-search-${_tabs.index}'),
+                            hintText: l10n.searchHint,
+                            initialQuery: _query,
+                            onChanged: _onSearchChanged,
+                          ),
+                          const SizedBox(height: 12),
+                          SegmentedPills(
+                            labels: [
+                              l10n.categories,
+                              l10n.authors,
+                              l10n.libraryAllBooks,
+                            ],
+                            selectedIndex: _tabs.index,
+                            onChanged: (i) {
+                              if (_tabs.index != i) _tabs.animateTo(i);
+                            },
+                          ),
+                        ],
                       ),
                     ),
                     if (_needsBack)
                       ListTile(
-                        leading: const Icon(Icons.arrow_back),
+                        leading: const Icon(Icons.arrow_forward),
                         title: Text(l10n.back),
                         onTap: () {
                           setState(() {
@@ -426,24 +454,46 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
             .where((e) => normalize(e.category.name).contains(q))
             .toList();
     if (filtered.isEmpty) {
-      return Center(child: Text(l10n.noBooks));
+      return EmptyState(message: l10n.noBooks);
     }
+    final t = IshamelaTokens.of(context);
     return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       itemCount: filtered.length,
       itemBuilder: (context, i) {
         final e = filtered[i];
-        return ListTile(
-          title: Text(e.category.name),
-          trailing: Text('${e.count}'),
-          onTap: () {
-            setState(() {
-              _categoryFilter = e.category;
-              _drillBooks = null;
-              _selecting = false;
-              _selected.clear();
-            });
-            _scheduleLoad();
-          },
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Material(
+            color: t.card,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: BorderSide(color: t.hairline),
+            ),
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: t.green100,
+                child: Icon(Icons.folder_outlined, color: t.green900),
+              ),
+              title: Text(
+                e.category.name,
+                style: const TextStyle(
+                  fontFamily: kFontAmiri,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              trailing: Text('${e.count}', style: TextStyle(color: t.muted)),
+              onTap: () {
+                setState(() {
+                  _categoryFilter = e.category;
+                  _drillBooks = null;
+                  _selecting = false;
+                  _selected.clear();
+                });
+                _scheduleLoad();
+              },
+            ),
+          ),
         );
       },
     );
@@ -468,24 +518,46 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
             .where((e) => normalize(e.author.name).contains(q))
             .toList();
     if (filtered.isEmpty) {
-      return Center(child: Text(l10n.noBooks));
+      return EmptyState(message: l10n.noBooks);
     }
+    final t = IshamelaTokens.of(context);
     return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       itemCount: filtered.length,
       itemBuilder: (context, i) {
         final e = filtered[i];
-        return ListTile(
-          title: Text(e.author.name),
-          trailing: Text('${e.count}'),
-          onTap: () {
-            setState(() {
-              _authorFilter = e.author;
-              _drillBooks = null;
-              _selecting = false;
-              _selected.clear();
-            });
-            _scheduleLoad();
-          },
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Material(
+            color: t.card,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: BorderSide(color: t.hairline),
+            ),
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: t.green100,
+                child: Icon(Icons.person_outline, color: t.green900),
+              ),
+              title: Text(
+                e.author.name,
+                style: const TextStyle(
+                  fontFamily: kFontAmiri,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              trailing: Text('${e.count}', style: TextStyle(color: t.muted)),
+              onTap: () {
+                setState(() {
+                  _authorFilter = e.author;
+                  _drillBooks = null;
+                  _selecting = false;
+                  _selected.clear();
+                });
+                _scheduleLoad();
+              },
+            ),
+          ),
         );
       },
     );
@@ -497,73 +569,109 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
     AsyncValue<DownloadService> downloadsAsync,
   ) {
     if (books.isEmpty) {
-      return Center(child: Text(l10n.noBooks));
+      return EmptyState(message: l10n.noBooks);
     }
+    final state = ref.read(stateDatabaseProvider).maybeWhen(
+          data: (s) => s,
+          orElse: () => null,
+        );
     return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       itemCount: books.length,
       itemBuilder: (context, i) {
         final book = books[i];
-        if (_selecting) {
-          return CheckboxListTile(
-            value: _selected.contains(book.bookId),
-            onChanged: (_) => setState(() {
-              if (_selected.contains(book.bookId)) {
-                _selected.remove(book.bookId);
-              } else {
-                _selected.add(book.bookId);
-              }
-            }),
-            title: Text(book.title),
-            subtitle: Text(book.authorName ?? ''),
-          );
+        final pageId = state?.readingPageId(book.bookId);
+        final total = book.pageCount > 0
+            ? book.pageCount
+            : (state?.installedPageCount(book.bookId) ?? 0);
+        double? progress;
+        if (pageId != null && total > 0) {
+          // page_id is internal; approximate progress by order index if possible
+          progress = null;
+          final allIds = _cachedPageProgress(book.bookId, pageId, total);
+          progress = allIds;
         }
-        return MouseRegion(
-          onEnter: (e) => _showHoverCard(context, book, e.position),
-          onExit: (_) => _removeHover(),
-          child: ListTile(
-            title: Text(book.title),
-            subtitle: Text(
-              [
-                if (book.authorName != null && book.authorName!.isNotEmpty)
-                  book.authorName!,
-                if (book.categoryName != null &&
-                    book.categoryName!.isNotEmpty)
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: MouseRegion(
+            onEnter: (e) => _showHoverCard(context, book, e.position),
+            onExit: (_) => _removeHover(),
+            child: BookCard(
+              title: book.title,
+              categoryId: book.categoryId,
+              author: book.authorName,
+              meta: [
+                if (book.categoryName != null && book.categoryName!.isNotEmpty)
                   book.categoryName!,
-              ].join(' · '),
-            ),
-            onTap: () {
-              _removeHover();
-              ReaderPage.open(
-                context,
-                bookId: book.bookId,
-                title: book.title,
-                authorName: book.authorName,
-              );
-            },
-            onLongPress: () => _showCardDialog(context, l10n, book),
-            trailing: IconButton(
-              tooltip: l10n.delete,
-              icon: const Icon(Icons.delete_outline),
-              onPressed: () async {
-                final svc = downloadsAsync.maybeWhen(
-                  data: (s) => s,
-                  orElse: () => null,
+                if (total > 0) l10n.pagesCount(total),
+              ],
+              progress: progress,
+              selected: _selecting ? _selected.contains(book.bookId) : null,
+              onSelectedChanged: _selecting
+                  ? (_) => setState(() {
+                        if (_selected.contains(book.bookId)) {
+                          _selected.remove(book.bookId);
+                        } else {
+                          _selected.add(book.bookId);
+                        }
+                      })
+                  : null,
+              onTap: () {
+                _removeHover();
+                ReaderPage.open(
+                  context,
+                  bookId: book.bookId,
+                  title: book.title,
+                  authorName: book.authorName,
                 );
-                await svc?.deleteInstalled(book.bookId);
-                _categories = null;
-                _authors = null;
-                _allBooks = null;
-                _drillBooks = null;
-                if (mounted) {
-                  setState(() {});
-                  _scheduleLoad();
-                }
               },
+              onLongPress: () => setState(() {
+                _selecting = true;
+                _selected.add(book.bookId);
+              }),
+              trailing: PopupMenuButton<String>(
+                tooltip: l10n.bookCard,
+                onSelected: (v) async {
+                  if (v == 'card') {
+                    await _showCardSheet(context, l10n, book);
+                  } else if (v == 'delete') {
+                    final svc = downloadsAsync.maybeWhen(
+                      data: (s) => s,
+                      orElse: () => null,
+                    );
+                    await svc?.deleteInstalled(book.bookId);
+                    _categories = null;
+                    _authors = null;
+                    _allBooks = null;
+                    _drillBooks = null;
+                    if (mounted) {
+                      setState(() {});
+                      _scheduleLoad();
+                    }
+                  }
+                },
+                itemBuilder: (_) => [
+                  PopupMenuItem(value: 'card', child: Text(l10n.bookCard)),
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: Text(
+                      l10n.delete,
+                      style: const TextStyle(color: Color(0xFFA6402E)),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
       },
     );
+  }
+
+  /// Rough progress: page_id / page_count when ids align; else null.
+  double? _cachedPageProgress(int bookId, int pageId, int total) {
+    if (total <= 0) return null;
+    return (pageId / total).clamp(0.0, 1.0);
   }
 
   Future<void> _bulkDelete(
@@ -628,34 +736,61 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
     overlay.insert(_hoverOverlay!);
   }
 
-  Future<void> _showCardDialog(
+  Future<void> _showCardSheet(
     BuildContext context,
     AppLocalizations l10n,
     Book book,
   ) {
-    return showDialog<void>(
+    final t = IshamelaTokens.of(context);
+    return showModalBottomSheet<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.bookCard),
-        content: SingleChildScrollView(child: _cardContent(l10n, book)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.cancel),
+      backgroundColor: t.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  BookSpine(title: book.title, categoryId: book.categoryId),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      l10n.bookCard,
+                      style: TextStyle(
+                        fontFamily: kFontAmiri,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 20,
+                        color: t.ink,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _cardContent(l10n, book),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  ReaderPage.open(
+                    context,
+                    bookId: book.bookId,
+                    title: book.title,
+                    authorName: book.authorName,
+                  );
+                },
+                child: Text(l10n.openBook),
+              ),
+            ],
           ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              ReaderPage.open(
-                context,
-                bookId: book.bookId,
-                title: book.title,
-                authorName: book.authorName,
-              );
-            },
-            child: Text(l10n.openBook),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -681,6 +816,101 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
           Text(betaka, style: const TextStyle(height: 1.5)),
         ],
       ],
+    );
+  }
+}
+
+class _ContinueReadingHero extends StatelessWidget {
+  const _ContinueReadingHero({required this.state, required this.catalog});
+
+  final StateDatabase state;
+  final CatalogRepository catalog;
+
+  @override
+  Widget build(BuildContext context) {
+    final latest = state.latestReadingState();
+    if (latest == null || !state.isInstalled(latest.bookId)) {
+      return const SizedBox.shrink();
+    }
+    final book = catalog.bookById(latest.bookId);
+    if (book == null) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context);
+    final t = IshamelaTokens.of(context);
+    final total = book.pageCount > 0
+        ? book.pageCount
+        : (state.installedPageCount(book.bookId) ?? 0);
+    final progress =
+        total > 0 ? (latest.pageId / total).clamp(0.0, 1.0) : 0.0;
+
+    return Material(
+      color: t.green900,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => ReaderPage.open(
+          context,
+          bookId: book.bookId,
+          title: book.title,
+          authorName: book.authorName,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      l10n.continueReading,
+                      style: TextStyle(
+                        fontFamily: kFontUi,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                        color: t.goldSoft,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      book.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontFamily: kFontAmiri,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 18,
+                        color: Colors.white,
+                      ),
+                    ),
+                    if (total > 0) ...[
+                      const SizedBox(height: 10),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0, end: progress),
+                          duration: const Duration(milliseconds: 400),
+                          curve: Curves.easeOutCubic,
+                          builder: (context, v, _) => LinearProgressIndicator(
+                            value: v,
+                            minHeight: 4,
+                            backgroundColor: Colors.white24,
+                            color: t.goldSoft,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              CircleAvatar(
+                backgroundColor: t.gold,
+                child: const Icon(Icons.play_arrow, color: Colors.white),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

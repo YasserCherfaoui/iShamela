@@ -661,6 +661,96 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'رجوع'**
   String get back;
+
+  /// No description provided for @brandName.
+  ///
+  /// In ar, this message translates to:
+  /// **'iSHAMELA'**
+  String get brandName;
+
+  /// No description provided for @unavailableForDownload.
+  ///
+  /// In ar, this message translates to:
+  /// **'غير متاح للتنزيل'**
+  String get unavailableForDownload;
+
+  /// No description provided for @sectionWithCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'{label} · {count}'**
+  String sectionWithCount(String label, int count);
+
+  /// No description provided for @downloadSelectedCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'نزّل المحدد ({count})'**
+  String downloadSelectedCount(int count);
+
+  /// No description provided for @continueReading.
+  ///
+  /// In ar, this message translates to:
+  /// **'متابعة القراءة'**
+  String get continueReading;
+
+  /// No description provided for @libraryEmptyHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'مكتبتك فارغة بعد — تصفح الفهرس ونزّل أول كتاب'**
+  String get libraryEmptyHint;
+
+  /// No description provided for @browseCatalog.
+  ///
+  /// In ar, this message translates to:
+  /// **'تصفح الفهرس'**
+  String get browseCatalog;
+
+  /// No description provided for @readingTheme.
+  ///
+  /// In ar, this message translates to:
+  /// **'سمة القراءة'**
+  String get readingTheme;
+
+  /// No description provided for @atmospherePaper.
+  ///
+  /// In ar, this message translates to:
+  /// **'ورق'**
+  String get atmospherePaper;
+
+  /// No description provided for @atmosphereSepia.
+  ///
+  /// In ar, this message translates to:
+  /// **'سيبيا'**
+  String get atmosphereSepia;
+
+  /// No description provided for @atmosphereNight.
+  ///
+  /// In ar, this message translates to:
+  /// **'ليلي'**
+  String get atmosphereNight;
+
+  /// No description provided for @jumpToPageTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'الانتقال إلى صفحة'**
+  String get jumpToPageTitle;
+
+  /// No description provided for @completedToday.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتمل اليوم'**
+  String get completedToday;
+
+  /// No description provided for @activeDownloadsCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count} جارية'**
+  String activeDownloadsCount(int count);
+
+  /// No description provided for @catalogStaleAction.
+  ///
+  /// In ar, this message translates to:
+  /// **'حدّث الآن'**
+  String get catalogStaleAction;
 }
 
 class _AppLocalizationsDelegate

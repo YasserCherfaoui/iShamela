@@ -2,11 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ishamela/l10n/app_localizations.dart';
 
+import 'package:ishamela/core/format_bytes.dart';
 import 'package:ishamela/core/models/models.dart';
 import 'package:ishamela/core/providers.dart';
 import 'package:ishamela/features/downloads/download_service.dart';
 import 'package:ishamela/features/downloads/download_tabs.dart';
 import 'package:ishamela/features/reader/reader_page.dart';
+import 'package:ishamela/ui/download_card.dart';
+import 'package:ishamela/ui/empty_state.dart';
+import 'package:ishamela/ui/section_label.dart';
+import 'package:ishamela/ui/segmented_pills.dart';
+import 'package:ishamela/ui/theme/ishamela_theme.dart';
+import 'package:ishamela/ui/theme/ishamela_tokens.dart';
+import 'package:ishamela/ui/tonal_icon_button.dart';
 
 class DownloadsPage extends ConsumerStatefulWidget {
   const DownloadsPage({super.key});
@@ -15,30 +23,15 @@ class DownloadsPage extends ConsumerStatefulWidget {
   ConsumerState<DownloadsPage> createState() => _DownloadsPageState();
 }
 
-class _DownloadsPageState extends ConsumerState<DownloadsPage>
-    with SingleTickerProviderStateMixin {
+class _DownloadsPageState extends ConsumerState<DownloadsPage> {
   DownloadService? _svc;
-  late final TabController _tabs;
+  int _tabIndex = 0;
   bool _selecting = false;
   final Set<int> _selected = {};
 
   @override
-  void initState() {
-    super.initState();
-    _tabs = TabController(length: 3, vsync: this);
-    _tabs.addListener(() {
-      if (_tabs.indexIsChanging) return;
-      setState(() {
-        _selected.clear();
-        _selecting = false;
-      });
-    });
-  }
-
-  @override
   void dispose() {
     _svc?.removeListener(_onChange);
-    _tabs.dispose();
     super.dispose();
   }
 
@@ -47,7 +40,7 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage>
   }
 
   DownloadsTab get _currentTab {
-    switch (_tabs.index) {
+    switch (_tabIndex) {
       case 1:
         return DownloadsTab.failed;
       case 2:
@@ -60,57 +53,12 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = IshamelaTokens.of(context);
     final svcAsync = ref.watch(downloadServiceProvider);
 
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(l10n.tabDownloads),
-          bottom: TabBar(
-            controller: _tabs,
-            tabs: [
-              Tab(text: l10n.downloadsActive),
-              Tab(text: l10n.downloadsFailed),
-              Tab(text: l10n.downloadsCompleted),
-            ],
-          ),
-          actions: [
-            if (_selecting) ...[
-              IconButton(
-                tooltip: l10n.selectAll,
-                icon: const Icon(Icons.select_all),
-                onPressed: () {
-                  final tasks = _visibleTasks(svcAsync);
-                  setState(() {
-                    _selected
-                      ..clear()
-                      ..addAll(tasks.map((t) => t.bookId));
-                  });
-                },
-              ),
-              IconButton(
-                tooltip: l10n.deselectAll,
-                icon: const Icon(Icons.deselect),
-                onPressed: () => setState(() => _selected.clear()),
-              ),
-              ..._bulkActions(l10n, svcAsync),
-              IconButton(
-                tooltip: l10n.cancel,
-                icon: const Icon(Icons.close),
-                onPressed: () => setState(() {
-                  _selecting = false;
-                  _selected.clear();
-                }),
-              ),
-            ] else
-              IconButton(
-                tooltip: l10n.select,
-                icon: const Icon(Icons.checklist),
-                onPressed: () => setState(() => _selecting = true),
-              ),
-          ],
-        ),
         body: svcAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Center(child: Text('$e')),
@@ -120,12 +68,90 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage>
               _svc = svc;
               _svc!.addListener(_onChange);
             }
-            return TabBarView(
-              controller: _tabs,
+            final all = svc.listTasks();
+            final active =
+                filterDownloadTasks(all, DownloadsTab.active).length;
+            return Column(
               children: [
-                _taskList(l10n, svc, DownloadsTab.active),
-                _taskList(l10n, svc, DownloadsTab.failed),
-                _taskList(l10n, svc, DownloadsTab.completed),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              l10n.tabDownloads,
+                              style: TextStyle(
+                                fontFamily: kFontAmiri,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 26,
+                                color: t.ink,
+                              ),
+                            ),
+                          ),
+                          if (_selecting) ...[
+                            IconButton(
+                              tooltip: l10n.selectAll,
+                              icon: const Icon(Icons.select_all),
+                              onPressed: () {
+                                final tasks = filterDownloadTasks(
+                                  svc.listTasks(),
+                                  _currentTab,
+                                );
+                                setState(() {
+                                  _selected
+                                    ..clear()
+                                    ..addAll(tasks.map((x) => x.bookId));
+                                });
+                              },
+                            ),
+                            ..._bulkActions(l10n, svc),
+                            IconButton(
+                              tooltip: l10n.cancel,
+                              icon: const Icon(Icons.close),
+                              onPressed: () => setState(() {
+                                _selecting = false;
+                                _selected.clear();
+                              }),
+                            ),
+                          ] else
+                            IconButton(
+                              tooltip: l10n.select,
+                              icon: const Icon(Icons.checklist),
+                              onPressed: () =>
+                                  setState(() => _selecting = true),
+                            ),
+                        ],
+                      ),
+                      if (active > 0)
+                        Text(
+                          l10n.activeDownloadsCount(active),
+                          style: TextStyle(
+                            fontFamily: kFontUi,
+                            color: t.muted,
+                            fontSize: 12,
+                          ),
+                        ),
+                      const SizedBox(height: 12),
+                      SegmentedPills(
+                        labels: [
+                          l10n.downloadsActive,
+                          l10n.downloadsFailed,
+                          l10n.downloadsCompleted,
+                        ],
+                        selectedIndex: _tabIndex,
+                        onChanged: (i) => setState(() {
+                          _tabIndex = i;
+                          _selected.clear();
+                          _selecting = false;
+                        }),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(child: _taskList(l10n, svc, _currentTab)),
               ],
             );
           },
@@ -134,21 +160,10 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage>
     );
   }
 
-  List<DownloadTask> _visibleTasks(AsyncValue<DownloadService> svcAsync) {
-    final svc = svcAsync.maybeWhen(data: (s) => s, orElse: () => null);
-    if (svc == null) return const [];
-    return filterDownloadTasks(svc.listTasks(), _currentTab);
-  }
-
-  List<Widget> _bulkActions(
-    AppLocalizations l10n,
-    AsyncValue<DownloadService> svcAsync,
-  ) {
-    final svc = svcAsync.maybeWhen(data: (s) => s, orElse: () => null);
-    if (svc == null || _selected.isEmpty) return const [];
-    final tab = _currentTab;
+  List<Widget> _bulkActions(AppLocalizations l10n, DownloadService svc) {
+    if (_selected.isEmpty) return const [];
     final ids = _selected.toList();
-    switch (tab) {
+    switch (_currentTab) {
       case DownloadsTab.active:
         return [
           IconButton(
@@ -241,19 +256,31 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage>
   }
 
   Future<bool?> _confirmDelete(AppLocalizations l10n) {
+    final t = IshamelaTokens.of(context);
     return showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(l10n.delete),
+        backgroundColor: t.card,
+        title: Text(
+          l10n.delete,
+          style: TextStyle(
+            fontFamily: kFontAmiri,
+            fontWeight: FontWeight.w700,
+            color: t.ink,
+          ),
+        ),
         content: Text(l10n.confirmBulkDelete),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(l10n.cancel),
           ),
-          FilledButton(
+          TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.confirm),
+            child: Text(
+              l10n.confirm,
+              style: const TextStyle(color: Color(0xFFA6402E)),
+            ),
           ),
         ],
       ),
@@ -267,133 +294,149 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage>
   ) {
     final tasks = filterDownloadTasks(svc.listTasks(), tab);
     if (tasks.isEmpty) {
-      return Center(child: Text(l10n.downloadsEmpty));
+      return EmptyState(message: l10n.downloadsEmpty);
     }
     final catalog = ref.watch(catalogRepositoryProvider).maybeWhen(
           data: (c) => c,
           orElse: () => null,
         );
 
-    return ListView.builder(
-      itemCount: tasks.length,
-      itemBuilder: (context, i) {
-        final t = tasks[i];
-        final book = catalog?.bookById(t.bookId);
-        final title = book?.title ?? 'book_${t.bookId}';
-        final showBar = showDownloadProgress(t.status) &&
-            t.bytesTotal != null &&
-            t.bytesTotal! > 0;
-        final progress =
-            showBar ? (t.bytesDone / t.bytesTotal!).clamp(0.0, 1.0) : null;
+    final todayStart = DateTime.now();
+    final startMs = DateTime(todayStart.year, todayStart.month, todayStart.day)
+        .millisecondsSinceEpoch;
+    final todayDone = tab == DownloadsTab.completed
+        ? tasks.where((t) => t.updatedAt >= startMs).toList()
+        : const <DownloadTask>[];
+    final rest = tab == DownloadsTab.completed
+        ? tasks.where((t) => t.updatedAt < startMs).toList()
+        : tasks;
 
-        if (_selecting) {
-          return CheckboxListTile(
-            value: _selected.contains(t.bookId),
-            onChanged: (_) => setState(() {
-              if (_selected.contains(t.bookId)) {
-                _selected.remove(t.bookId);
-              } else {
-                _selected.add(t.bookId);
-              }
-            }),
-            title: Text(title),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(_statusLabel(l10n, t.status)),
-                if (progress != null) LinearProgressIndicator(value: progress),
-                if (t.error != null && tab == DownloadsTab.failed)
-                  Text(
-                    t.error!,
-                    style: TextStyle(color: Theme.of(context).colorScheme.error),
-                  ),
-              ],
-            ),
-            isThreeLine: progress != null || t.error != null,
-          );
-        }
+    Widget cardFor(DownloadTask task) {
+      final book = catalog?.bookById(task.bookId);
+      final title = book?.title ?? 'book_${task.bookId}';
+      final showBar = showDownloadProgress(task.status) &&
+          task.bytesTotal != null &&
+          task.bytesTotal! > 0;
+      final progress =
+          showBar ? (task.bytesDone / task.bytesTotal!).clamp(0.0, 1.0) : null;
+      final tone = switch (task.status) {
+        DownloadStatus.paused => DownloadCardTone.paused,
+        DownloadStatus.error => DownloadCardTone.failed,
+        DownloadStatus.done => DownloadCardTone.completed,
+        _ => DownloadCardTone.active,
+      };
+      String? caption;
+      if (showBar && task.bytesTotal != null) {
+        caption =
+            '${formatBytes(task.bytesDone)} / ${formatBytes(task.bytesTotal!)}';
+      }
 
-        return ListTile(
-          title: Text(title),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(_statusLabel(l10n, t.status)),
-              if (progress != null) LinearProgressIndicator(value: progress),
-              if (t.error != null && tab == DownloadsTab.failed)
-                Text(
-                  t.error!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-            ],
+      Widget? primary;
+      Widget? secondary;
+      if (task.status == DownloadStatus.downloading ||
+          task.status == DownloadStatus.queued ||
+          task.status == DownloadStatus.verifying ||
+          task.status == DownloadStatus.installing) {
+        primary = TonalIconButton(
+          tooltip: l10n.pause,
+          icon: Icons.pause,
+          onPressed: () => svc.pause(task.bookId),
+        );
+        secondary = TonalIconButton(
+          tooltip: l10n.cancel,
+          icon: Icons.close,
+          onPressed: () => svc.cancel(task.bookId),
+        );
+      } else if (task.status == DownloadStatus.paused) {
+        primary = TonalIconButton(
+          tooltip: l10n.resume,
+          icon: Icons.play_arrow,
+          onPressed: () => svc.resume(task.bookId),
+        );
+        secondary = TonalIconButton(
+          tooltip: l10n.cancel,
+          icon: Icons.close,
+          onPressed: () => svc.cancel(task.bookId),
+        );
+      } else if (task.status == DownloadStatus.error) {
+        primary = TonalIconButton(
+          tooltip: l10n.redownload,
+          icon: Icons.refresh,
+          onPressed: () => svc.redownload(task.bookId),
+        );
+        secondary = TonalIconButton(
+          tooltip: l10n.cancel,
+          icon: Icons.close,
+          onPressed: () => svc.cancel(task.bookId),
+        );
+      } else if (task.status == DownloadStatus.done) {
+        primary = TonalIconButton(
+          tooltip: l10n.openBook,
+          icon: Icons.menu_book,
+          onPressed: () => ReaderPage.open(
+            context,
+            bookId: task.bookId,
+            title: book?.title,
+            authorName: book?.authorName,
           ),
-          isThreeLine: progress != null || t.error != null,
-          onLongPress: () => setState(() {
-            _selecting = true;
-            _selected.add(t.bookId);
-          }),
-          onTap: t.status == DownloadStatus.done
+        );
+        secondary = TonalIconButton(
+          tooltip: l10n.delete,
+          icon: Icons.delete_outline,
+          onPressed: () async {
+            final ok = await _confirmDelete(l10n);
+            if (ok == true) await svc.deleteInstalled(task.bookId);
+          },
+        );
+      }
+
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: DownloadCard(
+          title: title,
+          statusLabel: _statusLabel(l10n, task.status),
+          tone: tone,
+          progress: progress,
+          caption: caption,
+          errorText: tab == DownloadsTab.failed ? task.error : null,
+          primaryAction: primary,
+          secondaryAction: secondary,
+          selected: _selecting ? _selected.contains(task.bookId) : null,
+          onSelectedChanged: _selecting
+              ? (_) => setState(() {
+                    if (_selected.contains(task.bookId)) {
+                      _selected.remove(task.bookId);
+                    } else {
+                      _selected.add(task.bookId);
+                    }
+                  })
+              : null,
+          onTap: task.status == DownloadStatus.done
               ? () => ReaderPage.open(
                     context,
-                    bookId: t.bookId,
+                    bookId: task.bookId,
                     title: book?.title,
                     authorName: book?.authorName,
                   )
               : null,
-          trailing: Wrap(
-            children: [
-              if (t.status == DownloadStatus.downloading ||
-                  t.status == DownloadStatus.queued ||
-                  t.status == DownloadStatus.verifying ||
-                  t.status == DownloadStatus.installing)
-                IconButton(
-                  tooltip: l10n.pause,
-                  icon: const Icon(Icons.pause),
-                  onPressed: () => svc.pause(t.bookId),
-                ),
-              if (t.status == DownloadStatus.paused)
-                IconButton(
-                  tooltip: l10n.resume,
-                  icon: const Icon(Icons.play_arrow),
-                  onPressed: () => svc.resume(t.bookId),
-                ),
-              if (t.status == DownloadStatus.error ||
-                  t.status == DownloadStatus.done)
-                IconButton(
-                  tooltip: l10n.redownload,
-                  icon: const Icon(Icons.refresh),
-                  onPressed: () => svc.redownload(t.bookId),
-                ),
-              if (t.status == DownloadStatus.done)
-                IconButton(
-                  tooltip: l10n.openBook,
-                  icon: const Icon(Icons.menu_book),
-                  onPressed: () => ReaderPage.open(
-                    context,
-                    bookId: t.bookId,
-                    title: book?.title,
-                    authorName: book?.authorName,
-                  ),
-                ),
-              if (t.status == DownloadStatus.done)
-                IconButton(
-                  tooltip: l10n.delete,
-                  icon: const Icon(Icons.delete_outline),
-                  onPressed: () async {
-                    final ok = await _confirmDelete(l10n);
-                    if (ok == true) await svc.deleteInstalled(t.bookId);
-                  },
-                )
-              else
-                IconButton(
-                  tooltip: l10n.cancel,
-                  icon: const Icon(Icons.close),
-                  onPressed: () => svc.cancel(t.bookId),
-                ),
-            ],
-          ),
-        );
-      },
+          onLongPress: () => setState(() {
+            _selecting = true;
+            _selected.add(task.bookId);
+          }),
+        ),
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      children: [
+        if (todayDone.isNotEmpty) ...[
+          SectionLabel(label: l10n.completedToday),
+          for (final t in todayDone) cardFor(t),
+          if (rest.isNotEmpty) const SizedBox(height: 8),
+        ],
+        for (final t in rest) cardFor(t),
+      ],
     );
   }
 

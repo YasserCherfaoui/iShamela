@@ -123,5 +123,36 @@
   "redownload": "إعادة التنزيل",
   "confirmBulkDelete": "حذف الكتب المحددة من الجهاز؟",
   "libraryAllBooks": "كل الكتب",
-  "back": "رجوع"
+  "back": "رجوع",
+  "brandName": "iSHAMELA",
+  "unavailableForDownload": "غير متاح للتنزيل",
+  "sectionWithCount": "{label} · {count}",
+  "@sectionWithCount": {
+    "placeholders": {
+      "label": {"type": "String"},
+      "count": {"type": "int"}
+    }
+  },
+  "downloadSelectedCount": "نزّل المحدد ({count})",
+  "@downloadSelectedCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "continueReading": "متابعة القراءة",
+  "libraryEmptyHint": "مكتبتك فارغة بعد — تصفح الفهرس ونزّل أول كتاب",
+  "browseCatalog": "تصفح الفهرس",
+  "readingTheme": "سمة القراءة",
+  "atmospherePaper": "ورق",
+  "atmosphereSepia": "سيبيا",
+  "atmosphereNight": "ليلي",
+  "jumpToPageTitle": "الانتقال إلى صفحة",
+  "completedToday": "اكتمل اليوم",
+  "activeDownloadsCount": "{count} جارية",
+  "@activeDownloadsCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "catalogStaleAction": "حدّث الآن"
 }

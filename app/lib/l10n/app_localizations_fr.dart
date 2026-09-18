@@ -303,4 +303,56 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get back => 'Retour';
+
+  @override
+  String get brandName => 'iSHAMELA';
+
+  @override
+  String get unavailableForDownload => 'Non disponible au téléchargement';
+
+  @override
+  String sectionWithCount(String label, int count) {
+    return '$label · $count';
+  }
+
+  @override
+  String downloadSelectedCount(int count) {
+    return 'Télécharger la sélection ($count)';
+  }
+
+  @override
+  String get continueReading => 'Continuer la lecture';
+
+  @override
+  String get libraryEmptyHint =>
+      'Votre bibliothèque est vide — parcourez le catalogue et téléchargez un livre';
+
+  @override
+  String get browseCatalog => 'Parcourir le catalogue';
+
+  @override
+  String get readingTheme => 'Thème de lecture';
+
+  @override
+  String get atmospherePaper => 'Papier';
+
+  @override
+  String get atmosphereSepia => 'Sépia';
+
+  @override
+  String get atmosphereNight => 'Nuit';
+
+  @override
+  String get jumpToPageTitle => 'Aller à la page';
+
+  @override
+  String get completedToday => 'Terminé aujourd\'hui';
+
+  @override
+  String activeDownloadsCount(int count) {
+    return '$count en cours';
+  }
+
+  @override
+  String get catalogStaleAction => 'Mettre à jour';
 }

@@ -47,7 +47,6 @@ class HomeShell extends ConsumerStatefulWidget {
 }
 
 class _HomeShellState extends ConsumerState<HomeShell> {
-  int _index = 0;
   DownloadService? _svc;
 
   void _onDownloadsChanged() {
@@ -77,6 +76,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final wide = MediaQuery.sizeOf(context).width >= 800;
+    final index = ref.watch(homeTabIndexProvider);
     final pages = const [
       CatalogPage(),
       LibraryPage(),
@@ -111,7 +111,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       ),
     ];
 
-    final body = pages[_index];
+    final body = pages[index];
+
+    void select(int i) => ref.read(homeTabIndexProvider.notifier).go(i);
 
     if (wide) {
       return Directionality(
@@ -120,8 +122,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           body: Row(
             children: [
               NavigationRail(
-                selectedIndex: _index,
-                onDestinationSelected: (i) => setState(() => _index = i),
+                selectedIndex: index,
+                onDestinationSelected: select,
                 labelType: NavigationRailLabelType.all,
                 destinations: [
                   for (final d in destinations)
@@ -153,13 +155,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         body: body,
         bottomNavigationBar: AppBottomNav(
           destinations: destinations,
-          selectedIndex: _index,
-          onDestinationSelected: (i) => setState(() => _index = i),
+          selectedIndex: index,
+          onDestinationSelected: select,
         ),
       ),
     );
   }
-
   Widget _railIcon(AppBottomNavDestination d, {bool selected = false}) {
     final count = d.badgeCount ?? 0;
     Widget icon = Icon(d.icon);

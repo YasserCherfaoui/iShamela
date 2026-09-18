@@ -302,4 +302,56 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get back => 'Back';
+
+  @override
+  String get brandName => 'iSHAMELA';
+
+  @override
+  String get unavailableForDownload => 'Not available for download';
+
+  @override
+  String sectionWithCount(String label, int count) {
+    return '$label · $count';
+  }
+
+  @override
+  String downloadSelectedCount(int count) {
+    return 'Download selected ($count)';
+  }
+
+  @override
+  String get continueReading => 'Continue reading';
+
+  @override
+  String get libraryEmptyHint =>
+      'Your library is empty — browse the catalog and download a book';
+
+  @override
+  String get browseCatalog => 'Browse catalog';
+
+  @override
+  String get readingTheme => 'Reading theme';
+
+  @override
+  String get atmospherePaper => 'Paper';
+
+  @override
+  String get atmosphereSepia => 'Sepia';
+
+  @override
+  String get atmosphereNight => 'Night';
+
+  @override
+  String get jumpToPageTitle => 'Go to page';
+
+  @override
+  String get completedToday => 'Completed today';
+
+  @override
+  String activeDownloadsCount(int count) {
+    return '$count active';
+  }
+
+  @override
+  String get catalogStaleAction => 'Update now';
 }

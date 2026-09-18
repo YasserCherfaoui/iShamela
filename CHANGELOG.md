@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
+- DESIGN-001 screen restyles: Catalog brand header + segmented browse + book cards; Library continue-reading hero + spines/overflow; Downloads status cards; Settings atmosphere picker; Reader page-pill / jump+search sheets / atmosphere menu.
 - DESIGN-001 foundation (Warm Manuscript): hand-authored theme tokens / atmospheres, bundled IBM Plex Sans Arabic, shared `lib/ui/` kit, adaptive HomeShell (bottom nav badge + ≥800 NavigationRail). Screen restyles follow.
 - Downloads & Library UX (SPEC-013): Downloads tabs (active/failed/completed) with multi-select bulk actions and no progress on finished/failed; Library category/author/all-books tabs, search, bulk uninstall, hover/long-press book card. Library open uses lazy tab loading and batched catalog queries (no per-book SQLite opens).
 - Reader: in-book search uses exact-token FTS MATCH (SPEC-005; no catalog prefix `*`) and snippets around the hit; bottom chrome shows print page, jump field, prev/next, and scrubber.

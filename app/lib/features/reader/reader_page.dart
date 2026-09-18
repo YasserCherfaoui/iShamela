@@ -10,6 +10,13 @@ import 'package:ishamela/features/reader/annotated_body.dart';
 import 'package:ishamela/features/reader/body_html.dart';
 import 'package:ishamela/features/reader/book_database.dart';
 import 'package:ishamela/features/reader/sticky_toc.dart';
+import 'package:ishamela/ui/app_search_field.dart';
+import 'package:ishamela/ui/jump_sheet.dart';
+import 'package:ishamela/ui/page_pill.dart';
+import 'package:ishamela/ui/rosette_divider.dart';
+import 'package:ishamela/ui/theme/ishamela_tokens.dart';
+import 'package:ishamela/ui/theme/reader_theme_tokens.dart';
+import 'package:ishamela/ui/tonal_icon_button.dart';
 
 enum ReadingMode { pagedH, pagedV, continuousV }
 
@@ -82,7 +89,6 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   ReadingMode _mode = ReadingMode.pagedH;
   bool _showToc = true;
   bool _showCard = true;
-  bool _searchOpen = false;
   bool _exactPhrase = false;
   List<BookSearchHit> _hits = const [];
   Set<int> _highlightPageIds = {};
@@ -200,19 +206,6 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     }
   }
 
-  void _jumpToPrintPage() {
-    final n = int.tryParse(_jumpCtrl.text.trim());
-    if (n == null || _db == null) return;
-    final page = _db!.pageByPrintNumber(n);
-    if (page == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).pageNotFound)),
-      );
-      return;
-    }
-    _jumpToId(page.id);
-  }
-
   void _runSearch() {
     if (_db == null) return;
     final hits = _db!.searchInBook(
@@ -230,55 +223,112 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     final l10n = AppLocalizations.of(context);
     final title = widget.title ?? _db?.meta('title') ?? 'book_${widget.bookId}';
     final wide = MediaQuery.sizeOf(context).width >= 800;
+    final reader = ReaderThemeTokens.of(context);
+    final page = (_db != null && _ids.isNotEmpty)
+        ? _db!.pageById(_ids[_index])
+        : null;
+    final printNo = page?.pageNumber?.toString() ?? '—';
+    final part = page?.part;
 
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
+        backgroundColor: reader.ground,
         appBar: AppBar(
-          title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+          backgroundColor: reader.raised,
+          title: Column(
+            children: [
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: 'Amiri',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18,
+                  color: reader.body,
+                ),
+              ),
+              if (_db != null)
+                Text(
+                  part != null && part.isNotEmpty
+                      ? 'ج$part · ص$printNo'
+                      : 'ص$printNo',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: reader.muted,
+                  ),
+                ),
+            ],
+          ),
+          centerTitle: true,
           actions: [
             IconButton(
               tooltip: l10n.searchInBook,
               icon: const Icon(Icons.search),
-              onPressed: () => setState(() => _searchOpen = !_searchOpen),
+              onPressed: () => _openSearchSheet(l10n),
             ),
-            IconButton(
-              tooltip: l10n.toc,
-              icon: const Icon(Icons.list_alt),
-              onPressed: () {
-                if (wide) {
-                  setState(() => _showToc = !_showToc);
-                } else {
-                  _openTocSheet(context, l10n);
+            if (wide)
+              TextButton(
+                onPressed: () => setState(() => _showToc = !_showToc),
+                child: Text(l10n.toc),
+              )
+            else
+              IconButton(
+                tooltip: l10n.toc,
+                icon: const Icon(Icons.list_alt),
+                onPressed: () => _openTocSheet(context, l10n),
+              ),
+            PopupMenuButton<String>(
+              onSelected: (v) {
+                switch (v) {
+                  case 'card':
+                    if (wide) {
+                      setState(() => _showCard = !_showCard);
+                    } else {
+                      _openCardSheet(context, l10n, title);
+                    }
+                  case 'mode_h':
+                    _setMode(ReadingMode.pagedH);
+                  case 'mode_v':
+                    _setMode(ReadingMode.pagedV);
+                  case 'mode_c':
+                    _setMode(ReadingMode.continuousV);
+                  case 'atm_paper':
+                    ref
+                        .read(readingAtmosphereProvider.notifier)
+                        .save(ReadingAtmosphere.paper);
+                  case 'atm_sepia':
+                    ref
+                        .read(readingAtmosphereProvider.notifier)
+                        .save(ReadingAtmosphere.sepia);
+                  case 'atm_night':
+                    ref
+                        .read(readingAtmosphereProvider.notifier)
+                        .save(ReadingAtmosphere.night);
                 }
               },
-            ),
-            IconButton(
-              tooltip: l10n.bookCard,
-              icon: const Icon(Icons.info_outline),
-              onPressed: () {
-                if (wide) {
-                  setState(() => _showCard = !_showCard);
-                } else {
-                  _openCardSheet(context, l10n, title);
-                }
-              },
-            ),
-            PopupMenuButton<ReadingMode>(
-              tooltip: l10n.readingMode,
-              onSelected: _setMode,
               itemBuilder: (_) => [
+                PopupMenuItem(value: 'card', child: Text(l10n.bookCard)),
+                const PopupMenuDivider(),
+                PopupMenuItem(value: 'mode_h', child: Text(l10n.modePagedH)),
+                PopupMenuItem(value: 'mode_v', child: Text(l10n.modePagedV)),
                 PopupMenuItem(
-                  value: ReadingMode.pagedH,
-                  child: Text(l10n.modePagedH),
-                ),
-                PopupMenuItem(
-                  value: ReadingMode.pagedV,
-                  child: Text(l10n.modePagedV),
-                ),
-                PopupMenuItem(
-                  value: ReadingMode.continuousV,
+                  value: 'mode_c',
                   child: Text(l10n.modeContinuousV),
+                ),
+                const PopupMenuDivider(),
+                PopupMenuItem(
+                  value: 'atm_paper',
+                  child: Text(l10n.atmospherePaper),
+                ),
+                PopupMenuItem(
+                  value: 'atm_sepia',
+                  child: Text(l10n.atmosphereSepia),
+                ),
+                PopupMenuItem(
+                  value: 'atm_night',
+                  child: Text(l10n.atmosphereNight),
                 ),
               ],
             ),
@@ -290,22 +340,32 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                 ? const Center(child: CircularProgressIndicator())
                 : Column(
                     children: [
-                      if (_searchOpen) _searchBar(l10n),
                       if (_hits.isNotEmpty) _searchHits(l10n),
                       Expanded(
                         child: Row(
                           children: [
                             if (wide && _showToc)
                               SizedBox(
-                                width: 280,
+                                width: 300,
                                 child: _sideIndexPane(l10n),
                               ),
-                            if (wide && _showToc) const VerticalDivider(width: 1),
-                            Expanded(child: _bodyPane(title)),
-                            if (wide && _showCard) const VerticalDivider(width: 1),
+                            if (wide && _showToc)
+                              const VerticalDivider(width: 1),
+                            Expanded(
+                              child: Center(
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 660,
+                                  ),
+                                  child: _bodyPane(title),
+                                ),
+                              ),
+                            ),
+                            if (wide && _showCard)
+                              const VerticalDivider(width: 1),
                             if (wide && _showCard)
                               SizedBox(
-                                width: 280,
+                                width: 300,
                                 child: _cardPane(l10n, title),
                               ),
                           ],
@@ -318,37 +378,93 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     );
   }
 
-  Widget _searchBar(AppLocalizations l10n) {
-    return Material(
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _searchCtrl,
-                decoration: InputDecoration(
-                  hintText: l10n.searchInBook,
-                  isDense: true,
-                  border: const OutlineInputBorder(),
-                ),
-                onSubmitted: (_) => _runSearch(),
-              ),
-            ),
-            const SizedBox(width: 8),
-            FilterChip(
-              label: Text(l10n.exactPhrase),
-              selected: _exactPhrase,
-              onSelected: (v) => setState(() => _exactPhrase = v),
-            ),
-            IconButton(
-              icon: const Icon(Icons.search),
-              onPressed: _runSearch,
-            ),
-          ],
-        ),
+  Future<void> _openSearchSheet(AppLocalizations l10n) async {
+    final t = IshamelaTokens.of(context);
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: t.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
+      builder: (ctx) {
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              16,
+              12,
+              16,
+              16 + MediaQuery.paddingOf(ctx).bottom,
+            ),
+            child: StatefulBuilder(
+              builder: (ctx, setLocal) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AppSearchField(
+                      hintText: l10n.searchInBook,
+                      initialQuery: _searchCtrl.text,
+                      autofocus: true,
+                      onChanged: (v) => _searchCtrl.text = v,
+                      onSubmitted: (_) {
+                        _runSearch();
+                        setLocal(() {});
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        FilterChip(
+                          label: Text(l10n.exactPhrase),
+                          selected: _exactPhrase,
+                          onSelected: (v) {
+                            setState(() => _exactPhrase = v);
+                            setLocal(() {});
+                          },
+                        ),
+                        const Spacer(),
+                        FilledButton(
+                          onPressed: () {
+                            _runSearch();
+                            setLocal(() {});
+                          },
+                          child: Text(l10n.searchInBook),
+                        ),
+                      ],
+                    ),
+                    if (_hits.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 220,
+                        child: ListView.builder(
+                          itemCount: _hits.length,
+                          itemBuilder: (context, i) {
+                            final h = _hits[i];
+                            return ListTile(
+                              dense: true,
+                              title: Text('ص ${h.pageNumber ?? '—'}'),
+                              subtitle: Text(
+                                h.snippet,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              onTap: () {
+                                Navigator.pop(ctx);
+                                _jumpToId(h.pageId);
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              },
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -381,23 +497,25 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
 
   Widget _bottomNavBar(AppLocalizations l10n) {
     if (_ids.isEmpty || _db == null) return const SizedBox.shrink();
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final reader = ReaderThemeTokens.of(context);
+    final t = IshamelaTokens.of(context);
     final page = _db!.pageById(_ids[_index]);
     final printNo = page?.pageNumber?.toString() ?? '—';
     final part = page?.part;
     final canPrev = _index > 0;
     final canNext = _index < _ids.length - 1;
-    final pageLabel = part != null && part.isNotEmpty
-        ? 'ج$part · ص$printNo'
-        : 'ص$printNo';
+    final pillLabel = [
+      if (part != null && part.isNotEmpty) 'ج$part',
+      'ص$printNo',
+      '${_index + 1}/${_ids.length}',
+    ].join(' · ');
 
     return Material(
-      color: cs.surface,
+      color: reader.raised,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: cs.outlineVariant)),
-          color: cs.surfaceContainerLowest,
+          border: Border(top: BorderSide(color: reader.hairline)),
+          color: reader.raised,
         ),
         child: SafeArea(
           top: false,
@@ -409,15 +527,15 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                 if (_ids.length > 1)
                   SliderTheme(
                     data: SliderTheme.of(context).copyWith(
-                      trackHeight: 2,
+                      trackHeight: 3,
                       thumbShape: const RoundSliderThumbShape(
                         enabledThumbRadius: 6,
                       ),
                       overlayShape: const RoundSliderOverlayShape(
                         overlayRadius: 14,
                       ),
-                      activeTrackColor: cs.primary,
-                      inactiveTrackColor: cs.outlineVariant,
+                      activeTrackColor: reader.progressFill,
+                      inactiveTrackColor: t.segmentTrack,
                     ),
                     child: Slider(
                       value: _index.toDouble(),
@@ -434,91 +552,47 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                       },
                     ),
                   ),
-                // RTL Row: first child = right. Prev on the right, next on the
-                // left so arrows face *outward* (→  …  ←), not at each other.
                 Row(
                   children: [
-                    _navArrow(
+                    TonalIconButton(
                       tooltip: l10n.previousPage,
                       icon: Icons.chevron_right,
                       enabled: canPrev,
                       onPressed: () => _goRelative(-1),
                     ),
                     Expanded(
-                      child: Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              pageLabel,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                      child: Center(
+                        child: PagePill(
+                          label: pillLabel,
+                          onTap: () => showJumpSheet(
+                            context: context,
+                            title: l10n.jumpToPageTitle,
+                            fieldHint: l10n.jumpToPrintPage,
+                            goLabel: l10n.go,
+                            cancelLabel: l10n.cancel,
+                            tocLabel: l10n.toc,
+                            initialValue: page?.pageNumber?.toString(),
+                            onGo: (raw) async {
+                              final n = int.tryParse(raw.trim());
+                              if (n == null) return false;
+                              final p = _db!.pageByPrintNumber(n);
+                              if (p == null) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(l10n.pageNotFound)),
+                                  );
+                                }
+                                return false;
+                              }
+                              _jumpToId(p.id);
+                              return true;
+                            },
+                            onOpenToc: () => _openTocSheet(context, l10n),
                           ),
-                          const SizedBox(width: 10),
-                          SizedBox(
-                            width: 72,
-                            child: TextField(
-                              controller: _jumpCtrl,
-                              keyboardType: TextInputType.number,
-                              textAlign: TextAlign.center,
-                              style: theme.textTheme.bodyMedium,
-                              decoration: InputDecoration(
-                                isDense: true,
-                                hintText: 'ص',
-                                filled: true,
-                                fillColor: cs.surface,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 10,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: BorderSide(
-                                    color: cs.outlineVariant,
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: BorderSide(
-                                    color: cs.outlineVariant,
-                                  ),
-                                ),
-                              ),
-                              onSubmitted: (_) => _jumpToPrintPage(),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          FilledButton.tonal(
-                            style: FilledButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 10,
-                              ),
-                              minimumSize: const Size(0, 40),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            onPressed: _jumpToPrintPage,
-                            child: Text(l10n.go),
-                          ),
-                          const SizedBox(width: 8),
-                          Directionality(
-                            textDirection: TextDirection.ltr,
-                            child: Text(
-                              l10n.readerProgress(_index + 1, _ids.length),
-                              style: theme.textTheme.labelMedium?.copyWith(
-                                color: cs.onSurfaceVariant,
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
-                    _navArrow(
+                    TonalIconButton(
                       tooltip: l10n.nextPage,
                       icon: Icons.chevron_left,
                       enabled: canNext,
@@ -531,29 +605,6 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _navArrow({
-    required String tooltip,
-    required IconData icon,
-    required bool enabled,
-    required VoidCallback onPressed,
-  }) {
-    final cs = Theme.of(context).colorScheme;
-    return IconButton.filledTonal(
-      tooltip: tooltip,
-      onPressed: enabled ? onPressed : null,
-      style: IconButton.styleFrom(
-        foregroundColor: cs.onSecondaryContainer,
-        disabledForegroundColor: cs.onSurface.withValues(alpha: 0.28),
-        backgroundColor: enabled
-            ? cs.secondaryContainer
-            : cs.surfaceContainerHighest,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        minimumSize: const Size(44, 44),
-      ),
-      icon: Icon(icon, size: 28),
     );
   }
 
@@ -708,7 +759,10 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
             style: Theme.of(context).textTheme.labelLarge,
             textAlign: TextAlign.center,
           ),
-          const Divider(),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: RosetteDivider(size: 14),
+          ),
           Expanded(
             child: SingleChildScrollView(
               child: Column(

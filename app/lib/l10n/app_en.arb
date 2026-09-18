@@ -123,5 +123,36 @@
   "redownload": "Redownload",
   "confirmBulkDelete": "Delete the selected books from this device?",
   "libraryAllBooks": "All books",
-  "back": "Back"
+  "back": "Back",
+  "brandName": "iSHAMELA",
+  "unavailableForDownload": "Not available for download",
+  "sectionWithCount": "{label} · {count}",
+  "@sectionWithCount": {
+    "placeholders": {
+      "label": {"type": "String"},
+      "count": {"type": "int"}
+    }
+  },
+  "downloadSelectedCount": "Download selected ({count})",
+  "@downloadSelectedCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "continueReading": "Continue reading",
+  "libraryEmptyHint": "Your library is empty — browse the catalog and download a book",
+  "browseCatalog": "Browse catalog",
+  "readingTheme": "Reading theme",
+  "atmospherePaper": "Paper",
+  "atmosphereSepia": "Sepia",
+  "atmosphereNight": "Night",
+  "jumpToPageTitle": "Go to page",
+  "completedToday": "Completed today",
+  "activeDownloadsCount": "{count} active",
+  "@activeDownloadsCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "catalogStaleAction": "Update now"
 }

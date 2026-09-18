@@ -78,6 +78,18 @@ final readingAtmosphereProvider =
   ReadingAtmosphereNotifier.new,
 );
 
+/// Shell tab index (0 catalog … 3 settings) — for cross-tab empty CTAs.
+final homeTabIndexProvider = NotifierProvider<HomeTabIndexNotifier, int>(
+  HomeTabIndexNotifier.new,
+);
+
+class HomeTabIndexNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void go(int index) => state = index.clamp(0, 3);
+}
+
 class ReadingAtmosphereNotifier extends Notifier<ReadingAtmosphere> {
   @override
   ReadingAtmosphere build() {

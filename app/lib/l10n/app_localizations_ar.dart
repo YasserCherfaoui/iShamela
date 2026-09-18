@@ -301,4 +301,56 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get back => 'رجوع';
+
+  @override
+  String get brandName => 'iSHAMELA';
+
+  @override
+  String get unavailableForDownload => 'غير متاح للتنزيل';
+
+  @override
+  String sectionWithCount(String label, int count) {
+    return '$label · $count';
+  }
+
+  @override
+  String downloadSelectedCount(int count) {
+    return 'نزّل المحدد ($count)';
+  }
+
+  @override
+  String get continueReading => 'متابعة القراءة';
+
+  @override
+  String get libraryEmptyHint =>
+      'مكتبتك فارغة بعد — تصفح الفهرس ونزّل أول كتاب';
+
+  @override
+  String get browseCatalog => 'تصفح الفهرس';
+
+  @override
+  String get readingTheme => 'سمة القراءة';
+
+  @override
+  String get atmospherePaper => 'ورق';
+
+  @override
+  String get atmosphereSepia => 'سيبيا';
+
+  @override
+  String get atmosphereNight => 'ليلي';
+
+  @override
+  String get jumpToPageTitle => 'الانتقال إلى صفحة';
+
+  @override
+  String get completedToday => 'اكتمل اليوم';
+
+  @override
+  String activeDownloadsCount(int count) {
+    return '$count جارية';
+  }
+
+  @override
+  String get catalogStaleAction => 'حدّث الآن';
 }

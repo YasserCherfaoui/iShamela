@@ -230,6 +230,23 @@ class StateDatabase {
     return rows.first['page_id'] as int;
   }
 
+  /// Most recently updated reading position (for continue-reading hero).
+  ({int bookId, int pageId, int updatedAt})? latestReadingState() {
+    final rows = _db.select(
+      '''
+      SELECT book_id, page_id, updated_at FROM reading_state
+      ORDER BY updated_at DESC LIMIT 1
+      ''',
+    );
+    if (rows.isEmpty) return null;
+    final r = rows.first;
+    return (
+      bookId: r['book_id'] as int,
+      pageId: r['page_id'] as int,
+      updatedAt: r['updated_at'] as int,
+    );
+  }
+
   void upsertReadingState({
     required int bookId,
     required int pageId,

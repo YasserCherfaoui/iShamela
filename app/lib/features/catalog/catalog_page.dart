@@ -9,6 +9,15 @@ import 'package:ishamela/features/catalog/catalog_search_field.dart';
 import 'package:ishamela/features/catalog/catalog_service.dart';
 import 'package:ishamela/features/downloads/download_service.dart';
 import 'package:ishamela/features/reader/reader_page.dart';
+import 'package:ishamela/ui/book_card.dart';
+import 'package:ishamela/ui/empty_state.dart';
+import 'package:ishamela/ui/progress_ring.dart';
+import 'package:ishamela/ui/rosette_divider.dart';
+import 'package:ishamela/ui/section_label.dart';
+import 'package:ishamela/ui/segmented_pills.dart';
+import 'package:ishamela/ui/theme/ishamela_theme.dart';
+import 'package:ishamela/ui/theme/ishamela_tokens.dart';
+import 'package:ishamela/ui/tonal_icon_button.dart';
 
 class CatalogPage extends ConsumerStatefulWidget {
   const CatalogPage({super.key});
@@ -20,10 +29,17 @@ class CatalogPage extends ConsumerStatefulWidget {
 class _CatalogPageState extends ConsumerState<CatalogPage> {
   String _query = '';
   CatalogSearchScope _scope = CatalogSearchScope.all;
+  int _browseIndex = 0;
+
+  void _refresh() {
+    ref.invalidate(catalogSyncTickProvider);
+    ref.invalidate(catalogRepositoryProvider);
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = IshamelaTokens.of(context);
     final catalogAsync = ref.watch(catalogRepositoryProvider);
     final syncTick = ref.watch(catalogSyncTickProvider);
     final stateAsync = ref.watch(stateDatabaseProvider);
@@ -31,129 +47,157 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(l10n.tabCatalog),
-          actions: [
-            IconButton(
-              tooltip: l10n.refresh,
-              onPressed: () {
-                ref.invalidate(catalogSyncTickProvider);
-                ref.invalidate(catalogRepositoryProvider);
-              },
-              icon: const Icon(Icons.refresh),
-            ),
-          ],
-        ),
         body: catalogAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Center(child: Text('$e')),
           data: (catalog) {
             if (!catalog.hasCatalog) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(l10n.offlineEmpty, textAlign: TextAlign.center),
-                      const SizedBox(height: 16),
-                      FilledButton(
-                        onPressed: () {
-                          ref.invalidate(catalogSyncTickProvider);
-                          ref.invalidate(catalogRepositoryProvider);
-                        },
-                        child: Text(l10n.refresh),
-                      ),
-                      syncTick.when(
-                        data: (_) => const SizedBox.shrink(),
-                        loading: () => const Padding(
-                          padding: EdgeInsets.only(top: 16),
-                          child: CircularProgressIndicator(),
-                        ),
-                        error: (_, __) => const SizedBox.shrink(),
-                      ),
-                    ],
-                  ),
-                ),
+              return EmptyState(
+                message: l10n.offlineEmpty,
+                actionLabel: l10n.refresh,
+                onAction: _refresh,
               );
             }
 
-            // Stale hint: local catalog older than 30 days (SPEC-007 optional).
             final showStale = catalog.isCatalogStale();
             final bookCount = catalog.bookCount();
             final installedBytes = stateAsync.maybeWhen(
               data: (s) => s.installedSqliteBytesTotal,
               orElse: () => 0,
             );
+            final searching = _query.trim().isNotEmpty;
 
-            return Column(
-              children: [
-                if (showStale)
-                  Material(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.info_outline, size: 18),
-                          const SizedBox(width: 8),
-                          Expanded(child: Text(l10n.catalogStaleHint)),
-                        ],
-                      ),
-                    ),
-                  ),
-                Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: CatalogSearchField(
-                    hintText: l10n.searchHint,
-                    initialQuery: _query,
-                    onChanged: (v) => setState(() => _query = v),
-                  ),
-                ),
-                if (_query.trim().isNotEmpty)
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Row(
+            return CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        for (final s in CatalogSearchScope.values)
-                          Padding(
-                            padding: const EdgeInsetsDirectional.only(end: 8),
-                            child: ChoiceChip(
-                              label: Text(_scopeLabel(l10n, s)),
-                              selected: _scope == s,
-                              onSelected: (_) => setState(() => _scope = s),
+                        Row(
+                          children: [
+                            const RosetteMark(size: 16),
+                            const SizedBox(width: 8),
+                            Text(
+                              l10n.brandName,
+                              style: TextStyle(
+                                fontFamily: kFontUi,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 10.5,
+                                letterSpacing: 2.5,
+                                color: t.green900,
+                              ),
+                            ),
+                            const Spacer(),
+                            IconButton(
+                              tooltip: l10n.refresh,
+                              onPressed: _refresh,
+                              icon: const Icon(Icons.refresh),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          l10n.tabCatalog,
+                          style: TextStyle(
+                            fontFamily: kFontAmiri,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 26,
+                            color: t.ink,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          l10n.catalogFooter(
+                            bookCount,
+                            formatBytes(installedBytes),
+                          ),
+                          style: TextStyle(
+                            fontFamily: kFontUi,
+                            fontSize: 12,
+                            color: t.muted,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        CatalogSearchField(
+                          hintText: l10n.searchHint,
+                          initialQuery: _query,
+                          onChanged: (v) => setState(() => _query = v),
+                        ),
+                        if (showStale) ...[
+                          const SizedBox(height: 12),
+                          _StaleBanner(
+                            message: l10n.catalogStaleHint,
+                            action: l10n.catalogStaleAction,
+                            onAction: _refresh,
+                          ),
+                        ],
+                        if (searching) ...[
+                          const SizedBox(height: 12),
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: [
+                                for (final s in CatalogSearchScope.values)
+                                  Padding(
+                                    padding: const EdgeInsetsDirectional.only(
+                                      end: 8,
+                                    ),
+                                    child: FilterChip(
+                                      label: Text(_scopeLabel(l10n, s)),
+                                      selected: _scope == s,
+                                      selectedColor: t.green700,
+                                      checkmarkColor: Colors.white,
+                                      labelStyle: TextStyle(
+                                        fontFamily: kFontUi,
+                                        fontWeight: FontWeight.w600,
+                                        color: _scope == s
+                                            ? Colors.white
+                                            : t.ink,
+                                      ),
+                                      side: BorderSide(
+                                        color: _scope == s
+                                            ? t.green700
+                                            : t.hairline,
+                                      ),
+                                      onSelected: (_) =>
+                                          setState(() => _scope = s),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
+                        ] else ...[
+                          const SizedBox(height: 16),
+                          SegmentedPills(
+                            labels: [l10n.categories, l10n.authors],
+                            selectedIndex: _browseIndex,
+                            onChanged: (i) =>
+                                setState(() => _browseIndex = i),
+                          ),
+                        ],
                       ],
                     ),
                   ),
-                Expanded(
-                  child: _query.trim().isEmpty
-                      ? _BrowseTabs(catalog: catalog)
-                      : _SearchResults(
-                          catalog: catalog,
-                          query: _query,
-                          scope: _scope,
-                        ),
                 ),
-                SafeArea(
-                  top: false,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-                    child: Text(
-                      l10n.catalogFooter(
-                        bookCount,
-                        formatBytes(installedBytes),
-                      ),
-                      style: Theme.of(context).textTheme.bodySmall,
-                      textAlign: TextAlign.center,
-                    ),
+                if (syncTick.isLoading)
+                  const SliverToBoxAdapter(
+                    child: LinearProgressIndicator(minHeight: 2),
                   ),
-                ),
+                if (searching)
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                    sliver: _SearchResultsSliver(
+                      catalog: catalog,
+                      query: _query,
+                      scope: _scope,
+                    ),
+                  )
+                else if (_browseIndex == 0)
+                  _CategorySliver(catalog: catalog)
+                else
+                  _AuthorSliver(catalog: catalog),
               ],
             );
           },
@@ -176,95 +220,178 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
   }
 }
 
-class _BrowseTabs extends StatelessWidget {
-  const _BrowseTabs({required this.catalog});
-  final CatalogRepository catalog;
+class _StaleBanner extends StatelessWidget {
+  const _StaleBanner({
+    required this.message,
+    required this.action,
+    required this.onAction,
+  });
+
+  final String message;
+  final String action;
+  final VoidCallback onAction;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return DefaultTabController(
-      length: 2,
-      child: Column(
-        children: [
-          TabBar(
-            tabs: [
-              Tab(text: l10n.categories),
-              Tab(text: l10n.authors),
-            ],
-          ),
-          Expanded(
-            child: TabBarView(
-              children: [
-                _CategoryList(catalog: catalog),
-                _AuthorList(catalog: catalog),
-              ],
+    final t = IshamelaTokens.of(context);
+    return Material(
+      color: t.goldPale,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, size: 18, color: t.gold),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                message,
+                style: TextStyle(
+                  fontFamily: kFontUi,
+                  fontSize: 12,
+                  color: t.ink,
+                ),
+              ),
             ),
-          ),
-        ],
+            TextButton(
+              onPressed: onAction,
+              child: Text(
+                action,
+                style: TextStyle(
+                  fontFamily: kFontUi,
+                  fontWeight: FontWeight.w700,
+                  color: t.gold,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _CategoryList extends StatelessWidget {
-  const _CategoryList({required this.catalog});
+class _BrowseEntityCard extends StatelessWidget {
+  const _BrowseEntityCard({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = IshamelaTokens.of(context);
+    return Material(
+      color: t.card,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: t.hairline),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: t.green100,
+                child: Icon(icon, color: t.green900, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontFamily: kFontAmiri,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    color: t.ink,
+                  ),
+                ),
+              ),
+              Icon(Icons.chevron_left, color: t.muted),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CategorySliver extends StatelessWidget {
+  const _CategorySliver({required this.catalog});
   final CatalogRepository catalog;
 
   @override
   Widget build(BuildContext context) {
     final items = catalog.categories();
-    return ListView.builder(
-      itemCount: items.length,
-      itemBuilder: (context, i) {
-        final c = items[i];
-        return ListTile(
-          title: Text(c.name),
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => BookListPage(
-                title: c.name,
-                books: catalog.booksByCategory(c.id),
-                allowDownloadAll: true,
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      sliver: SliverList.separated(
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        itemBuilder: (context, i) {
+          final c = items[i];
+          return _BrowseEntityCard(
+            icon: Icons.folder_outlined,
+            title: c.name,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => BookListPage(
+                  title: c.name,
+                  books: catalog.booksByCategory(c.id),
+                  allowDownloadAll: true,
+                ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
 
-class _AuthorList extends StatelessWidget {
-  const _AuthorList({required this.catalog});
+class _AuthorSliver extends StatelessWidget {
+  const _AuthorSliver({required this.catalog});
   final CatalogRepository catalog;
 
   @override
   Widget build(BuildContext context) {
     final items = catalog.authors();
-    return ListView.builder(
-      itemCount: items.length,
-      itemBuilder: (context, i) {
-        final a = items[i];
-        return ListTile(
-          title: Text(a.name),
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => BookListPage(
-                title: a.name,
-                books: catalog.booksByAuthor(a.id),
-                allowDownloadAll: true,
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      sliver: SliverList.separated(
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        itemBuilder: (context, i) {
+          final a = items[i];
+          return _BrowseEntityCard(
+            icon: Icons.person_outline,
+            title: a.name,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => BookListPage(
+                  title: a.name,
+                  books: catalog.booksByAuthor(a.id),
+                  allowDownloadAll: true,
+                ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
 
-class _SearchResults extends StatelessWidget {
-  const _SearchResults({
+class _SearchResultsSliver extends StatelessWidget {
+  const _SearchResultsSliver({
     required this.catalog,
     required this.query,
     required this.scope,
@@ -278,64 +405,64 @@ class _SearchResults extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final hits = catalog.scopedSearch(query, chipScope: scope);
     if (hits.isEmpty) {
-      return Center(child: Text(l10n.noBooks));
+      return SliverToBoxAdapter(child: EmptyState(message: l10n.noBooks));
     }
-    return ListView(
-      children: [
+    return SliverList(
+      delegate: SliverChildListDelegate([
         if (hits.categories.isNotEmpty) ...[
-          ListTile(
-            title: Text(
+          SectionLabel(
+            label: l10n.sectionWithCount(
               l10n.categories,
-              style: Theme.of(context).textTheme.titleSmall,
+              hits.categories.length,
             ),
           ),
           for (final c in hits.categories)
-            ListTile(
-              leading: const Icon(Icons.folder_outlined),
-              title: Text(c.name),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => BookListPage(
-                    title: c.name,
-                    books: catalog.booksByCategory(c.id),
-                    allowDownloadAll: true,
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _BrowseEntityCard(
+                icon: Icons.folder_outlined,
+                title: c.name,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => BookListPage(
+                      title: c.name,
+                      books: catalog.booksByCategory(c.id),
+                      allowDownloadAll: true,
+                    ),
                   ),
                 ),
               ),
             ),
         ],
         if (hits.authors.isNotEmpty) ...[
-          ListTile(
-            title: Text(
-              l10n.authors,
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
+          SectionLabel(
+            label: l10n.sectionWithCount(l10n.authors, hits.authors.length),
           ),
           for (final a in hits.authors)
-            ListTile(
-              leading: const Icon(Icons.person_outline),
-              title: Text(a.name),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => BookListPage(
-                    title: a.name,
-                    books: catalog.booksByAuthor(a.id),
-                    allowDownloadAll: true,
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _BrowseEntityCard(
+                icon: Icons.person_outline,
+                title: a.name,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => BookListPage(
+                      title: a.name,
+                      books: catalog.booksByAuthor(a.id),
+                      allowDownloadAll: true,
+                    ),
                   ),
                 ),
               ),
             ),
         ],
         if (hits.books.isNotEmpty) ...[
-          ListTile(
-            title: Text(
-              l10n.books,
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
+          SectionLabel(
+            label: l10n.sectionWithCount(l10n.books, hits.books.length),
           ),
           BookListView(books: hits.books, shrinkWrap: true),
         ],
-      ],
+      ]),
     );
   }
 }
@@ -400,8 +527,13 @@ class _BookListPageState extends ConsumerState<BookListPage> {
       );
       return;
     }
+    final t = IshamelaTokens.of(context);
     final ok = await showModalBottomSheet<bool>(
       context: context,
+      backgroundColor: t.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       builder: (ctx) {
         final loc = AppLocalizations.of(ctx);
         return Directionality(
@@ -414,7 +546,12 @@ class _BookListPageState extends ConsumerState<BookListPage> {
               children: [
                 Text(
                   loc.confirmDownloadTitle,
-                  style: Theme.of(ctx).textTheme.titleLarge,
+                  style: TextStyle(
+                    fontFamily: kFontAmiri,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 22,
+                    color: t.ink,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -461,66 +598,85 @@ class _BookListPageState extends ConsumerState<BookListPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = IshamelaTokens.of(context);
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
           title: Text(widget.title),
-          actions: [
-            if (_selecting) ...[
-              IconButton(
-                tooltip: l10n.selectAll,
-                onPressed: () => setState(() {
-                  for (final b in _visible) {
-                    if (b.canInstallOnDevice) _selected.add(b.bookId);
-                  }
-                }),
-                icon: const Icon(Icons.select_all),
-              ),
-              IconButton(
-                tooltip: l10n.deselectAll,
-                onPressed: () => setState(() => _selected.clear()),
-                icon: const Icon(Icons.deselect),
-              ),
-              IconButton(
-                tooltip: l10n.downloadSelected,
-                onPressed: _selected.isEmpty
-                    ? null
-                    : () {
-                        final books = widget.books
-                            .where((b) => _selected.contains(b.bookId))
-                            .toList();
-                        _confirmAndEnqueue(books);
-                      },
-                icon: const Icon(Icons.download),
-              ),
-              IconButton(
-                tooltip: l10n.cancel,
-                onPressed: () => setState(() {
-                  _selecting = false;
-                  _selected.clear();
-                }),
-                icon: const Icon(Icons.close),
-              ),
-            ] else ...[
-              IconButton(
-                tooltip: l10n.select,
-                onPressed: () => setState(() => _selecting = true),
-                icon: const Icon(Icons.checklist),
-              ),
-              if (widget.allowDownloadAll)
-                IconButton(
-                  tooltip: l10n.downloadAll,
-                  onPressed: () => _confirmAndEnqueue(widget.books),
-                  icon: const Icon(Icons.download_for_offline_outlined),
-                ),
-            ],
-          ],
         ),
         body: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+              child: _selecting
+                  ? Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        OutlinedButton(
+                          onPressed: () => setState(() {
+                            for (final b in _visible) {
+                              if (b.canInstallOnDevice) {
+                                _selected.add(b.bookId);
+                              }
+                            }
+                          }),
+                          child: Text(l10n.selectAll),
+                        ),
+                        OutlinedButton(
+                          onPressed: () => setState(() => _selected.clear()),
+                          child: Text(l10n.deselectAll),
+                        ),
+                        FilledButton(
+                          onPressed: _selected.isEmpty
+                              ? null
+                              : () {
+                                  final books = widget.books
+                                      .where(
+                                        (b) => _selected.contains(b.bookId),
+                                      )
+                                      .toList();
+                                  _confirmAndEnqueue(books);
+                                },
+                          child: Text(
+                            l10n.downloadSelectedCount(_selected.length),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => setState(() {
+                            _selecting = false;
+                            _selected.clear();
+                          }),
+                          child: Text(
+                            l10n.cancel,
+                            style: TextStyle(color: t.muted),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        if (widget.allowDownloadAll)
+                          FilledButton.tonal(
+                            onPressed: () =>
+                                _confirmAndEnqueue(widget.books),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: t.green100,
+                              foregroundColor: t.green900,
+                            ),
+                            child: Text(l10n.downloadAll),
+                          ),
+                        const SizedBox(width: 8),
+                        OutlinedButton(
+                          onPressed: () => setState(() => _selecting = true),
+                          child: Text(l10n.select),
+                        ),
+                      ],
+                    ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
               child: CatalogSearchField(
                 hintText: l10n.searchHint,
                 onChanged: (v) => setState(() => _filter = v),
@@ -578,53 +734,75 @@ class BookListView extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final stateAsync = ref.watch(stateDatabaseProvider);
     final downloadsAsync = ref.watch(downloadServiceProvider);
+    final width = MediaQuery.sizeOf(context).width;
+    final cols = width >= 800 ? 2 : 1;
 
     if (books.isEmpty) {
-      return Center(child: Text(l10n.noBooks));
+      return EmptyState(message: l10n.noBooks);
     }
 
-    return ListView.builder(
-      shrinkWrap: shrinkWrap,
-      physics: shrinkWrap ? const NeverScrollableScrollPhysics() : null,
-      itemCount: books.length,
-      itemBuilder: (context, i) {
-        final book = books[i];
-        final installed = stateAsync.maybeWhen(
-          data: (s) => s.isInstalled(book.bookId),
-          orElse: () => false,
+    Widget tile(Book book) {
+      final installed = stateAsync.maybeWhen(
+        data: (s) => s.isInstalled(book.bookId),
+        orElse: () => false,
+      );
+      final status = stateAsync.maybeWhen(
+        data: (s) => s.downloadStatus(book.bookId),
+        orElse: () => null,
+      );
+      final installedPages = stateAsync.maybeWhen(
+        data: (s) => s.installedPageCount(book.bookId),
+        orElse: () => null,
+      );
+      final displayPages =
+          book.pageCount > 0 ? book.pageCount : (installedPages ?? 0);
+      final meta = <String>[
+        if (displayPages > 0) l10n.pagesCount(displayPages),
+        if (book.isbBytes > 0) formatBytes(book.isbBytes),
+        if (book.categoryName != null && book.categoryName!.isNotEmpty)
+          book.categoryName!,
+      ];
+      final canDownload = book.canInstallOnDevice;
+      final inFlight = status == DownloadStatus.downloading ||
+          status == DownloadStatus.queued ||
+          status == DownloadStatus.verifying ||
+          status == DownloadStatus.installing;
+
+      Widget? trailing;
+      if (installed) {
+        trailing = MetaChipInstalled(label: l10n.installed);
+      } else if (inFlight) {
+        trailing = const ProgressRing(value: 0.35);
+      } else if (canDownload) {
+        trailing = TonalIconButton(
+          tooltip: l10n.download,
+          icon: Icons.download,
+          onPressed: () async {
+            final svc = await downloadsAsync.when(
+              data: (s) async => s,
+              loading: () async => null,
+              error: (_, __) async => null,
+            );
+            await svc?.enqueue(book.bookId);
+          },
         );
-        final installedPages = stateAsync.maybeWhen(
-          data: (s) => s.installedPageCount(book.bookId),
-          orElse: () => null,
-        );
-        final displayPages =
-            book.pageCount > 0 ? book.pageCount : (installedPages ?? 0);
-        final sizeLabel =
-            book.isbBytes > 0 ? ' · ${formatBytes(book.isbBytes)}' : '';
-        final pagesLabel =
-            displayPages > 0 ? ' · ${l10n.pagesCount(displayPages)}' : '';
-        final subtitle =
-            '${book.authorName ?? ''}$pagesLabel'
-            '$sizeLabel'
-            '${book.categoryName != null ? ' · ${book.categoryName}' : ''}';
+      }
 
-        final canDownload = book.canInstallOnDevice;
-
-        if (selecting) {
-          return CheckboxListTile(
-            value: selected.contains(book.bookId),
-            onChanged: installed || !canDownload
-                ? null
-                : (_) => onToggle?.call(book.bookId),
-            title: Text(book.title),
-            subtitle: Text(subtitle),
-            secondary: installed ? Chip(label: Text(l10n.installed)) : null,
-          );
-        }
-
-        return ListTile(
-          title: Text(book.title),
-          subtitle: Text(subtitle),
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: BookCard(
+          title: book.title,
+          categoryId: book.categoryId,
+          author: book.authorName,
+          meta: meta,
+          available: canDownload || installed,
+          unavailableLabel:
+              canDownload || installed ? null : l10n.unavailableForDownload,
+          trailing: trailing,
+          selected: selecting ? selected.contains(book.bookId) : null,
+          onSelectedChanged: selecting && canDownload && !installed
+              ? (_) => onToggle?.call(book.bookId)
+              : null,
           onTap: installed
               ? () => ReaderPage.open(
                     context,
@@ -636,24 +814,61 @@ class BookListView extends ConsumerWidget {
           onLongPress: installed || !canDownload
               ? null
               : () => onLongPressSelect?.call(book.bookId),
-          trailing: installed
-              ? Chip(label: Text(l10n.installed))
-              : canDownload
-                  ? IconButton(
-                      tooltip: l10n.download,
-                      icon: const Icon(Icons.download),
-                      onPressed: () async {
-                        final svc = await downloadsAsync.when(
-                          data: (s) async => s,
-                          loading: () async => null,
-                          error: (_, __) async => null,
-                        );
-                        await svc?.enqueue(book.bookId);
-                      },
-                    )
-                  : null,
-        );
-      },
+        ),
+      );
+    }
+
+    if (shrinkWrap) {
+      return Column(
+        children: [for (final b in books) tile(b)],
+      );
+    }
+
+    if (cols > 1) {
+      return GridView.builder(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisExtent: 140,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 4,
+        ),
+        itemCount: books.length,
+        itemBuilder: (context, i) => tile(books[i]),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      itemCount: books.length,
+      itemBuilder: (context, i) => tile(books[i]),
+    );
+  }
+}
+
+/// Small installed chip using design tokens.
+class MetaChipInstalled extends StatelessWidget {
+  const MetaChipInstalled({super.key, required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = IshamelaTokens.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: t.green100,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontFamily: kFontUi,
+          fontWeight: FontWeight.w600,
+          fontSize: 11,
+          color: t.green900,
+        ),
+      ),
     );
   }
 }
