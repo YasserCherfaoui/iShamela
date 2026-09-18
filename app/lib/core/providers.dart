@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ishamela/core/compress/zstd.dart';
@@ -78,16 +79,67 @@ final readingAtmosphereProvider =
   ReadingAtmosphereNotifier.new,
 );
 
+/// SPEC-016 persisted UI locale (`ar` | `en` | `fr`).
+final appLocaleProvider = NotifierProvider<AppLocaleNotifier, Locale>(
+  AppLocaleNotifier.new,
+);
+
+/// Pending catalog search query when jumping from Library text-search empty CTA.
+final catalogPendingQueryProvider =
+    NotifierProvider<CatalogPendingQueryNotifier, String?>(
+  CatalogPendingQueryNotifier.new,
+);
+
 /// Shell tab index (0 catalog … 3 settings) — for cross-tab empty CTAs.
 final homeTabIndexProvider = NotifierProvider<HomeTabIndexNotifier, int>(
   HomeTabIndexNotifier.new,
 );
+
+class CatalogPendingQueryNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void set(String? query) => state = query;
+  void clear() => state = null;
+}
 
 class HomeTabIndexNotifier extends Notifier<int> {
   @override
   int build() => 0;
 
   void go(int index) => state = index.clamp(0, 3);
+}
+
+class AppLocaleNotifier extends Notifier<Locale> {
+  static const settingsKey = 'app_locale';
+
+  @override
+  Locale build() {
+    final async = ref.watch(stateDatabaseProvider);
+    return async.maybeWhen(
+      data: (db) => _parse(db.setting(settingsKey)),
+      orElse: () => const Locale('ar'),
+    );
+  }
+
+  Future<void> save(Locale locale) async {
+    final code = locale.languageCode;
+    if (code != 'ar' && code != 'en' && code != 'fr') return;
+    final db = await ref.read(stateDatabaseProvider.future);
+    db.setSetting(settingsKey, code);
+    state = Locale(code);
+  }
+
+  static Locale _parse(String? raw) {
+    switch (raw) {
+      case 'en':
+        return const Locale('en');
+      case 'fr':
+        return const Locale('fr');
+      default:
+        return const Locale('ar');
+    }
+  }
 }
 
 class ReadingAtmosphereNotifier extends Notifier<ReadingAtmosphere> {

@@ -21,11 +21,12 @@ class IshamelaApp extends ConsumerWidget {
     // Kick off catalog sync once.
     ref.watch(catalogSyncTickProvider);
     final atmosphere = ref.watch(readingAtmosphereProvider);
+    final locale = ref.watch(appLocaleProvider);
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
-      locale: const Locale('ar'),
+      locale: locale,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: const [
         AppLocalizations.delegate,
@@ -77,6 +78,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     final l10n = AppLocalizations.of(context);
     final wide = MediaQuery.sizeOf(context).width >= 800;
     final index = ref.watch(homeTabIndexProvider);
+    final locale = ref.watch(appLocaleProvider);
+    final textDir =
+        locale.languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr;
     final pages = const [
       CatalogPage(),
       LibraryPage(),
@@ -117,7 +121,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
     if (wide) {
       return Directionality(
-        textDirection: TextDirection.rtl,
+        textDirection: textDir,
         child: Scaffold(
           body: Row(
             children: [
@@ -150,7 +154,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     }
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: textDir,
       child: Scaffold(
         body: body,
         bottomNavigationBar: AppBottomNav(

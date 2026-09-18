@@ -13,6 +13,7 @@ class BookCard extends StatelessWidget {
     required this.title,
     required this.categoryId,
     this.author,
+    this.onAuthorTap,
     this.meta = const [],
     this.trailing,
     this.onTap,
@@ -28,6 +29,7 @@ class BookCard extends StatelessWidget {
   final String title;
   final int categoryId;
   final String? author;
+  final VoidCallback? onAuthorTap;
   final List<String> meta;
   final Widget? trailing;
   final VoidCallback? onTap;
@@ -114,17 +116,36 @@ class BookCard extends StatelessWidget {
                       ),
                       if (author != null && author!.isNotEmpty) ...[
                         const SizedBox(height: 2),
-                        Text(
-                          author!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: kFontUi,
-                            fontWeight: FontWeight.w500,
-                            fontSize: 12,
-                            color: t.muted,
+                        if (onAuthorTap != null)
+                          GestureDetector(
+                            onTap: onAuthorTap,
+                            behavior: HitTestBehavior.opaque,
+                            child: Text(
+                              author!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: kFontUi,
+                                fontWeight: FontWeight.w500,
+                                fontSize: 12,
+                                color: t.green700,
+                                decoration: TextDecoration.underline,
+                                decorationColor: t.green700.withValues(alpha: 0.4),
+                              ),
+                            ),
+                          )
+                        else
+                          Text(
+                            author!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: kFontUi,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 12,
+                              color: t.muted,
+                            ),
                           ),
-                        ),
                       ],
                       if (meta.isNotEmpty) ...[
                         const SizedBox(height: 6),

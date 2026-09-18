@@ -1,6 +1,6 @@
 # SPEC-015 — Storage Manager
 
-**Status:** Draft · **Implements:** DESIGN-002 F3 (§4) · **Depends on:** SPEC-013 (uninstall), catalog install registry
+**Status:** Implemented · **Implements:** DESIGN-002 F3 (§4) · **Depends on:** SPEC-013 (uninstall), catalog install registry
 **Goal:** Give users visibility into disk usage of installed book bundles and a fast way to reclaim space, without touching the download pipeline or bundle format.
 
 ---

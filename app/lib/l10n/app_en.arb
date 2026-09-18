@@ -173,6 +173,24 @@
   "historyClearConfirm": "Reading history will be permanently deleted.",
   "historyEmpty": "Nothing read yet — open a book from your library",
   "historyLink": "History",
+  "minutesAgo": "{count} min ago",
+  "@minutesAgo": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "hoursAgo": "{count}h ago",
+  "@hoursAgo": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "daysAgo": "{count}d ago",
+  "@daysAgo": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "today": "Today",
   "yesterday": "Yesterday",
   "thisWeek": "This week",
@@ -189,5 +207,128 @@
   "bookmarkRemoved": "Bookmark removed",
   "renameBookmark": "Rename bookmark",
   "bookmarksEmpty": "No bookmarks yet — tap the bookmark icon while reading",
-  "undo": "Undo"
+  "undo": "Undo",
+  "storage": "Storage",
+  "storageUsed": "Used: {size} ({count} books)",
+  "@storageUsed": {
+    "placeholders": {
+      "size": {"type": "String"},
+      "count": {"type": "int"}
+    }
+  },
+  "storageAvailable": "Available on device: {size}",
+  "@storageAvailable": {
+    "placeholders": {
+      "size": {"type": "String"}
+    }
+  },
+  "manageStorage": "Manage storage",
+  "calculatingSizes": "Calculating sizes…",
+  "uninstallSelected": "Uninstall selected ({count})",
+  "@uninstallSelected": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "uninstallConfirmSize": "This will free {size}.",
+  "@uninstallConfirmSize": {
+    "placeholders": {
+      "size": {"type": "String"}
+    }
+  },
+  "freeUpSpace": "{used} used · {free} available",
+  "@freeUpSpace": {
+    "placeholders": {
+      "used": {"type": "String"},
+      "free": {"type": "String"}
+    }
+  },
+  "noInstalledBooks": "No installed books",
+  "languageAndApp": "Language & app",
+  "appLanguage": "App language",
+  "aboutApp": "About",
+  "version": "Version {version} ({build})",
+  "@version": {
+    "placeholders": {
+      "version": {"type": "String"},
+      "build": {"type": "String"}
+    }
+  },
+  "buildCopied": "Version copied",
+  "licenses": "Third-party licenses",
+  "datasetAttributionTitle": "Corpus data",
+  "datasetAttributionBody": "Shamela library data — AuthenticIlm/Shamela4_Full_DB on Hugging Face. Texts are shown verbatim from the corpus.",
+  "sourceCode": "Source code",
+  "noConnection": "No internet connection",
+  "searchScopeTitles": "Titles",
+  "searchScopeTexts": "Full text",
+  "minQueryHint": "Enter at least two characters",
+  "searchingBooksProgress": "Searching {done} of {total} books…",
+  "@searchingBooksProgress": {
+    "placeholders": {
+      "done": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "hitsCapped": "{count}+",
+  "@hitsCapped": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "moreHitsInBook": "Show more in book",
+  "libSearchEmpty": "No results in your library",
+  "tryCatalogSearch": "Search the catalog",
+  "searchFailedRetry": "Search failed — tap to retry",
+  "authorBooksCount": "{count} books",
+  "@authorBooksCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "authorInstalledCount": "{count} installed",
+  "@authorInstalledCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "showMore": "More",
+  "showLess": "Less",
+  "allBooks": "All",
+  "installedOnly": "Installed",
+  "noInstalledForAuthor": "No installed books by this author",
+  "filterHint": "Filter…",
+  "diedHijri": "d. {year} AH",
+  "@diedHijri": {
+    "placeholders": {
+      "year": {"type": "int"}
+    }
+  },
+  "diedCE": "d. {year} CE",
+  "@diedCE": {
+    "placeholders": {
+      "year": {"type": "int"}
+    }
+  },
+  "exportAnnotations": "Export notes & highlights",
+  "exportNoAnnotationsHint": "No annotations in this book",
+  "exportFormatMarkdown": "Markdown",
+  "exportFormatText": "Plain text",
+  "includeHighlights": "Highlights",
+  "includeNotes": "Notes",
+  "export": "Export",
+  "exportDone": "Exported",
+  "exportedOn": "Exported on {date}",
+  "@exportedOn": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "notesFileHeading": "Notes — {title}",
+  "@notesFileHeading": {
+    "placeholders": {
+      "title": {"type": "String"}
+    }
+  },
+  "noteLabel": "Note"
 }

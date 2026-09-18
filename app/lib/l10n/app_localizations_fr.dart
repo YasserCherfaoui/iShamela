@@ -387,6 +387,21 @@ class AppLocalizationsFr extends AppLocalizations {
   String get historyLink => 'Historique';
 
   @override
+  String minutesAgo(int count) {
+    return 'il y a $count min';
+  }
+
+  @override
+  String hoursAgo(int count) {
+    return 'il y a $count h';
+  }
+
+  @override
+  String daysAgo(int count) {
+    return 'il y a $count j';
+  }
+
+  @override
   String get today => 'Aujourd\'hui';
 
   @override
@@ -424,4 +439,180 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get undo => 'Annuler';
+
+  @override
+  String get storage => 'Stockage';
+
+  @override
+  String storageUsed(String size, int count) {
+    return 'Utilisé : $size ($count livres)';
+  }
+
+  @override
+  String storageAvailable(String size) {
+    return 'Disponible sur l\'appareil : $size';
+  }
+
+  @override
+  String get manageStorage => 'Gérer le stockage';
+
+  @override
+  String get calculatingSizes => 'Calcul des tailles…';
+
+  @override
+  String uninstallSelected(int count) {
+    return 'Désinstaller la sélection ($count)';
+  }
+
+  @override
+  String uninstallConfirmSize(String size) {
+    return 'Cela libérera $size.';
+  }
+
+  @override
+  String freeUpSpace(String used, String free) {
+    return '$used utilisés · $free disponibles';
+  }
+
+  @override
+  String get noInstalledBooks => 'Aucun livre installé';
+
+  @override
+  String get languageAndApp => 'Langue et application';
+
+  @override
+  String get appLanguage => 'Langue de l\'application';
+
+  @override
+  String get aboutApp => 'À propos';
+
+  @override
+  String version(String version, String build) {
+    return 'Version $version ($build)';
+  }
+
+  @override
+  String get buildCopied => 'Version copiée';
+
+  @override
+  String get licenses => 'Licences tierces';
+
+  @override
+  String get datasetAttributionTitle => 'Données du corpus';
+
+  @override
+  String get datasetAttributionBody =>
+      'Données de la bibliothèque Shamela — AuthenticIlm/Shamela4_Full_DB sur Hugging Face. Les textes sont affichés tels quels.';
+
+  @override
+  String get sourceCode => 'Code source';
+
+  @override
+  String get noConnection => 'Pas de connexion Internet';
+
+  @override
+  String get searchScopeTitles => 'Titres';
+
+  @override
+  String get searchScopeTexts => 'Texte intégral';
+
+  @override
+  String get minQueryHint => 'Saisissez au moins deux caractères';
+
+  @override
+  String searchingBooksProgress(int done, int total) {
+    return 'Recherche $done sur $total livres…';
+  }
+
+  @override
+  String hitsCapped(int count) {
+    return '$count+';
+  }
+
+  @override
+  String get moreHitsInBook => 'Voir plus dans le livre';
+
+  @override
+  String get libSearchEmpty => 'Aucun résultat dans votre bibliothèque';
+
+  @override
+  String get tryCatalogSearch => 'Chercher dans le catalogue';
+
+  @override
+  String get searchFailedRetry => 'Échec — toucher pour réessayer';
+
+  @override
+  String authorBooksCount(int count) {
+    return '$count livres';
+  }
+
+  @override
+  String authorInstalledCount(int count) {
+    return '$count installés';
+  }
+
+  @override
+  String get showMore => 'Plus';
+
+  @override
+  String get showLess => 'Moins';
+
+  @override
+  String get allBooks => 'Tous';
+
+  @override
+  String get installedOnly => 'Installés';
+
+  @override
+  String get noInstalledForAuthor => 'Aucun livre installé de cet auteur';
+
+  @override
+  String get filterHint => 'Filtrer…';
+
+  @override
+  String diedHijri(int year) {
+    return 'm. $year H';
+  }
+
+  @override
+  String diedCE(int year) {
+    return 'm. $year apr. J.-C.';
+  }
+
+  @override
+  String get exportAnnotations => 'Exporter notes et surlignages';
+
+  @override
+  String get exportNoAnnotationsHint => 'Pas d\'annotations dans ce livre';
+
+  @override
+  String get exportFormatMarkdown => 'Markdown';
+
+  @override
+  String get exportFormatText => 'Texte';
+
+  @override
+  String get includeHighlights => 'Surlignages';
+
+  @override
+  String get includeNotes => 'Notes';
+
+  @override
+  String get export => 'Exporter';
+
+  @override
+  String get exportDone => 'Exporté';
+
+  @override
+  String exportedOn(String date) {
+    return 'Exporté le $date';
+  }
+
+  @override
+  String notesFileHeading(String title) {
+    return 'Notes — $title';
+  }
+
+  @override
+  String get noteLabel => 'Note';
 }

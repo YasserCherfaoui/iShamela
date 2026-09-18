@@ -8,14 +8,17 @@ import 'package:ishamela/core/models/models.dart';
 import 'package:ishamela/core/providers.dart';
 import 'package:ishamela/core/search/normalizer.dart';
 import 'package:ishamela/core/search/normalizer_map.dart';
+import 'package:ishamela/features/catalog/author_page.dart';
 import 'package:ishamela/features/reader/annotated_body.dart';
 import 'package:ishamela/features/reader/body_html.dart';
 import 'package:ishamela/features/reader/book_database.dart';
+import 'package:ishamela/features/reader/export_sheet.dart';
 import 'package:ishamela/features/reader/sticky_toc.dart';
 import 'package:ishamela/ui/app_search_field.dart';
 import 'package:ishamela/ui/jump_sheet.dart';
 import 'package:ishamela/ui/page_pill.dart';
 import 'package:ishamela/ui/rosette_divider.dart';
+import 'package:ishamela/ui/segmented_pills.dart';
 import 'package:ishamela/ui/theme/ishamela_theme.dart';
 import 'package:ishamela/ui/theme/ishamela_tokens.dart';
 import 'package:ishamela/ui/theme/reader_theme_tokens.dart';
@@ -52,25 +55,36 @@ class ReaderPage extends ConsumerStatefulWidget {
     required this.bookId,
     this.title,
     this.authorName,
+    this.authorId,
     this.initialPageId,
     this.initialPrintPage,
+    this.initialSearchQuery,
+    this.exactPhrase = false,
   });
 
   final int bookId;
   final String? title;
   final String? authorName;
+  final int? authorId;
 
   /// Prefer [initialPrintPage] when set (SPEC-014 resume).
   final int? initialPageId;
   final int? initialPrintPage;
+
+  /// Prefill in-book search (SPEC-017 «عرض المزيد» / hit open).
+  final String? initialSearchQuery;
+  final bool exactPhrase;
 
   static Future<void> open(
     BuildContext context, {
     required int bookId,
     String? title,
     String? authorName,
+    int? authorId,
     int? initialPageId,
     int? initialPrintPage,
+    String? initialSearchQuery,
+    bool exactPhrase = false,
   }) {
     return Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -78,8 +92,11 @@ class ReaderPage extends ConsumerStatefulWidget {
           bookId: bookId,
           title: title,
           authorName: authorName,
+          authorId: authorId,
           initialPageId: initialPageId,
           initialPrintPage: initialPrintPage,
+          initialSearchQuery: initialSearchQuery,
+          exactPhrase: exactPhrase,
         ),
       ),
     );
@@ -107,10 +124,15 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   List<BookSearchHit> _hits = const [];
   Set<int> _highlightPageIds = {};
   StateDatabase? _state;
+  int _paneTab = 0;
 
   @override
   void initState() {
     super.initState();
+    _exactPhrase = widget.exactPhrase;
+    if (widget.initialSearchQuery != null) {
+      _searchCtrl.text = widget.initialSearchQuery!;
+    }
     _open();
   }
 
@@ -181,6 +203,10 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         _pageController = PageController(initialPage: index);
         _jumpCtrl.text = page?.pageNumber?.toString() ?? '';
       });
+      if (widget.initialSearchQuery != null &&
+          widget.initialSearchQuery!.trim().isNotEmpty) {
+        _runSearch();
+      }
       if (resumeMissing && mounted) {
         final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -408,7 +434,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                 child: Text(l10n.bookCard),
               ),
             PopupMenuButton<String>(
-              onSelected: (v) {
+              onSelected: (v) async {
                 switch (v) {
                   case 'card':
                     if (wide) {
@@ -416,6 +442,13 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                     } else {
                       _openCardSheet(context, l10n, title);
                     }
+                  case 'export':
+                    await showAnnotationsExportSheet(
+                      context,
+                      bookId: widget.bookId,
+                      title: title,
+                      authorName: widget.authorName,
+                    );
                   case 'mode_h':
                     _setMode(ReadingMode.pagedH);
                   case 'mode_v':
@@ -436,30 +469,46 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                         .save(ReadingAtmosphere.night);
                 }
               },
-              itemBuilder: (_) => [
-                if (!wide)
-                  PopupMenuItem(value: 'card', child: Text(l10n.bookCard)),
-                if (!wide) const PopupMenuDivider(),
-                PopupMenuItem(value: 'mode_h', child: Text(l10n.modePagedH)),
-                PopupMenuItem(value: 'mode_v', child: Text(l10n.modePagedV)),
-                PopupMenuItem(
-                  value: 'mode_c',
-                  child: Text(l10n.modeContinuousV),
-                ),
-                const PopupMenuDivider(),
-                PopupMenuItem(
-                  value: 'atm_paper',
-                  child: Text(l10n.atmospherePaper),
-                ),
-                PopupMenuItem(
-                  value: 'atm_sepia',
-                  child: Text(l10n.atmosphereSepia),
-                ),
-                PopupMenuItem(
-                  value: 'atm_night',
-                  child: Text(l10n.atmosphereNight),
-                ),
-              ],
+              itemBuilder: (_) {
+                final state = ref.read(stateDatabaseProvider).maybeWhen(
+                      data: (s) => s,
+                      orElse: () => null,
+                    );
+                final count = state?.annotationCountForBook(widget.bookId) ?? 0;
+                return [
+                  if (!wide)
+                    PopupMenuItem(value: 'card', child: Text(l10n.bookCard)),
+                  PopupMenuItem(
+                    value: 'export',
+                    enabled: count > 0,
+                    child: Text(
+                      count > 0
+                          ? l10n.exportAnnotations
+                          : l10n.exportNoAnnotationsHint,
+                    ),
+                  ),
+                  if (!wide) const PopupMenuDivider(),
+                  PopupMenuItem(value: 'mode_h', child: Text(l10n.modePagedH)),
+                  PopupMenuItem(value: 'mode_v', child: Text(l10n.modePagedV)),
+                  PopupMenuItem(
+                    value: 'mode_c',
+                    child: Text(l10n.modeContinuousV),
+                  ),
+                  const PopupMenuDivider(),
+                  PopupMenuItem(
+                    value: 'atm_paper',
+                    child: Text(l10n.atmospherePaper),
+                  ),
+                  PopupMenuItem(
+                    value: 'atm_sepia',
+                    child: Text(l10n.atmosphereSepia),
+                  ),
+                  PopupMenuItem(
+                    value: 'atm_night',
+                    child: Text(l10n.atmosphereNight),
+                  ),
+                ];
+              },
             ),
           ],
         ),
@@ -746,15 +795,29 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
           part: page.part,
         );
     final gold = IshamelaTokens.of(context).goldSoft;
-    return IconButton(
-      tooltip: l10n.bookmarks,
-      icon: Icon(
-        marked ? Icons.bookmark : Icons.bookmark_border,
-        color: marked ? gold : null,
+    final reduce = MediaQuery.disableAnimationsOf(context);
+    return SizedBox(
+      width: 38,
+      height: 38,
+      child: IconButton(
+        padding: EdgeInsets.zero,
+        tooltip: l10n.bookmarks,
+        icon: AnimatedScale(
+          scale: marked ? 1.1 : 1.0,
+          duration: reduce
+              ? Duration.zero
+              : const Duration(milliseconds: 150),
+          curve: Curves.easeOut,
+          child: Icon(
+            marked ? Icons.bookmark : Icons.bookmark_border,
+            color: marked ? gold : IshamelaTokens.of(context).muted,
+            size: 22,
+          ),
+        ),
+        onPressed: page == null || state == null
+            ? null
+            : () => _toggleBookmark(l10n, page),
       ),
-      onPressed: page == null || state == null
-          ? null
-          : () => _toggleBookmark(l10n, page),
     );
   }
 
@@ -797,63 +860,32 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     assert(ticks >= 0);
     final noteCount = _state?.notesForBook(widget.bookId).length ?? 0;
     final bookmarkCount = _state?.bookmarksForBook(widget.bookId).length ?? 0;
-    final gold = IshamelaTokens.of(context).gold;
-    return DefaultTabController(
-      length: 3,
-      child: Column(
-        children: [
-          TabBar(
-            tabs: [
-              Tab(text: l10n.toc),
-              Tab(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(l10n.bookmarks),
-                    if (bookmarkCount > 0) ...[
-                      const SizedBox(width: 6),
-                      Badge(
-                        backgroundColor: gold,
-                        label: Text(
-                          '$bookmarkCount',
-                          style: const TextStyle(fontSize: 10),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              Tab(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(l10n.notesTab),
-                    if (noteCount > 0) ...[
-                      const SizedBox(width: 6),
-                      Badge(
-                        backgroundColor: gold,
-                        label: Text(
-                          '$noteCount',
-                          style: const TextStyle(fontSize: 10),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
+    final bookmarkLabel = bookmarkCount > 0
+        ? '${l10n.bookmarks} $bookmarkCount'
+        : l10n.bookmarks;
+    final notesLabel =
+        noteCount > 0 ? '${l10n.notesTab} $noteCount' : l10n.notesTab;
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
+          child: SegmentedPills(
+            labels: [l10n.toc, bookmarkLabel, notesLabel],
+            selectedIndex: _paneTab,
+            onChanged: (i) => setState(() => _paneTab = i),
+          ),
+        ),
+        Expanded(
+          child: IndexedStack(
+            index: _paneTab,
+            children: [
+              _tocList(l10n),
+              _bookmarksList(l10n),
+              _notesList(l10n),
             ],
           ),
-          Expanded(
-            child: TabBarView(
-              children: [
-                _tocList(l10n),
-                _bookmarksList(l10n),
-                _notesList(l10n),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -1047,6 +1079,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   Widget _cardPane(AppLocalizations l10n, String title) {
     final betaka = _db?.meta('betaka');
     final author = widget.authorName ?? _db?.meta('author') ?? '';
+    final authorId = widget.authorId;
     final category = _db?.meta('category_name') ?? '';
     final pages = _db?.meta('page_count') ?? '${_ids.length}';
     final t = IshamelaTokens.of(context);
@@ -1056,7 +1089,24 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         Text(l10n.bookCard, style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         Text(title, style: Theme.of(context).textTheme.titleSmall),
-        if (author.isNotEmpty) Text(author),
+        if (author.isNotEmpty)
+          authorId == null
+              ? Text(author)
+              : InkWell(
+                  onTap: () => AuthorPage.open(
+                    context,
+                    authorId: authorId,
+                    author: Author(id: authorId, name: author),
+                  ),
+                  child: Text(
+                    author,
+                    style: TextStyle(
+                      color: t.green700,
+                      decoration: TextDecoration.underline,
+                      decorationColor: t.green700.withValues(alpha: 0.4),
+                    ),
+                  ),
+                ),
         if (category.isNotEmpty) Text(category),
         Text(l10n.pagesCount(int.tryParse(pages) ?? _ids.length)),
         const SizedBox(height: 8),

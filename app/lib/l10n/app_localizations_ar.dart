@@ -383,6 +383,21 @@ class AppLocalizationsAr extends AppLocalizations {
   String get historyLink => 'السجل';
 
   @override
+  String minutesAgo(int count) {
+    return 'قبل $count دقيقة';
+  }
+
+  @override
+  String hoursAgo(int count) {
+    return 'قبل $count ساعة';
+  }
+
+  @override
+  String daysAgo(int count) {
+    return 'قبل $count يوم';
+  }
+
+  @override
   String get today => 'اليوم';
 
   @override
@@ -419,4 +434,180 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get undo => 'تراجع';
+
+  @override
+  String get storage => 'التخزين';
+
+  @override
+  String storageUsed(String size, int count) {
+    return 'المستخدم: $size ($count كتابًا)';
+  }
+
+  @override
+  String storageAvailable(String size) {
+    return 'المتاح على الجهاز: $size';
+  }
+
+  @override
+  String get manageStorage => 'إدارة التخزين';
+
+  @override
+  String get calculatingSizes => 'يجري حساب الأحجام…';
+
+  @override
+  String uninstallSelected(int count) {
+    return 'إلغاء تثبيت المحدد ($count)';
+  }
+
+  @override
+  String uninstallConfirmSize(String size) {
+    return 'سيحرر $size.';
+  }
+
+  @override
+  String freeUpSpace(String used, String free) {
+    return '$used مستخدمة · $free متاحة';
+  }
+
+  @override
+  String get noInstalledBooks => 'لا كتب مثبّتة';
+
+  @override
+  String get languageAndApp => 'اللغة والتطبيق';
+
+  @override
+  String get appLanguage => 'لغة التطبيق';
+
+  @override
+  String get aboutApp => 'حول التطبيق';
+
+  @override
+  String version(String version, String build) {
+    return 'الإصدار $version ($build)';
+  }
+
+  @override
+  String get buildCopied => 'تم نسخ الإصدار';
+
+  @override
+  String get licenses => 'تراخيص الطرف الثالث';
+
+  @override
+  String get datasetAttributionTitle => 'بيانات المكتبة';
+
+  @override
+  String get datasetAttributionBody =>
+      'بيانات المكتبة الشاملة — مجموعة AuthenticIlm/Shamela4_Full_DB على HuggingFace. تُعرض النصوص كما وردت في المصدر.';
+
+  @override
+  String get sourceCode => 'شفرة المصدر';
+
+  @override
+  String get noConnection => 'لا اتصال بالإنترنت';
+
+  @override
+  String get searchScopeTitles => 'العناوين';
+
+  @override
+  String get searchScopeTexts => 'النصوص';
+
+  @override
+  String get minQueryHint => 'أدخل حرفين على الأقل';
+
+  @override
+  String searchingBooksProgress(int done, int total) {
+    return 'جارٍ البحث في $done من $total كتابًا…';
+  }
+
+  @override
+  String hitsCapped(int count) {
+    return '$count+';
+  }
+
+  @override
+  String get moreHitsInBook => 'عرض المزيد داخل الكتاب';
+
+  @override
+  String get libSearchEmpty => 'لا نتائج في مكتبتك';
+
+  @override
+  String get tryCatalogSearch => 'ابحث في الفهرس';
+
+  @override
+  String get searchFailedRetry => 'فشل البحث — انقر لإعادة المحاولة';
+
+  @override
+  String authorBooksCount(int count) {
+    return '$count كتابًا';
+  }
+
+  @override
+  String authorInstalledCount(int count) {
+    return 'مثبّت $count';
+  }
+
+  @override
+  String get showMore => 'المزيد';
+
+  @override
+  String get showLess => 'أقل';
+
+  @override
+  String get allBooks => 'الكل';
+
+  @override
+  String get installedOnly => 'المثبّتة';
+
+  @override
+  String get noInstalledForAuthor => 'لا كتب مثبّتة لهذا المؤلف';
+
+  @override
+  String get filterHint => 'تصفية…';
+
+  @override
+  String diedHijri(int year) {
+    return 'ت $yearهـ';
+  }
+
+  @override
+  String diedCE(int year) {
+    return 'ت $yearم';
+  }
+
+  @override
+  String get exportAnnotations => 'تصدير الملاحظات والتظليلات';
+
+  @override
+  String get exportNoAnnotationsHint => 'لا ملاحظات في هذا الكتاب';
+
+  @override
+  String get exportFormatMarkdown => 'Markdown';
+
+  @override
+  String get exportFormatText => 'نص';
+
+  @override
+  String get includeHighlights => 'التظليلات';
+
+  @override
+  String get includeNotes => 'الملاحظات';
+
+  @override
+  String get export => 'تصدير';
+
+  @override
+  String get exportDone => 'تم التصدير';
+
+  @override
+  String exportedOn(String date) {
+    return 'صُدِّر في $date';
+  }
+
+  @override
+  String notesFileHeading(String title) {
+    return 'ملاحظات — $title';
+  }
+
+  @override
+  String get noteLabel => 'ملاحظة';
 }

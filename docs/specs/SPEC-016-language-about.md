@@ -1,6 +1,6 @@
 # SPEC-016 — App Language & About
 
-**Status:** Draft · **Implements:** DESIGN-002 F4 (§5) · **Depends on:** existing ARB set (`app_ar/en/fr.arb`), settings store
+**Status:** Implemented · **Implements:** DESIGN-002 F4 (§5) · **Depends on:** existing ARB set (`app_ar/en/fr.arb`), settings store
 **Goal:** Let users switch the app UI language (ar/en/fr) and give the app a proper About surface with version, licenses, and dataset attribution. No new features beyond that.
 
 ---

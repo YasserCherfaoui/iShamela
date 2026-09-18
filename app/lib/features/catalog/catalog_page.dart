@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ishamela/l10n/app_localizations.dart';
 
+import 'package:ishamela/core/author_death.dart';
 import 'package:ishamela/core/author_line.dart';
 import 'package:ishamela/core/format_bytes.dart';
 import 'package:ishamela/core/models/models.dart';
 import 'package:ishamela/core/providers.dart';
 import 'package:ishamela/features/catalog/catalog_search_field.dart';
+import 'package:ishamela/features/catalog/author_page.dart';
 import 'package:ishamela/features/catalog/catalog_service.dart';
 import 'package:ishamela/features/downloads/download_service.dart';
 import 'package:ishamela/features/reader/reader_page.dart';
@@ -45,6 +47,12 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
     final catalogAsync = ref.watch(catalogRepositoryProvider);
     final syncTick = ref.watch(catalogSyncTickProvider);
     final stateAsync = ref.watch(stateDatabaseProvider);
+
+    ref.listen<String?>(catalogPendingQueryProvider, (prev, next) {
+      if (next == null || next.trim().isEmpty) return;
+      setState(() => _query = next);
+      ref.read(catalogPendingQueryProvider.notifier).clear();
+    });
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -124,6 +132,7 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
                         ),
                         const SizedBox(height: 16),
                         CatalogSearchField(
+                          key: ValueKey('cat-search-$_query'),
                           hintText: l10n.searchHint,
                           initialQuery: _query,
                           onChanged: (v) => setState(() => _query = v),
@@ -400,16 +409,8 @@ class _AuthorSliver extends StatelessWidget {
           return _BrowseEntityCard(
             icon: Icons.person_outline,
             title: a.name,
-            subtitle: a.deathYearHijri != null ? 'ت ${a.deathYearHijri}هـ' : null,
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => BookListPage(
-                  title: a.name,
-                  books: catalog.booksByAuthor(a.id),
-                  allowDownloadAll: true,
-                ),
-              ),
-            ),
+            subtitle: formatAuthorDeath(AppLocalizations.of(context), a.deathYearHijri),
+            onTap: () => AuthorPage.open(context, authorId: a.id, author: a),
           );
         },
       ),
@@ -473,17 +474,9 @@ class _SearchResultsSliver extends StatelessWidget {
                 icon: Icons.person_outline,
                 title: a.name,
                 titleQuery: query,
-                subtitle:
-                    a.deathYearHijri != null ? 'ت ${a.deathYearHijri}هـ' : null,
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => BookListPage(
-                      title: a.name,
-                      books: catalog.booksByAuthor(a.id),
-                      allowDownloadAll: true,
-                    ),
-                  ),
-                ),
+                subtitle: formatAuthorDeath(l10n, a.deathYearHijri),
+                onTap: () =>
+                    AuthorPage.open(context, authorId: a.id, author: a),
               ),
             ),
         ],
@@ -508,11 +501,15 @@ class BookListPage extends ConsumerStatefulWidget {
     required this.title,
     required this.books,
     this.allowDownloadAll = false,
+    this.embedded = false,
   });
 
   final String title;
   final List<Book> books;
   final bool allowDownloadAll;
+
+  /// When true, omit Scaffold/AppBar (SPEC-018 author page body).
+  final bool embedded;
 
   @override
   ConsumerState<BookListPage> createState() => _BookListPageState();
@@ -634,113 +631,116 @@ class _BookListPageState extends ConsumerState<BookListPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final t = IshamelaTokens.of(context);
+    final body = Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+          child: _selecting
+              ? Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton(
+                      onPressed: () => setState(() {
+                        for (final b in _visible) {
+                          if (b.canInstallOnDevice) {
+                            _selected.add(b.bookId);
+                          }
+                        }
+                      }),
+                      child: Text(l10n.selectAll),
+                    ),
+                    OutlinedButton(
+                      onPressed: () => setState(() => _selected.clear()),
+                      child: Text(l10n.deselectAll),
+                    ),
+                    FilledButton(
+                      onPressed: _selected.isEmpty
+                          ? null
+                          : () {
+                              final books = widget.books
+                                  .where(
+                                    (b) => _selected.contains(b.bookId),
+                                  )
+                                  .toList();
+                              _confirmAndEnqueue(books);
+                            },
+                      child: Text(
+                        l10n.downloadSelectedCount(_selected.length),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => setState(() {
+                        _selecting = false;
+                        _selected.clear();
+                      }),
+                      child: Text(
+                        l10n.cancel,
+                        style: TextStyle(color: t.muted),
+                      ),
+                    ),
+                  ],
+                )
+              : Row(
+                  children: [
+                    if (widget.allowDownloadAll)
+                      FilledButton.tonal(
+                        onPressed: () => _confirmAndEnqueue(widget.books),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: t.green100,
+                          foregroundColor: t.green900,
+                        ),
+                        child: Text(l10n.downloadAll),
+                      ),
+                    const SizedBox(width: 8),
+                    OutlinedButton(
+                      onPressed: () => setState(() => _selecting = true),
+                      child: Text(l10n.select),
+                    ),
+                  ],
+                ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+          child: CatalogSearchField(
+            hintText: l10n.filterHint,
+            onChanged: (v) => setState(() => _filter = v),
+          ),
+        ),
+        Expanded(
+          child: BookListView(
+            books: _visible,
+            selecting: _selecting,
+            selected: _selected,
+            onToggle: (id) {
+              setState(() {
+                if (_selected.contains(id)) {
+                  _selected.remove(id);
+                } else {
+                  _selected.add(id);
+                }
+              });
+            },
+            onLongPressSelect: (id) {
+              setState(() {
+                _selecting = true;
+                _selected.add(id);
+              });
+            },
+          ),
+        ),
+      ],
+    );
+
+    if (widget.embedded) return body;
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
           title: Text(widget.title),
         ),
-        body: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-              child: _selecting
-                  ? Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        OutlinedButton(
-                          onPressed: () => setState(() {
-                            for (final b in _visible) {
-                              if (b.canInstallOnDevice) {
-                                _selected.add(b.bookId);
-                              }
-                            }
-                          }),
-                          child: Text(l10n.selectAll),
-                        ),
-                        OutlinedButton(
-                          onPressed: () => setState(() => _selected.clear()),
-                          child: Text(l10n.deselectAll),
-                        ),
-                        FilledButton(
-                          onPressed: _selected.isEmpty
-                              ? null
-                              : () {
-                                  final books = widget.books
-                                      .where(
-                                        (b) => _selected.contains(b.bookId),
-                                      )
-                                      .toList();
-                                  _confirmAndEnqueue(books);
-                                },
-                          child: Text(
-                            l10n.downloadSelectedCount(_selected.length),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () => setState(() {
-                            _selecting = false;
-                            _selected.clear();
-                          }),
-                          child: Text(
-                            l10n.cancel,
-                            style: TextStyle(color: t.muted),
-                          ),
-                        ),
-                      ],
-                    )
-                  : Row(
-                      children: [
-                        if (widget.allowDownloadAll)
-                          FilledButton.tonal(
-                            onPressed: () =>
-                                _confirmAndEnqueue(widget.books),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: t.green100,
-                              foregroundColor: t.green900,
-                            ),
-                            child: Text(l10n.downloadAll),
-                          ),
-                        const SizedBox(width: 8),
-                        OutlinedButton(
-                          onPressed: () => setState(() => _selecting = true),
-                          child: Text(l10n.select),
-                        ),
-                      ],
-                    ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: CatalogSearchField(
-                hintText: l10n.searchHint,
-                onChanged: (v) => setState(() => _filter = v),
-              ),
-            ),
-            Expanded(
-              child: BookListView(
-                books: _visible,
-                selecting: _selecting,
-                selected: _selected,
-                onToggle: (id) {
-                  setState(() {
-                    if (_selected.contains(id)) {
-                      _selected.remove(id);
-                    } else {
-                      _selected.add(id);
-                    }
-                  });
-                },
-                onLongPressSelect: (id) {
-                  setState(() {
-                    _selecting = true;
-                    _selected.add(id);
-                  });
-                },
-              ),
-            ),
-          ],
-        ),
+        body: body,
       ),
     );
   }
@@ -833,6 +833,17 @@ class BookListView extends ConsumerWidget {
           title: book.title,
           categoryId: book.categoryId,
           author: formatAuthorLine(book.authorName, book.authorDeathYearHijri),
+          onAuthorTap: book.authorId == null
+              ? null
+              : () => AuthorPage.open(
+                    context,
+                    authorId: book.authorId!,
+                    author: Author(
+                      id: book.authorId!,
+                      name: book.authorName ?? '',
+                      deathYearHijri: book.authorDeathYearHijri,
+                    ),
+                  ),
           meta: meta,
           highlightQuery: highlightQuery,
           available: canDownload || installed,
@@ -849,6 +860,7 @@ class BookListView extends ConsumerWidget {
                     bookId: book.bookId,
                     title: book.title,
                     authorName: book.authorName,
+                    authorId: book.authorId,
                   )
               : null,
           onLongPress: installed || !canDownload

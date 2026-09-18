@@ -385,6 +385,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get historyLink => 'History';
 
   @override
+  String minutesAgo(int count) {
+    return '$count min ago';
+  }
+
+  @override
+  String hoursAgo(int count) {
+    return '${count}h ago';
+  }
+
+  @override
+  String daysAgo(int count) {
+    return '${count}d ago';
+  }
+
+  @override
   String get today => 'Today';
 
   @override
@@ -422,4 +437,180 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get undo => 'Undo';
+
+  @override
+  String get storage => 'Storage';
+
+  @override
+  String storageUsed(String size, int count) {
+    return 'Used: $size ($count books)';
+  }
+
+  @override
+  String storageAvailable(String size) {
+    return 'Available on device: $size';
+  }
+
+  @override
+  String get manageStorage => 'Manage storage';
+
+  @override
+  String get calculatingSizes => 'Calculating sizes…';
+
+  @override
+  String uninstallSelected(int count) {
+    return 'Uninstall selected ($count)';
+  }
+
+  @override
+  String uninstallConfirmSize(String size) {
+    return 'This will free $size.';
+  }
+
+  @override
+  String freeUpSpace(String used, String free) {
+    return '$used used · $free available';
+  }
+
+  @override
+  String get noInstalledBooks => 'No installed books';
+
+  @override
+  String get languageAndApp => 'Language & app';
+
+  @override
+  String get appLanguage => 'App language';
+
+  @override
+  String get aboutApp => 'About';
+
+  @override
+  String version(String version, String build) {
+    return 'Version $version ($build)';
+  }
+
+  @override
+  String get buildCopied => 'Version copied';
+
+  @override
+  String get licenses => 'Third-party licenses';
+
+  @override
+  String get datasetAttributionTitle => 'Corpus data';
+
+  @override
+  String get datasetAttributionBody =>
+      'Shamela library data — AuthenticIlm/Shamela4_Full_DB on Hugging Face. Texts are shown verbatim from the corpus.';
+
+  @override
+  String get sourceCode => 'Source code';
+
+  @override
+  String get noConnection => 'No internet connection';
+
+  @override
+  String get searchScopeTitles => 'Titles';
+
+  @override
+  String get searchScopeTexts => 'Full text';
+
+  @override
+  String get minQueryHint => 'Enter at least two characters';
+
+  @override
+  String searchingBooksProgress(int done, int total) {
+    return 'Searching $done of $total books…';
+  }
+
+  @override
+  String hitsCapped(int count) {
+    return '$count+';
+  }
+
+  @override
+  String get moreHitsInBook => 'Show more in book';
+
+  @override
+  String get libSearchEmpty => 'No results in your library';
+
+  @override
+  String get tryCatalogSearch => 'Search the catalog';
+
+  @override
+  String get searchFailedRetry => 'Search failed — tap to retry';
+
+  @override
+  String authorBooksCount(int count) {
+    return '$count books';
+  }
+
+  @override
+  String authorInstalledCount(int count) {
+    return '$count installed';
+  }
+
+  @override
+  String get showMore => 'More';
+
+  @override
+  String get showLess => 'Less';
+
+  @override
+  String get allBooks => 'All';
+
+  @override
+  String get installedOnly => 'Installed';
+
+  @override
+  String get noInstalledForAuthor => 'No installed books by this author';
+
+  @override
+  String get filterHint => 'Filter…';
+
+  @override
+  String diedHijri(int year) {
+    return 'd. $year AH';
+  }
+
+  @override
+  String diedCE(int year) {
+    return 'd. $year CE';
+  }
+
+  @override
+  String get exportAnnotations => 'Export notes & highlights';
+
+  @override
+  String get exportNoAnnotationsHint => 'No annotations in this book';
+
+  @override
+  String get exportFormatMarkdown => 'Markdown';
+
+  @override
+  String get exportFormatText => 'Plain text';
+
+  @override
+  String get includeHighlights => 'Highlights';
+
+  @override
+  String get includeNotes => 'Notes';
+
+  @override
+  String get export => 'Export';
+
+  @override
+  String get exportDone => 'Exported';
+
+  @override
+  String exportedOn(String date) {
+    return 'Exported on $date';
+  }
+
+  @override
+  String notesFileHeading(String title) {
+    return 'Notes — $title';
+  }
+
+  @override
+  String get noteLabel => 'Note';
 }

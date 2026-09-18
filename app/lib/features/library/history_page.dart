@@ -66,36 +66,34 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
     final catalogAsync = ref.watch(catalogRepositoryProvider);
     final downloadsAsync = ref.watch(downloadServiceProvider);
 
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            l10n.historyTitle,
-            style: TextStyle(
-              fontFamily: kFontAmiri,
-              fontWeight: FontWeight.w700,
-              fontSize: 22,
-              color: t.ink,
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          l10n.historyTitle,
+          style: TextStyle(
+            fontFamily: kFontAmiri,
+            fontWeight: FontWeight.w700,
+            fontSize: 23,
+            color: t.ink,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              final state = stateAsync.maybeWhen(
+                data: (s) => s,
+                orElse: () => null,
+              );
+              if (state != null) _clear(l10n, state);
+            },
+            child: Text(
+              l10n.historyClear,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                final state = stateAsync.maybeWhen(
-                  data: (s) => s,
-                  orElse: () => null,
-                );
-                if (state != null) _clear(l10n, state);
-              },
-              child: Text(
-                l10n.historyClear,
-                style: const TextStyle(color: Color(0xFFA6402E)),
-              ),
-            ),
-          ],
-        ),
-        body: stateAsync.when(
+        ],
+      ),
+      body: stateAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Center(child: Text('$e')),
           data: (state) {
@@ -142,7 +140,6 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
             }
             return list;
           },
-        ),
       ),
     );
   }
@@ -199,13 +196,16 @@ List<HistoryDayGroup> groupHistoryByDay(
   ];
 }
 
-String relativeOpenedLabel(int openedAtMs, DateTime now) {
+String relativeOpenedLabel(
+  int openedAtMs,
+  DateTime now,
+  AppLocalizations l10n,
+) {
   final diff = now.difference(DateTime.fromMillisecondsSinceEpoch(openedAtMs));
   if (diff.inMinutes < 1) return '…';
-  if (diff.inHours < 1) return '${diff.inMinutes}m';
-  if (diff.inHours < 24) return '${diff.inHours}h';
-  if (diff.inDays < 7) return '${diff.inDays}d';
-  return '${diff.inDays}d';
+  if (diff.inHours < 1) return l10n.minutesAgo(diff.inMinutes);
+  if (diff.inHours < 24) return l10n.hoursAgo(diff.inHours);
+  return l10n.daysAgo(diff.inDays);
 }
 
 class _HistoryRow extends ConsumerWidget {
@@ -237,6 +237,7 @@ class _HistoryRow extends ConsumerWidget {
     final caption = relativeOpenedLabel(
       entry.openedAt,
       DateTime.now(),
+      l10n,
     );
 
     Widget? trailing;
@@ -254,10 +255,7 @@ class _HistoryRow extends ConsumerWidget {
         title: title,
         categoryId: book?.categoryId ?? 0,
         author: line2.isEmpty ? null : line2,
-        meta: [
-          caption,
-          if (!installed) l10n.notInstalled,
-        ],
+        meta: [caption],
         available: installed,
         unavailableLabel: installed ? null : l10n.notInstalled,
         trailing: trailing ??

@@ -1,6 +1,6 @@
 # SPEC-017 — Library-Wide Full-Text Search
 
-**Status:** Draft · **Implements:** DESIGN-002 F5 (§6) · **Depends on:** SPEC-001 (normalization), SPEC-005 (normalize-with-map offsets), SPEC-009 (in-book search semantics), SPEC-014 (reading history for ordering), ADR-001 (per-bundle FTS5)
+**Status:** Implemented · **Implements:** DESIGN-002 F5 (§6) · **Depends on:** SPEC-001 (normalization), SPEC-005 (normalize-with-map offsets), SPEC-009 (in-book search semantics), SPEC-014 (reading history for ordering), ADR-001 (per-bundle FTS5)
 **Goal:** One query across the full text of every *installed* book, streamed and cancellable, reusing each bundle's existing FTS5 index. Zero new storage; fully offline.
 
 ---

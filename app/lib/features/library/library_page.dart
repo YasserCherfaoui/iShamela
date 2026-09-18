@@ -9,14 +9,19 @@ import 'package:ishamela/core/models/models.dart';
 import 'package:ishamela/core/providers.dart';
 import 'package:ishamela/core/db/state_database.dart';
 import 'package:ishamela/core/search/normalizer.dart';
+import 'package:ishamela/features/catalog/author_page.dart';
 import 'package:ishamela/features/catalog/catalog_service.dart';
 import 'package:ishamela/features/downloads/download_service.dart';
 import 'package:ishamela/features/library/history_page.dart';
+import 'package:ishamela/features/library/library_search_service.dart';
+import 'package:ishamela/features/reader/export_sheet.dart';
 import 'package:ishamela/features/reader/reader_page.dart';
 import 'package:ishamela/ui/app_search_field.dart';
 import 'package:ishamela/ui/book_card.dart';
 import 'package:ishamela/ui/book_spine.dart';
 import 'package:ishamela/ui/empty_state.dart';
+import 'package:ishamela/ui/highlighted_text.dart';
+import 'package:ishamela/ui/meta_chip.dart';
 import 'package:ishamela/ui/segmented_pills.dart';
 import 'package:ishamela/ui/theme/ishamela_theme.dart';
 import 'package:ishamela/ui/theme/ishamela_tokens.dart';
@@ -51,6 +56,17 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
   List<Book>? _drillBooks;
   bool _loading = false;
 
+  /// 0 = titles (default), 1 = full text (SPEC-017).
+  int _searchScope = 0;
+  bool _exactPhrase = false;
+  CancellationToken? _textSearchToken;
+  StreamSubscription<LibraryTextSearchGroup>? _textSearchSub;
+  final List<LibraryTextSearchGroup> _textGroups = [];
+  int _textSearchDone = 0;
+  int _textSearchTotal = 0;
+  bool _textSearching = false;
+  bool _textSearchFailed = false;
+
   @override
   void initState() {
     super.initState();
@@ -58,16 +74,28 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
     _tabs.addListener(_onTabChanged);
   }
 
+  void _cancelTextSearch() {
+    _textSearchToken?.cancel();
+    _textSearchToken = null;
+    _textSearchSub?.cancel();
+    _textSearchSub = null;
+  }
+
   void _onTabChanged() {
     if (_tabs.indexIsChanging) return;
+    _cancelTextSearch();
     setState(() {
       _categoryFilter = null;
       _authorFilter = null;
       _drillBooks = null;
       _query = '';
       _searchCtrl.clear();
+      _searchScope = 0;
       _selecting = false;
       _selected.clear();
+      _textGroups.clear();
+      _textSearching = false;
+      _textSearchFailed = false;
     });
     _removeHover();
     _scheduleLoad();
@@ -75,6 +103,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
 
   @override
   void dispose() {
+    _cancelTextSearch();
     _searchDebounce?.cancel();
     _svc?.removeListener(_onDownloadsChanged);
     _tabs.removeListener(_onTabChanged);
@@ -102,10 +131,104 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
 
   void _onSearchChanged(String v) {
     _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 200), () {
+    final delay = _searchScope == 1
+        ? const Duration(milliseconds: 300)
+        : const Duration(milliseconds: 200);
+    _searchDebounce = Timer(delay, () {
       if (!mounted) return;
-      setState(() => _query = v);
+      final cleared = v.trim().isEmpty;
+      setState(() {
+        _query = v;
+        if (cleared) _searchScope = 0;
+      });
+      if (_searchScope == 1) {
+        _startTextSearch();
+      } else {
+        _cancelTextSearch();
+        setState(() {
+          _textGroups.clear();
+          _textSearching = false;
+        });
+      }
     });
+  }
+
+  void _startTextSearch() {
+    _cancelTextSearch();
+    final q = normalize(_query.trim());
+    if (q.length < 2) {
+      setState(() {
+        _textGroups.clear();
+        _textSearching = false;
+        _textSearchFailed = false;
+      });
+      return;
+    }
+    final paths = ref.read(appPathsProvider).maybeWhen(
+          data: (p) => p,
+          orElse: () => null,
+        );
+    final state = ref.read(stateDatabaseProvider).maybeWhen(
+          data: (s) => s,
+          orElse: () => null,
+        );
+    final catalog = ref.read(catalogRepositoryProvider).maybeWhen(
+          data: (c) => c,
+          orElse: () => null,
+        );
+    if (paths == null || state == null || catalog == null) return;
+
+    final token = CancellationToken();
+    _textSearchToken = token;
+    final svc = LibrarySearchService(
+      paths: paths,
+      state: state,
+      catalog: catalog,
+    );
+    final ordered = svc.orderedInstalledBookIds();
+    setState(() {
+      _textGroups.clear();
+      _textSearching = true;
+      _textSearchFailed = false;
+      _textSearchDone = 0;
+      _textSearchTotal = ordered.length;
+    });
+
+    final seen = <int>{};
+    _textSearchSub = svc
+        .search(query: _query, exactPhrase: _exactPhrase, token: token)
+        .listen(
+      (g) {
+        if (!mounted || token.isCancelled) return;
+        setState(() {
+          _textGroups.removeWhere((x) => x.bookId == g.bookId);
+          _textGroups.add(g);
+          seen.add(g.bookId);
+          _textSearchDone = seen.length;
+        });
+      },
+      onError: (_) {
+        if (!mounted || token.isCancelled) return;
+        setState(() {
+          _textSearching = false;
+          _textSearchFailed = true;
+        });
+      },
+      onDone: () {
+        if (!mounted || token.isCancelled) return;
+        setState(() {
+          _textSearching = false;
+          _textSearchDone = _textSearchTotal;
+          // Re-sort to LS-11 order
+          final order = {
+            for (var i = 0; i < ordered.length; i++) ordered[i]: i,
+          };
+          _textGroups.sort(
+            (a, b) => (order[a.bookId] ?? 0).compareTo(order[b.bookId] ?? 0),
+          );
+        });
+      },
+    );
   }
 
   void _scheduleLoad() {
@@ -275,17 +398,6 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
                                   ),
                                 ),
                               ),
-                              TextButton(
-                                onPressed: () => HistoryPage.open(context),
-                                child: Text(
-                                  l10n.historyTitle,
-                                  style: TextStyle(
-                                    fontFamily: kFontUi,
-                                    fontWeight: FontWeight.w600,
-                                    color: t.green700,
-                                  ),
-                                ),
-                              ),
                               if (_selecting) ...[
                                 IconButton(
                                   tooltip: l10n.selectAll,
@@ -333,22 +445,86 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
                             initialQuery: _query,
                             onChanged: _onSearchChanged,
                           ),
-                          const SizedBox(height: 12),
-                          SegmentedPills(
-                            labels: [
-                              l10n.categories,
-                              l10n.authors,
-                              l10n.libraryAllBooks,
+                          if (_query.trim().isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            SegmentedPills(
+                              labels: [
+                                l10n.searchScopeTitles,
+                                l10n.searchScopeTexts,
+                              ],
+                              selectedIndex: _searchScope,
+                              onChanged: (i) {
+                                _cancelTextSearch();
+                                setState(() {
+                                  _searchScope = i;
+                                  _textGroups.clear();
+                                });
+                                if (i == 1) _startTextSearch();
+                              },
+                            ),
+                            if (_searchScope == 1) ...[
+                              const SizedBox(height: 8),
+                              Align(
+                                alignment: AlignmentDirectional.centerStart,
+                                child: FilterChip(
+                                  label: Text(l10n.exactPhrase),
+                                  selected: _exactPhrase,
+                                  onSelected: (v) {
+                                    setState(() => _exactPhrase = v);
+                                    _startTextSearch();
+                                  },
+                                ),
+                              ),
+                              if (_textSearching)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      LinearProgressIndicator(
+                                        value: _textSearchTotal == 0
+                                            ? null
+                                            : (_textSearchDone /
+                                                    _textSearchTotal)
+                                                .clamp(0.0, 1.0),
+                                        minHeight: 3,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        l10n.searchingBooksProgress(
+                                          _textSearchDone,
+                                          _textSearchTotal,
+                                        ),
+                                        style: TextStyle(
+                                          fontFamily: kFontUi,
+                                          fontSize: 11,
+                                          color: t.muted,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                             ],
-                            selectedIndex: _tabs.index,
-                            onChanged: (i) {
-                              if (_tabs.index != i) _tabs.animateTo(i);
-                            },
-                          ),
+                          ],
+                          if (_searchScope != 1) ...[
+                            const SizedBox(height: 12),
+                            SegmentedPills(
+                              labels: [
+                                l10n.categories,
+                                l10n.authors,
+                                l10n.libraryAllBooks,
+                              ],
+                              selectedIndex: _tabs.index,
+                              onChanged: (i) {
+                                if (_tabs.index != i) _tabs.animateTo(i);
+                              },
+                            ),
+                          ],
                         ],
                       ),
                     ),
-                    if (_needsBack)
+                    if (_needsBack && _searchScope != 1)
                       ListTile(
                         leading: const Icon(Icons.arrow_forward),
                         title: Text(l10n.back),
@@ -367,6 +543,10 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
                       child: AnimatedBuilder(
                         animation: _tabs,
                         builder: (context, _) {
+                          if (_searchScope == 1 &&
+                              _query.trim().isNotEmpty) {
+                            return _textSearchResults(l10n, t);
+                          }
                           if (_loading && !_hasDataForActive) {
                             return const Center(
                               child: CircularProgressIndicator(),
@@ -383,6 +563,149 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
           },
         ),
       ),
+    );
+  }
+
+  Widget _textSearchResults(AppLocalizations l10n, IshamelaTokens t) {
+    final q = normalize(_query.trim());
+    if (q.length < 2) {
+      return Center(
+        child: Text(
+          l10n.minQueryHint,
+          style: TextStyle(fontFamily: kFontUi, color: t.muted),
+        ),
+      );
+    }
+    if (_textSearchFailed) {
+      return EmptyState(
+        message: l10n.searchFailedRetry,
+        actionLabel: l10n.searchFailedRetry,
+        onAction: _startTextSearch,
+      );
+    }
+    if (!_textSearching && _textGroups.isEmpty) {
+      return EmptyState(
+        message: l10n.libSearchEmpty,
+        actionLabel: l10n.tryCatalogSearch,
+        onAction: () {
+          ref.read(catalogPendingQueryProvider.notifier).set(_query);
+          ref.read(homeTabIndexProvider.notifier).go(0);
+        },
+      );
+    }
+    final reduce = MediaQuery.disableAnimationsOf(context);
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      itemCount: _textGroups.length,
+      itemBuilder: (context, i) {
+        final g = _textGroups[i];
+        final countLabel = g.capped
+            ? l10n.hitsCapped(g.totalHits > 50 ? 50 : g.totalHits)
+            : '${g.totalHits}';
+        return TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: 1),
+          duration: reduce
+              ? Duration.zero
+              : const Duration(milliseconds: 120),
+          builder: (context, opacity, child) =>
+              Opacity(opacity: opacity, child: child),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    BookSpine(
+                      title: g.title,
+                      categoryId: g.categoryId,
+                      width: 32,
+                      height: 46,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        g.title,
+                        style: TextStyle(
+                          fontFamily: kFontAmiri,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                          color: t.ink,
+                        ),
+                      ),
+                    ),
+                    MetaChip(label: countLabel),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                for (final hit in g.hits)
+                  InkWell(
+                    onTap: () => ReaderPage.open(
+                      context,
+                      bookId: g.bookId,
+                      title: g.title,
+                      initialPageId: hit.pageId,
+                      initialSearchQuery: _query,
+                      exactPhrase: _exactPhrase,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: t.goldSoft.withValues(alpha: 0.45),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              'ص ${hit.pageNumber?.toString() ?? '—'}',
+                              style: TextStyle(
+                                fontFamily: kFontUi,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                                color: t.ink,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: HighlightedText(
+                              text: hit.snippet,
+                              query: _query,
+                              maxLines: 1,
+                              style: TextStyle(
+                                fontFamily: kFontAmiri,
+                                fontSize: 14,
+                                height: 1.4,
+                                color: t.ink,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                if (g.capped)
+                  TextButton(
+                    onPressed: () => ReaderPage.open(
+                      context,
+                      bookId: g.bookId,
+                      title: g.title,
+                      initialSearchQuery: _query,
+                      exactPhrase: _exactPhrase,
+                    ),
+                    child: Text(l10n.moreHitsInBook),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -560,15 +883,11 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
                 ),
               ),
               trailing: Text('${e.count}', style: TextStyle(color: t.muted)),
-              onTap: () {
-                setState(() {
-                  _authorFilter = e.author;
-                  _drillBooks = null;
-                  _selecting = false;
-                  _selected.clear();
-                });
-                _scheduleLoad();
-              },
+              onTap: () => AuthorPage.open(
+                context,
+                authorId: e.author.id,
+                author: e.author,
+              ),
             ),
           ),
         );
@@ -616,6 +935,20 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
                 book.authorName,
                 book.authorDeathYearHijri,
               ),
+              onAuthorTap: book.authorId == null
+                  ? null
+                  : () {
+                      _removeHover();
+                      AuthorPage.open(
+                        context,
+                        authorId: book.authorId!,
+                        author: Author(
+                          id: book.authorId!,
+                          name: book.authorName ?? '',
+                          deathYearHijri: book.authorDeathYearHijri,
+                        ),
+                      );
+                    },
               meta: [
                 if (book.volumeCount != null && book.volumeCount! > 0)
                   l10n.volumesCount(book.volumeCount!),
@@ -641,6 +974,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
                   bookId: book.bookId,
                   title: book.title,
                   authorName: book.authorName,
+                  authorId: book.authorId,
                 );
               },
               onLongPress: () => setState(() {
@@ -652,6 +986,13 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
                 onSelected: (v) async {
                   if (v == 'card') {
                     await _showCardSheet(context, l10n, book);
+                  } else if (v == 'export') {
+                    await showAnnotationsExportSheet(
+                      context,
+                      bookId: book.bookId,
+                      title: book.title,
+                      authorName: book.authorName,
+                    );
                   } else if (v == 'delete') {
                     final svc = downloadsAsync.maybeWhen(
                       data: (s) => s,
@@ -668,16 +1009,29 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
                     }
                   }
                 },
-                itemBuilder: (_) => [
-                  PopupMenuItem(value: 'card', child: Text(l10n.bookCard)),
-                  PopupMenuItem(
-                    value: 'delete',
-                    child: Text(
-                      l10n.delete,
-                      style: const TextStyle(color: Color(0xFFA6402E)),
+                itemBuilder: (_) {
+                  final count =
+                      state?.annotationCountForBook(book.bookId) ?? 0;
+                  return [
+                    PopupMenuItem(value: 'card', child: Text(l10n.bookCard)),
+                    PopupMenuItem(
+                      value: 'export',
+                      enabled: count > 0,
+                      child: Text(
+                        count > 0
+                            ? l10n.exportAnnotations
+                            : l10n.exportNoAnnotationsHint,
+                      ),
                     ),
-                  ),
-                ],
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Text(
+                        l10n.delete,
+                        style: const TextStyle(color: Color(0xFFA6402E)),
+                      ),
+                    ),
+                  ];
+                },
               ),
             ),
           ),
@@ -872,14 +1226,40 @@ class _ContinueReadingHero extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    l10n.continueReading,
-                    style: TextStyle(
-                      fontFamily: kFontUi,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 11,
-                      color: t.goldSoft,
-                    ),
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        l10n.continueReading,
+                        style: TextStyle(
+                          fontFamily: kFontUi,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
+                          color: t.goldSoft,
+                        ),
+                      ),
+                      Text(
+                        ' · ',
+                        style: TextStyle(
+                          fontFamily: kFontUi,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
+                          color: t.goldSoft,
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => HistoryPage.open(context),
+                        child: Text(
+                          '${l10n.historyLink} ←',
+                          style: TextStyle(
+                            fontFamily: kFontUi,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 11,
+                            color: t.goldSoft,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 4),
                   InkWell(

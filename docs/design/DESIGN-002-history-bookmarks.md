@@ -1,9 +1,9 @@
 # DESIGN-002 — iShamela Feature Additions: History, Bookmarks & Research Tools
 
-**Status:** Proposed (M-F1 Implemented via SPEC-014) · **Depends on:** DESIGN-001 (Warm Manuscript tokens/components — all visuals below reuse them; no new colors or type styles)
+**Status:** Implemented (SPEC-014…019) · **Depends on:** DESIGN-001 (Warm Manuscript tokens/components — all visuals below reuse them; no new colors or type styles)
 **Scope:** New user-facing capabilities layered onto the redesigned shell: reading history, bookmarks, storage manager, settings completions (language/about), library-wide full-text search, author pages, and notes/highlights export. Everything is local-only and offline-first. Dataset `_meta` superpowers (xrefs, narrators, isnads, quran_verses) are explicitly **out of scope** — reserved for DESIGN-003 after their own SPECs.
 
-**Spec mapping:** M-F1 (F1 + F2) → [`SPEC-014-reading-history-bookmarks.md`](../specs/SPEC-014-reading-history-bookmarks.md). F3–F7 need their own SPECs before implementation. SPEC-005’s sketched `bookmarks` table is **superseded** by SPEC-014 (page marks + optional `label`; text notes remain SPEC-010).
+**Spec mapping:** F1+F2 → [`SPEC-014`](../specs/SPEC-014-reading-history-bookmarks.md); F3 → [`SPEC-015`](../specs/SPEC-015-storage-manager.md); F4 → [`SPEC-016`](../specs/SPEC-016-language-about.md); F5 → [`SPEC-017`](../specs/SPEC-017-library-text-search.md); F6 → [`SPEC-018`](../specs/SPEC-018-author-pages.md); F7 → [`SPEC-019`](../specs/SPEC-019-annotations-export.md). SPEC-005’s sketched `bookmarks` table is **superseded** by SPEC-014.
 
 ---
 
@@ -155,7 +155,7 @@ No cloud sync or accounts (history/bookmarks are device-local); no cross-book xr
 
 | M | Contents | Spec |
 |---|---|---|
-| M-F1 | History table + hook + screen + hero tie-in; bookmarks table + toggle + pane tab | **SPEC-014** |
-| M-F2 | Storage card/screen; language + About | (later SPEC) |
-| M-F3 | Library-wide search (streamed) | (later SPEC) |
-| M-F4 | Author pages; notes/highlights export | (later SPEC) |
+| M-F1 | History table + hook + screen + hero tie-in; bookmarks table + toggle + pane tab | **SPEC-014** (done) |
+| M-F2 | Storage card/screen; language + About | **SPEC-015**, **SPEC-016** (done) |
+| M-F3 | Library-wide search (streamed) | **SPEC-017** (done) |
+| M-F4 | Author pages; notes/highlights export | **SPEC-018**, **SPEC-019** (done) |

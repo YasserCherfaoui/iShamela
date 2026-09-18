@@ -259,14 +259,45 @@ class BookDatabase {
 
   /// In-book FTS (SPEC-005 MATCH — exact tokens, not catalog prefix).
   List<BookSearchHit> searchInBook(String query, {bool exactPhrase = false}) {
+    return searchInBookCapped(
+      query,
+      exactPhrase: exactPhrase,
+      hitCap: 100,
+      countCap: 100,
+    ).hits;
+  }
+
+  /// SPEC-017 capped search with approximate total (count capped at [countCap]).
+  ({List<BookSearchHit> hits, int totalHits, bool capped}) searchInBookCapped(
+    String query, {
+    bool exactPhrase = false,
+    int hitCap = 50,
+    int countCap = 200,
+  }) {
     final q = normalize(query);
-    if (q.isEmpty) return const [];
+    if (q.isEmpty) {
+      return (hits: const [], totalHits: 0, capped: false);
+    }
     final cleanedPhrase = q.replaceAll(RegExp(r'["*\^:(){}]'), '').trim();
     final match = exactPhrase
         ? '"${cleanedPhrase.replaceAll('"', '""')}"'
         : buildBookFtsMatch(q);
-    if (match.isEmpty || match == '""') return const [];
+    if (match.isEmpty || match == '""') {
+      return (hits: const [], totalHits: 0, capped: false);
+    }
     try {
+      final countRows = _db.select(
+        '''
+        SELECT COUNT(*) AS c FROM (
+          SELECT 1 FROM pages_fts WHERE pages_fts MATCH ? LIMIT ?
+        )
+        ''',
+        [match, countCap + 1],
+      );
+      final rawCount = countRows.first['c'] as int;
+      final totalHits = rawCount > countCap ? countCap : rawCount;
+      final capped = rawCount > hitCap;
+
       final rows = _db.select(
         '''
         SELECT p.id, p.page_number, p.part, p.body
@@ -274,9 +305,9 @@ class BookDatabase {
         JOIN pages p ON p.id = pages_fts.rowid
         WHERE pages_fts MATCH ?
         ORDER BY p.id
-        LIMIT 100
+        LIMIT ?
         ''',
-        [match],
+        [match, hitCap],
       );
       final tokens = exactPhrase
           ? (cleanedPhrase.isEmpty ? <String>[] : [cleanedPhrase])
@@ -285,7 +316,7 @@ class BookDatabase {
               .map((t) => t.replaceAll(RegExp(r'["*\^:(){}]'), '').trim())
               .where((t) => t.isNotEmpty)
               .toList();
-      return rows.map((r) {
+      final hits = rows.map((r) {
         final body = r['body'] as String;
         final nr = normalizeWithMap(body);
         final ranges = <({int start, int end})>[];
@@ -301,8 +332,9 @@ class BookDatabase {
           snippet: bookSearchSnippet(body, ranges),
         );
       }).toList();
+      return (hits: hits, totalHits: totalHits, capped: capped);
     } catch (_) {
-      return const [];
+      return (hits: const [], totalHits: 0, capped: false);
     }
   }
 }

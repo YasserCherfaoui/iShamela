@@ -173,6 +173,24 @@
   "historyClearConfirm": "سيُحذف سجل القراءة نهائيًا.",
   "historyEmpty": "لم تقرأ شيئًا بعد — افتح كتابًا من مكتبتك",
   "historyLink": "السجل",
+  "minutesAgo": "قبل {count} دقيقة",
+  "@minutesAgo": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "hoursAgo": "قبل {count} ساعة",
+  "@hoursAgo": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "daysAgo": "قبل {count} يوم",
+  "@daysAgo": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "today": "اليوم",
   "yesterday": "أمس",
   "thisWeek": "هذا الأسبوع",
@@ -189,5 +207,128 @@
   "bookmarkRemoved": "أُزيلت العلامة",
   "renameBookmark": "إعادة تسمية العلامة",
   "bookmarksEmpty": "لا علامات بعد — اضغط رمز العلامة أثناء القراءة",
-  "undo": "تراجع"
+  "undo": "تراجع",
+  "storage": "التخزين",
+  "storageUsed": "المستخدم: {size} ({count} كتابًا)",
+  "@storageUsed": {
+    "placeholders": {
+      "size": {"type": "String"},
+      "count": {"type": "int"}
+    }
+  },
+  "storageAvailable": "المتاح على الجهاز: {size}",
+  "@storageAvailable": {
+    "placeholders": {
+      "size": {"type": "String"}
+    }
+  },
+  "manageStorage": "إدارة التخزين",
+  "calculatingSizes": "يجري حساب الأحجام…",
+  "uninstallSelected": "إلغاء تثبيت المحدد ({count})",
+  "@uninstallSelected": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "uninstallConfirmSize": "سيحرر {size}.",
+  "@uninstallConfirmSize": {
+    "placeholders": {
+      "size": {"type": "String"}
+    }
+  },
+  "freeUpSpace": "{used} مستخدمة · {free} متاحة",
+  "@freeUpSpace": {
+    "placeholders": {
+      "used": {"type": "String"},
+      "free": {"type": "String"}
+    }
+  },
+  "noInstalledBooks": "لا كتب مثبّتة",
+  "languageAndApp": "اللغة والتطبيق",
+  "appLanguage": "لغة التطبيق",
+  "aboutApp": "حول التطبيق",
+  "version": "الإصدار {version} ({build})",
+  "@version": {
+    "placeholders": {
+      "version": {"type": "String"},
+      "build": {"type": "String"}
+    }
+  },
+  "buildCopied": "تم نسخ الإصدار",
+  "licenses": "تراخيص الطرف الثالث",
+  "datasetAttributionTitle": "بيانات المكتبة",
+  "datasetAttributionBody": "بيانات المكتبة الشاملة — مجموعة AuthenticIlm/Shamela4_Full_DB على HuggingFace. تُعرض النصوص كما وردت في المصدر.",
+  "sourceCode": "شفرة المصدر",
+  "noConnection": "لا اتصال بالإنترنت",
+  "searchScopeTitles": "العناوين",
+  "searchScopeTexts": "النصوص",
+  "minQueryHint": "أدخل حرفين على الأقل",
+  "searchingBooksProgress": "جارٍ البحث في {done} من {total} كتابًا…",
+  "@searchingBooksProgress": {
+    "placeholders": {
+      "done": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "hitsCapped": "{count}+",
+  "@hitsCapped": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "moreHitsInBook": "عرض المزيد داخل الكتاب",
+  "libSearchEmpty": "لا نتائج في مكتبتك",
+  "tryCatalogSearch": "ابحث في الفهرس",
+  "searchFailedRetry": "فشل البحث — انقر لإعادة المحاولة",
+  "authorBooksCount": "{count} كتابًا",
+  "@authorBooksCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "authorInstalledCount": "مثبّت {count}",
+  "@authorInstalledCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "showMore": "المزيد",
+  "showLess": "أقل",
+  "allBooks": "الكل",
+  "installedOnly": "المثبّتة",
+  "noInstalledForAuthor": "لا كتب مثبّتة لهذا المؤلف",
+  "filterHint": "تصفية…",
+  "diedHijri": "ت {year}هـ",
+  "@diedHijri": {
+    "placeholders": {
+      "year": {"type": "int"}
+    }
+  },
+  "diedCE": "ت {year}م",
+  "@diedCE": {
+    "placeholders": {
+      "year": {"type": "int"}
+    }
+  },
+  "exportAnnotations": "تصدير الملاحظات والتظليلات",
+  "exportNoAnnotationsHint": "لا ملاحظات في هذا الكتاب",
+  "exportFormatMarkdown": "Markdown",
+  "exportFormatText": "نص",
+  "includeHighlights": "التظليلات",
+  "includeNotes": "الملاحظات",
+  "export": "تصدير",
+  "exportDone": "تم التصدير",
+  "exportedOn": "صُدِّر في {date}",
+  "@exportedOn": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "notesFileHeading": "ملاحظات — {title}",
+  "@notesFileHeading": {
+    "placeholders": {
+      "title": {"type": "String"}
+    }
+  },
+  "noteLabel": "ملاحظة"
 }

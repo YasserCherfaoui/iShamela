@@ -1,6 +1,6 @@
 # SPEC-019 — Notes & Highlights Export
 
-**Status:** Draft · **Implements:** DESIGN-002 F7 (§8) · **Depends on:** SPEC-005 (annotation offsets), existing copy-with-reference citation generator, annotations store
+**Status:** Implemented · **Implements:** DESIGN-002 F7 (§8) · **Depends on:** SPEC-005 (annotation offsets), existing copy-with-reference citation generator, annotations store
 **Goal:** Export a book's user annotations (highlights + notes) to Markdown or plain text through the system share sheet. The export is the user's own work plus short verbatim anchors with proper citations — never bulk book content.
 
 ---

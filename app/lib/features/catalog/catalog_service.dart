@@ -311,6 +311,47 @@ class CatalogRepository {
     }
   }
 
+  Author? authorById(int authorId) {
+    final db = openReadonlySqlite(paths.catalogSqlite);
+    try {
+      final rows = db.select(
+        'SELECT id, name, death_year_hijri FROM authors WHERE id = ? LIMIT 1',
+        [authorId],
+      );
+      if (rows.isEmpty) return null;
+      final r = rows.first;
+      return Author(
+        id: r['id'] as int,
+        name: r['name'] as String,
+        deathYearHijri: r['death_year_hijri'] as int?,
+      );
+    } finally {
+      db.dispose();
+    }
+  }
+
+  /// Optional bio when catalog schema ships it (SPEC-018 AU-13).
+  String? authorBio(int authorId) {
+    final db = openReadonlySqlite(paths.catalogSqlite);
+    try {
+      final cols = db.select('PRAGMA table_info(authors)');
+      final hasBio = cols.any((c) => c['name'] == 'bio');
+      if (!hasBio) return null;
+      final rows = db.select(
+        'SELECT bio FROM authors WHERE id = ? LIMIT 1',
+        [authorId],
+      );
+      if (rows.isEmpty) return null;
+      final bio = rows.first['bio'] as String?;
+      if (bio == null || bio.trim().isEmpty) return null;
+      return bio;
+    } catch (_) {
+      return null;
+    } finally {
+      db.dispose();
+    }
+  }
+
   /// Batch-load books by id (one DB open). Missing ids are skipped.
   List<Book> booksByIds(Iterable<int> bookIds) {
     final ids = bookIds.toSet().toList()..sort();

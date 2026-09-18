@@ -1,6 +1,6 @@
 # SPEC-018 — Author Pages
 
-**Status:** Draft · **Implements:** DESIGN-002 F6 (§7) · **Depends on:** catalog DB (books↔authors), authors `_meta` (death dates, optional bio), SPEC-013 (uninstall via standard rows), existing BookList select/download flows
+**Status:** Implemented · **Implements:** DESIGN-002 F6 (§7) · **Depends on:** catalog DB (books↔authors), authors `_meta` (death dates, optional bio), SPEC-013 (uninstall via standard rows), existing BookList select/download flows
 **Goal:** Make every author name a destination: a pushed screen with the author's identity, dates, optional bio, and their books with full download affordances. Entirely from the local catalog; offline after catalog install.
 
 ---

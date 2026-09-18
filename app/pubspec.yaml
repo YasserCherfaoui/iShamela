@@ -22,6 +22,9 @@ dependencies:
   ffi: ^2.2.0
   zstandard: ^1.5.0
   path: ^1.9.1
+  package_info_plus: ^9.0.1
+  url_launcher: ^6.3.2
+  share_plus: ^12.0.2
 
 dev_dependencies:
   flutter_test:

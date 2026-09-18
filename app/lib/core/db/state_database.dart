@@ -151,6 +151,23 @@ class StateDatabase {
       );
       db.execute('PRAGMA user_version = 6');
     }
+    final version7 =
+        db.select('PRAGMA user_version').first.columnAt(0) as int;
+    if (version7 < 7) {
+      try {
+        db.execute(
+          'ALTER TABLE installed_books ADD COLUMN installed_size_bytes INTEGER',
+        );
+      } catch (_) {}
+      db.execute(
+        '''
+        UPDATE installed_books
+        SET installed_size_bytes = sqlite_bytes
+        WHERE installed_size_bytes IS NULL
+        ''',
+      );
+      db.execute('PRAGMA user_version = 7');
+    }
     return StateDatabase(db);
   }
 
@@ -200,21 +217,91 @@ class StateDatabase {
     required int sqliteBytes,
     required int installedAt,
     int? pageCount,
+    int? installedSizeBytes,
   }) {
+    final size = installedSizeBytes ?? sqliteBytes;
     _db.execute(
       '''
       INSERT INTO installed_books
-        (book_id, schema_version, norm_version, sqlite_bytes, installed_at, page_count)
-      VALUES (?, ?, ?, ?, ?, ?)
+        (book_id, schema_version, norm_version, sqlite_bytes, installed_at,
+         page_count, installed_size_bytes)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(book_id) DO UPDATE SET
         schema_version=excluded.schema_version,
         norm_version=excluded.norm_version,
         sqlite_bytes=excluded.sqlite_bytes,
         installed_at=excluded.installed_at,
-        page_count=excluded.page_count
+        page_count=excluded.page_count,
+        installed_size_bytes=excluded.installed_size_bytes
       ''',
-      [bookId, schemaVersion, normVersion, sqliteBytes, installedAt, pageCount],
+      [
+        bookId,
+        schemaVersion,
+        normVersion,
+        sqliteBytes,
+        installedAt,
+        pageCount,
+        size,
+      ],
     );
+  }
+
+  int? installedSizeBytes(int bookId) {
+    final rows = _db.select(
+      'SELECT installed_size_bytes FROM installed_books WHERE book_id = ? LIMIT 1',
+      [bookId],
+    );
+    if (rows.isEmpty) return null;
+    return rows.first['installed_size_bytes'] as int?;
+  }
+
+  void setInstalledSizeBytes(int bookId, int bytes) {
+    _db.execute(
+      'UPDATE installed_books SET installed_size_bytes = ? WHERE book_id = ?',
+      [bytes, bookId],
+    );
+  }
+
+  /// Known sizes only (excludes NULL).
+  int get installedSizeBytesTotal {
+    final rows = _db.select(
+      'SELECT COALESCE(SUM(installed_size_bytes), 0) AS total '
+      'FROM installed_books WHERE installed_size_bytes IS NOT NULL',
+    );
+    return rows.first['total'] as int;
+  }
+
+  bool get hasUnknownInstalledSizes {
+    final rows = _db.select(
+      'SELECT 1 FROM installed_books WHERE installed_size_bytes IS NULL LIMIT 1',
+    );
+    return rows.isNotEmpty;
+  }
+
+  List<({int bookId, int? sizeBytes})> installedBooksBySizeDesc() {
+    return _db
+        .select(
+          '''
+          SELECT book_id, installed_size_bytes FROM installed_books
+          ORDER BY installed_size_bytes DESC NULLS LAST, book_id ASC
+          ''',
+        )
+        .map(
+          (r) => (
+            bookId: r['book_id'] as int,
+            sizeBytes: r['installed_size_bytes'] as int?,
+          ),
+        )
+        .toList();
+  }
+
+  List<int> installedBookIdsMissingSize() {
+    return _db
+        .select(
+          'SELECT book_id FROM installed_books WHERE installed_size_bytes IS NULL',
+        )
+        .map((r) => r['book_id'] as int)
+        .toList();
   }
 
   int? installedPageCount(int bookId) {
@@ -338,6 +425,30 @@ class StateDatabase {
         )
         .map((r) => Map<String, Object?>.from(r))
         .toList();
+  }
+
+  List<Map<String, Object?>> highlightsForBook(int bookId) {
+    return _db
+        .select(
+          'SELECT id, page_id, start_offset, end_offset, color, created_at '
+          'FROM highlights WHERE book_id = ? '
+          'ORDER BY page_id ASC, start_offset ASC, id ASC',
+          [bookId],
+        )
+        .map((r) => Map<String, Object?>.from(r))
+        .toList();
+  }
+
+  int annotationCountForBook(int bookId) {
+    final h = _db.select(
+      'SELECT COUNT(*) AS c FROM highlights WHERE book_id = ?',
+      [bookId],
+    );
+    final n = _db.select(
+      'SELECT COUNT(*) AS c FROM text_notes WHERE book_id = ?',
+      [bookId],
+    );
+    return (h.first['c'] as int) + (n.first['c'] as int);
   }
 
   int insertHighlight({

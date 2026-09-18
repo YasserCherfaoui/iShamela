@@ -800,6 +800,24 @@ abstract class AppLocalizations {
   /// **'السجل'**
   String get historyLink;
 
+  /// No description provided for @minutesAgo.
+  ///
+  /// In ar, this message translates to:
+  /// **'قبل {count} دقيقة'**
+  String minutesAgo(int count);
+
+  /// No description provided for @hoursAgo.
+  ///
+  /// In ar, this message translates to:
+  /// **'قبل {count} ساعة'**
+  String hoursAgo(int count);
+
+  /// No description provided for @daysAgo.
+  ///
+  /// In ar, this message translates to:
+  /// **'قبل {count} يوم'**
+  String daysAgo(int count);
+
   /// No description provided for @today.
   ///
   /// In ar, this message translates to:
@@ -871,6 +889,300 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'تراجع'**
   String get undo;
+
+  /// No description provided for @storage.
+  ///
+  /// In ar, this message translates to:
+  /// **'التخزين'**
+  String get storage;
+
+  /// No description provided for @storageUsed.
+  ///
+  /// In ar, this message translates to:
+  /// **'المستخدم: {size} ({count} كتابًا)'**
+  String storageUsed(String size, int count);
+
+  /// No description provided for @storageAvailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'المتاح على الجهاز: {size}'**
+  String storageAvailable(String size);
+
+  /// No description provided for @manageStorage.
+  ///
+  /// In ar, this message translates to:
+  /// **'إدارة التخزين'**
+  String get manageStorage;
+
+  /// No description provided for @calculatingSizes.
+  ///
+  /// In ar, this message translates to:
+  /// **'يجري حساب الأحجام…'**
+  String get calculatingSizes;
+
+  /// No description provided for @uninstallSelected.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلغاء تثبيت المحدد ({count})'**
+  String uninstallSelected(int count);
+
+  /// No description provided for @uninstallConfirmSize.
+  ///
+  /// In ar, this message translates to:
+  /// **'سيحرر {size}.'**
+  String uninstallConfirmSize(String size);
+
+  /// No description provided for @freeUpSpace.
+  ///
+  /// In ar, this message translates to:
+  /// **'{used} مستخدمة · {free} متاحة'**
+  String freeUpSpace(String used, String free);
+
+  /// No description provided for @noInstalledBooks.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا كتب مثبّتة'**
+  String get noInstalledBooks;
+
+  /// No description provided for @languageAndApp.
+  ///
+  /// In ar, this message translates to:
+  /// **'اللغة والتطبيق'**
+  String get languageAndApp;
+
+  /// No description provided for @appLanguage.
+  ///
+  /// In ar, this message translates to:
+  /// **'لغة التطبيق'**
+  String get appLanguage;
+
+  /// No description provided for @aboutApp.
+  ///
+  /// In ar, this message translates to:
+  /// **'حول التطبيق'**
+  String get aboutApp;
+
+  /// No description provided for @version.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإصدار {version} ({build})'**
+  String version(String version, String build);
+
+  /// No description provided for @buildCopied.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم نسخ الإصدار'**
+  String get buildCopied;
+
+  /// No description provided for @licenses.
+  ///
+  /// In ar, this message translates to:
+  /// **'تراخيص الطرف الثالث'**
+  String get licenses;
+
+  /// No description provided for @datasetAttributionTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'بيانات المكتبة'**
+  String get datasetAttributionTitle;
+
+  /// No description provided for @datasetAttributionBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'بيانات المكتبة الشاملة — مجموعة AuthenticIlm/Shamela4_Full_DB على HuggingFace. تُعرض النصوص كما وردت في المصدر.'**
+  String get datasetAttributionBody;
+
+  /// No description provided for @sourceCode.
+  ///
+  /// In ar, this message translates to:
+  /// **'شفرة المصدر'**
+  String get sourceCode;
+
+  /// No description provided for @noConnection.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا اتصال بالإنترنت'**
+  String get noConnection;
+
+  /// No description provided for @searchScopeTitles.
+  ///
+  /// In ar, this message translates to:
+  /// **'العناوين'**
+  String get searchScopeTitles;
+
+  /// No description provided for @searchScopeTexts.
+  ///
+  /// In ar, this message translates to:
+  /// **'النصوص'**
+  String get searchScopeTexts;
+
+  /// No description provided for @minQueryHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل حرفين على الأقل'**
+  String get minQueryHint;
+
+  /// No description provided for @searchingBooksProgress.
+  ///
+  /// In ar, this message translates to:
+  /// **'جارٍ البحث في {done} من {total} كتابًا…'**
+  String searchingBooksProgress(int done, int total);
+
+  /// No description provided for @hitsCapped.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count}+'**
+  String hitsCapped(int count);
+
+  /// No description provided for @moreHitsInBook.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرض المزيد داخل الكتاب'**
+  String get moreHitsInBook;
+
+  /// No description provided for @libSearchEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا نتائج في مكتبتك'**
+  String get libSearchEmpty;
+
+  /// No description provided for @tryCatalogSearch.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابحث في الفهرس'**
+  String get tryCatalogSearch;
+
+  /// No description provided for @searchFailedRetry.
+  ///
+  /// In ar, this message translates to:
+  /// **'فشل البحث — انقر لإعادة المحاولة'**
+  String get searchFailedRetry;
+
+  /// No description provided for @authorBooksCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count} كتابًا'**
+  String authorBooksCount(int count);
+
+  /// No description provided for @authorInstalledCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'مثبّت {count}'**
+  String authorInstalledCount(int count);
+
+  /// No description provided for @showMore.
+  ///
+  /// In ar, this message translates to:
+  /// **'المزيد'**
+  String get showMore;
+
+  /// No description provided for @showLess.
+  ///
+  /// In ar, this message translates to:
+  /// **'أقل'**
+  String get showLess;
+
+  /// No description provided for @allBooks.
+  ///
+  /// In ar, this message translates to:
+  /// **'الكل'**
+  String get allBooks;
+
+  /// No description provided for @installedOnly.
+  ///
+  /// In ar, this message translates to:
+  /// **'المثبّتة'**
+  String get installedOnly;
+
+  /// No description provided for @noInstalledForAuthor.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا كتب مثبّتة لهذا المؤلف'**
+  String get noInstalledForAuthor;
+
+  /// No description provided for @filterHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'تصفية…'**
+  String get filterHint;
+
+  /// No description provided for @diedHijri.
+  ///
+  /// In ar, this message translates to:
+  /// **'ت {year}هـ'**
+  String diedHijri(int year);
+
+  /// No description provided for @diedCE.
+  ///
+  /// In ar, this message translates to:
+  /// **'ت {year}م'**
+  String diedCE(int year);
+
+  /// No description provided for @exportAnnotations.
+  ///
+  /// In ar, this message translates to:
+  /// **'تصدير الملاحظات والتظليلات'**
+  String get exportAnnotations;
+
+  /// No description provided for @exportNoAnnotationsHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا ملاحظات في هذا الكتاب'**
+  String get exportNoAnnotationsHint;
+
+  /// No description provided for @exportFormatMarkdown.
+  ///
+  /// In ar, this message translates to:
+  /// **'Markdown'**
+  String get exportFormatMarkdown;
+
+  /// No description provided for @exportFormatText.
+  ///
+  /// In ar, this message translates to:
+  /// **'نص'**
+  String get exportFormatText;
+
+  /// No description provided for @includeHighlights.
+  ///
+  /// In ar, this message translates to:
+  /// **'التظليلات'**
+  String get includeHighlights;
+
+  /// No description provided for @includeNotes.
+  ///
+  /// In ar, this message translates to:
+  /// **'الملاحظات'**
+  String get includeNotes;
+
+  /// No description provided for @export.
+  ///
+  /// In ar, this message translates to:
+  /// **'تصدير'**
+  String get export;
+
+  /// No description provided for @exportDone.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم التصدير'**
+  String get exportDone;
+
+  /// No description provided for @exportedOn.
+  ///
+  /// In ar, this message translates to:
+  /// **'صُدِّر في {date}'**
+  String exportedOn(String date);
+
+  /// No description provided for @notesFileHeading.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملاحظات — {title}'**
+  String notesFileHeading(String title);
+
+  /// No description provided for @noteLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملاحظة'**
+  String get noteLabel;
 }
 
 class _AppLocalizationsDelegate

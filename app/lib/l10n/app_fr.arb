@@ -173,6 +173,24 @@
   "historyClearConfirm": "L'historique de lecture sera définitivement supprimé.",
   "historyEmpty": "Rien lu encore — ouvrez un livre de votre bibliothèque",
   "historyLink": "Historique",
+  "minutesAgo": "il y a {count} min",
+  "@minutesAgo": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "hoursAgo": "il y a {count} h",
+  "@hoursAgo": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "daysAgo": "il y a {count} j",
+  "@daysAgo": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "today": "Aujourd'hui",
   "yesterday": "Hier",
   "thisWeek": "Cette semaine",
@@ -189,5 +207,128 @@
   "bookmarkRemoved": "Signet retiré",
   "renameBookmark": "Renommer le signet",
   "bookmarksEmpty": "Pas encore de signets — touchez l'icône pendant la lecture",
-  "undo": "Annuler"
+  "undo": "Annuler",
+  "storage": "Stockage",
+  "storageUsed": "Utilisé : {size} ({count} livres)",
+  "@storageUsed": {
+    "placeholders": {
+      "size": {"type": "String"},
+      "count": {"type": "int"}
+    }
+  },
+  "storageAvailable": "Disponible sur l'appareil : {size}",
+  "@storageAvailable": {
+    "placeholders": {
+      "size": {"type": "String"}
+    }
+  },
+  "manageStorage": "Gérer le stockage",
+  "calculatingSizes": "Calcul des tailles…",
+  "uninstallSelected": "Désinstaller la sélection ({count})",
+  "@uninstallSelected": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "uninstallConfirmSize": "Cela libérera {size}.",
+  "@uninstallConfirmSize": {
+    "placeholders": {
+      "size": {"type": "String"}
+    }
+  },
+  "freeUpSpace": "{used} utilisés · {free} disponibles",
+  "@freeUpSpace": {
+    "placeholders": {
+      "used": {"type": "String"},
+      "free": {"type": "String"}
+    }
+  },
+  "noInstalledBooks": "Aucun livre installé",
+  "languageAndApp": "Langue et application",
+  "appLanguage": "Langue de l'application",
+  "aboutApp": "À propos",
+  "version": "Version {version} ({build})",
+  "@version": {
+    "placeholders": {
+      "version": {"type": "String"},
+      "build": {"type": "String"}
+    }
+  },
+  "buildCopied": "Version copiée",
+  "licenses": "Licences tierces",
+  "datasetAttributionTitle": "Données du corpus",
+  "datasetAttributionBody": "Données de la bibliothèque Shamela — AuthenticIlm/Shamela4_Full_DB sur Hugging Face. Les textes sont affichés tels quels.",
+  "sourceCode": "Code source",
+  "noConnection": "Pas de connexion Internet",
+  "searchScopeTitles": "Titres",
+  "searchScopeTexts": "Texte intégral",
+  "minQueryHint": "Saisissez au moins deux caractères",
+  "searchingBooksProgress": "Recherche {done} sur {total} livres…",
+  "@searchingBooksProgress": {
+    "placeholders": {
+      "done": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "hitsCapped": "{count}+",
+  "@hitsCapped": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "moreHitsInBook": "Voir plus dans le livre",
+  "libSearchEmpty": "Aucun résultat dans votre bibliothèque",
+  "tryCatalogSearch": "Chercher dans le catalogue",
+  "searchFailedRetry": "Échec — toucher pour réessayer",
+  "authorBooksCount": "{count} livres",
+  "@authorBooksCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "authorInstalledCount": "{count} installés",
+  "@authorInstalledCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "showMore": "Plus",
+  "showLess": "Moins",
+  "allBooks": "Tous",
+  "installedOnly": "Installés",
+  "noInstalledForAuthor": "Aucun livre installé de cet auteur",
+  "filterHint": "Filtrer…",
+  "diedHijri": "m. {year} H",
+  "@diedHijri": {
+    "placeholders": {
+      "year": {"type": "int"}
+    }
+  },
+  "diedCE": "m. {year} apr. J.-C.",
+  "@diedCE": {
+    "placeholders": {
+      "year": {"type": "int"}
+    }
+  },
+  "exportAnnotations": "Exporter notes et surlignages",
+  "exportNoAnnotationsHint": "Pas d'annotations dans ce livre",
+  "exportFormatMarkdown": "Markdown",
+  "exportFormatText": "Texte",
+  "includeHighlights": "Surlignages",
+  "includeNotes": "Notes",
+  "export": "Exporter",
+  "exportDone": "Exporté",
+  "exportedOn": "Exporté le {date}",
+  "@exportedOn": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "notesFileHeading": "Notes — {title}",
+  "@notesFileHeading": {
+    "placeholders": {
+      "title": {"type": "String"}
+    }
+  },
+  "noteLabel": "Note"
 }

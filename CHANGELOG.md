@@ -6,8 +6,13 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
+- Storage manager (SPEC-015): `installed_size_bytes` on `state.sqlite` v7, Settings storage card, manage-storage screen with size-sorted uninstall.
+- App language & About (SPEC-016): persisted `app_locale` (ar/en/fr), Settings language sheet, About with version/licenses/dataset attribution (`package_info_plus`, `url_launcher`).
+- Library-wide text search (SPEC-017): Titles | Full text scope, streamed FTS across installed books (concurrency 2), exact-phrase chip.
+- Author pages (SPEC-018): id-routed author screen with death-date contract, counts, embedded book list / download-all.
+- Annotations export (SPEC-019): Markdown/plain export via share sheet (`share_plus`); Reader + Library menu entries.
 - Reading history & page bookmarks (SPEC-014): `state.sqlite` v6 tables, coalesce/prune, History screen from Library hero «السجل», reader bookmark toggle + TOC pane tab; unit tests for history/bookmarks.
-- DESIGN-002 fidelity: `page_id` naming, `StateDatabase`/`user_version` notes, SPEC-014 mapping for M-F1; F3–F7 still Proposed pending their own SPECs.
+- DESIGN-002: history/bookmarks (SPEC-014) plus storage, language/About, library text search, author pages, annotations export (SPEC-015…019).
 - DESIGN-001 gap close: floating selection toolbar; TOC indent + print page + notes badge; catalog FTS title highlight, `ت XXXهـ` / أجزاء meta, stale “N days” banner; downloads completed = check + افتح; reader wide inline search / labeled panes / ≥1200 defaults, gold footnote markers, بطاقة نسخ التوثيق; role colors `userOverride ?? themeDefault`; grids 2–3 col; subtle nav/page-pill/progress motion.
 - DESIGN-001 screen restyles: Catalog brand header + segmented browse + book cards; Library continue-reading hero + spines/overflow; Downloads status cards; Settings atmosphere picker; Reader page-pill / jump+search sheets / atmosphere menu.
 - DESIGN-001 foundation (Warm Manuscript): hand-authored theme tokens / atmospheres, bundled IBM Plex Sans Arabic, shared `lib/ui/` kit, adaptive HomeShell (bottom nav badge + ≥800 NavigationRail). Screen restyles follow.

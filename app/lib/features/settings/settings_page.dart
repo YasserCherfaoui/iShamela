@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ishamela/l10n/app_localizations.dart';
 
+import 'package:ishamela/core/format_bytes.dart';
 import 'package:ishamela/core/providers.dart';
+import 'package:ishamela/core/storage_size.dart';
 import 'package:ishamela/features/reader/reader_styles.dart';
 import 'package:ishamela/features/reader/role_color.dart';
 import 'package:ishamela/features/reader/text_roles.dart';
+import 'package:ishamela/features/settings/about_page.dart';
+import 'package:ishamela/features/settings/storage_page.dart';
 import 'package:ishamela/ui/theme/ishamela_theme.dart';
 import 'package:ishamela/ui/theme/ishamela_tokens.dart';
 import 'package:ishamela/ui/theme/reader_theme_tokens.dart';
@@ -198,27 +202,25 @@ class SettingsPage extends ConsumerWidget {
               },
             ),
           ),
+        const SizedBox(height: 24),
+        _StorageCard(),
+        const SizedBox(height: 16),
+        _LanguageAndAppCard(),
       ],
     );
 
     if (width >= 600 && width < 800) {
-      return Directionality(
-        textDirection: TextDirection.rtl,
-        child: Scaffold(
-          body: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
-              child: body,
-            ),
+      return Scaffold(
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: body,
           ),
         ),
       );
     }
 
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(body: body),
-    );
+    return Scaffold(body: body);
   }
 
   String _atmosphereLabel(AppLocalizations l10n, ReadingAtmosphere a) {
@@ -460,5 +462,208 @@ class _RoleStyleTile extends StatelessWidget {
     );
     hexCtrl.dispose();
     if (picked != null) onChanged(style.copyWith(color: picked));
+  }
+}
+
+class _StorageCard extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_StorageCard> createState() => _StorageCardState();
+}
+
+class _StorageCardState extends ConsumerState<_StorageCard> {
+  int? _free;
+  int _tick = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  Future<void> _refresh() async {
+    final paths = await ref.read(appPathsProvider.future);
+    final state = await ref.read(stateDatabaseProvider.future);
+    await backfillInstalledSizes(paths, state);
+    final free = await deviceFreeBytes(paths);
+    if (!mounted) return;
+    setState(() {
+      _free = free;
+      _tick++;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final t = IshamelaTokens.of(context);
+    ref.watch(downloadServiceProvider);
+    final stateAsync = ref.watch(stateDatabaseProvider);
+    final _ = _tick;
+
+    return Material(
+      color: t.card,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: t.hairline),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              l10n.storage,
+              style: TextStyle(
+                fontFamily: kFontUi,
+                fontWeight: FontWeight.w700,
+                color: t.green900,
+              ),
+            ),
+            const SizedBox(height: 8),
+            stateAsync.when(
+              loading: () => Text('…', style: TextStyle(color: t.muted)),
+              error: (e, _) => Text('$e'),
+              data: (state) {
+                final used = state.installedSizeBytesTotal;
+                final n = state.installedBooksBySizeDesc().length;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      l10n.storageUsed(formatBytes(used), n),
+                      style: TextStyle(
+                        fontFamily: kFontUi,
+                        fontSize: 13,
+                        color: t.ink,
+                      ),
+                    ),
+                    if (_free != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        l10n.storageAvailable(formatBytes(_free!)),
+                        style: TextStyle(
+                          fontFamily: kFontUi,
+                          fontSize: 13,
+                          color: t.muted,
+                        ),
+                      ),
+                    ],
+                    if (state.hasUnknownInstalledSizes)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          l10n.calculatingSizes,
+                          style: TextStyle(
+                            fontFamily: kFontUi,
+                            fontSize: 11,
+                            color: t.muted,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            FilledButton.tonal(
+              onPressed: () async {
+                await StoragePage.open(context);
+                if (mounted) await _refresh();
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: t.green100,
+                foregroundColor: t.green900,
+              ),
+              child: Text(l10n.manageStorage),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LanguageAndAppCard extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final t = IshamelaTokens.of(context);
+    final locale = ref.watch(appLocaleProvider);
+    final label = switch (locale.languageCode) {
+      'en' => 'English',
+      'fr' => 'Français',
+      _ => 'العربية',
+    };
+
+    return Material(
+      color: t.card,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: t.hairline),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              l10n.languageAndApp,
+              style: TextStyle(
+                fontFamily: kFontUi,
+                fontWeight: FontWeight.w700,
+                color: t.green900,
+              ),
+            ),
+          ),
+          ListTile(
+            title: Text(l10n.appLanguage),
+            subtitle: Text(label),
+            trailing: const Icon(Icons.chevron_left),
+            onTap: () => _pickLocale(context, ref),
+          ),
+          const Divider(height: 1),
+          ListTile(
+            title: Text(l10n.aboutApp),
+            trailing: const Icon(Icons.chevron_left),
+            onTap: () => AboutPage.open(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickLocale(BuildContext context, WidgetRef ref) async {
+    final t = IshamelaTokens.of(context);
+    final current = ref.read(appLocaleProvider);
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: t.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final opt in const [
+                ('ar', 'العربية'),
+                ('en', 'English'),
+                ('fr', 'Français'),
+              ])
+                RadioListTile<String>(
+                  title: Text(opt.$2),
+                  value: opt.$1,
+                  groupValue: current.languageCode,
+                  onChanged: (v) => Navigator.pop(ctx, v),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+    if (picked != null) {
+      await ref.read(appLocaleProvider.notifier).save(Locale(picked));
+    }
   }
 }

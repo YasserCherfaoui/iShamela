@@ -489,13 +489,15 @@ class DownloadService {
     final toc = paths.tmpTocJsonl(book.bookId);
     if (toc.existsSync()) await toc.delete();
 
+    final sizeBytes = dest.lengthSync();
     state.upsertInstalled(
       bookId: book.bookId,
       schemaVersion: int.parse(result.schemaVersion),
       normVersion: result.normVersion,
-      sqliteBytes: dest.lengthSync(),
+      sqliteBytes: sizeBytes,
       installedAt: nowMs(),
       pageCount: result.pageCount,
+      installedSizeBytes: sizeBytes,
     );
   }
 }
