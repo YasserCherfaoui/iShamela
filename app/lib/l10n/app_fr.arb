@@ -74,5 +74,16 @@
   "modePagedV": "Pages · vertical",
   "modeContinuousV": "Défilement continu",
   "searchInBook": "Chercher dans le livre",
-  "exactPhrase": "Expression exacte"
+  "exactPhrase": "Expression exacte",
+  "selectAll": "Tout sélectionner",
+  "deselectAll": "Tout désélectionner",
+  "highlight": "Surligner",
+  "addNote": "Ajouter une note",
+  "copyWithReference": "Copier avec référence",
+  "copiedCitation": "Citation copiée",
+  "colorYellow": "Jaune",
+  "colorGreen": "Vert",
+  "colorBlue": "Bleu",
+  "colorPink": "Rose",
+  "colorOrange": "Orange"
 }

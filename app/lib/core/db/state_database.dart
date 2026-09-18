@@ -61,6 +61,55 @@ class StateDatabase {
       ''');
       db.execute('PRAGMA user_version = 3');
     }
+    final version4 =
+        db.select('PRAGMA user_version').first.columnAt(0) as int;
+    if (version4 < 4) {
+      db.execute('''
+        CREATE TABLE IF NOT EXISTS highlights (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          book_id INTEGER NOT NULL,
+          page_id INTEGER NOT NULL,
+          start_offset INTEGER NOT NULL,
+          end_offset INTEGER NOT NULL,
+          color TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          CHECK (start_offset >= 0 AND end_offset > start_offset)
+        )
+      ''');
+      db.execute('''
+        CREATE TABLE IF NOT EXISTS text_notes (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          book_id INTEGER NOT NULL,
+          page_id INTEGER NOT NULL,
+          start_offset INTEGER NOT NULL,
+          end_offset INTEGER NOT NULL,
+          note TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          CHECK (length(note) > 0)
+        )
+      ''');
+      db.execute(
+        'CREATE INDEX IF NOT EXISTS highlights_book_page '
+        'ON highlights(book_id, page_id)',
+      );
+      db.execute(
+        'CREATE INDEX IF NOT EXISTS text_notes_book_page '
+        'ON text_notes(book_id, page_id)',
+      );
+      db.execute('PRAGMA user_version = 4');
+    }
+    final version5 =
+        db.select('PRAGMA user_version').first.columnAt(0) as int;
+    if (version5 < 5) {
+      try {
+        db.execute(
+          'ALTER TABLE installed_books ADD COLUMN page_count INTEGER',
+        );
+      } catch (_) {
+        // column may already exist
+      }
+      db.execute('PRAGMA user_version = 5');
+    }
     return StateDatabase(db);
   }
 
@@ -109,20 +158,31 @@ class StateDatabase {
     required String normVersion,
     required int sqliteBytes,
     required int installedAt,
+    int? pageCount,
   }) {
     _db.execute(
       '''
       INSERT INTO installed_books
-        (book_id, schema_version, norm_version, sqlite_bytes, installed_at)
-      VALUES (?, ?, ?, ?, ?)
+        (book_id, schema_version, norm_version, sqlite_bytes, installed_at, page_count)
+      VALUES (?, ?, ?, ?, ?, ?)
       ON CONFLICT(book_id) DO UPDATE SET
         schema_version=excluded.schema_version,
         norm_version=excluded.norm_version,
         sqlite_bytes=excluded.sqlite_bytes,
-        installed_at=excluded.installed_at
+        installed_at=excluded.installed_at,
+        page_count=excluded.page_count
       ''',
-      [bookId, schemaVersion, normVersion, sqliteBytes, installedAt],
+      [bookId, schemaVersion, normVersion, sqliteBytes, installedAt, pageCount],
     );
+  }
+
+  int? installedPageCount(int bookId) {
+    final rows = _db.select(
+      'SELECT page_count FROM installed_books WHERE book_id = ? LIMIT 1',
+      [bookId],
+    );
+    if (rows.isEmpty) return null;
+    return rows.first['page_count'] as int?;
   }
 
   void deleteInstalled(int bookId) {
@@ -208,6 +268,76 @@ class StateDatabase {
       ''',
       [key, value],
     );
+  }
+
+  List<Map<String, Object?>> highlightsForPage(int bookId, int pageId) {
+    return _db
+        .select(
+          'SELECT id, start_offset, end_offset, color, created_at '
+          'FROM highlights WHERE book_id = ? AND page_id = ? '
+          'ORDER BY created_at ASC',
+          [bookId, pageId],
+        )
+        .map((r) => Map<String, Object?>.from(r))
+        .toList();
+  }
+
+  int insertHighlight({
+    required int bookId,
+    required int pageId,
+    required int start,
+    required int end,
+    required String color,
+    required int createdAt,
+  }) {
+    _db.execute(
+      'INSERT INTO highlights '
+      '(book_id, page_id, start_offset, end_offset, color, created_at) '
+      'VALUES (?, ?, ?, ?, ?, ?)',
+      [bookId, pageId, start, end, color, createdAt],
+    );
+    return _db.lastInsertRowId;
+  }
+
+  void deleteHighlight(int id) {
+    _db.execute('DELETE FROM highlights WHERE id = ?', [id]);
+  }
+
+  List<Map<String, Object?>> notesForPage(int bookId, int pageId) {
+    return _db
+        .select(
+          'SELECT id, start_offset, end_offset, note, created_at '
+          'FROM text_notes WHERE book_id = ? AND page_id = ? '
+          'ORDER BY created_at ASC',
+          [bookId, pageId],
+        )
+        .map((r) => Map<String, Object?>.from(r))
+        .toList();
+  }
+
+  int insertNote({
+    required int bookId,
+    required int pageId,
+    required int start,
+    required int end,
+    required String note,
+    required int createdAt,
+  }) {
+    _db.execute(
+      'INSERT INTO text_notes '
+      '(book_id, page_id, start_offset, end_offset, note, created_at) '
+      'VALUES (?, ?, ?, ?, ?, ?)',
+      [bookId, pageId, start, end, note, createdAt],
+    );
+    return _db.lastInsertRowId;
+  }
+
+  void updateNote(int id, String note) {
+    _db.execute('UPDATE text_notes SET note = ? WHERE id = ?', [note, id]);
+  }
+
+  void deleteNote(int id) {
+    _db.execute('DELETE FROM text_notes WHERE id = ?', [id]);
   }
 }
 

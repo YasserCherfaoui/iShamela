@@ -74,5 +74,16 @@
   "modePagedV": "Pages · vertical",
   "modeContinuousV": "Continuous scroll",
   "searchInBook": "Search in book",
-  "exactPhrase": "Exact phrase"
+  "exactPhrase": "Exact phrase",
+  "selectAll": "Select all",
+  "deselectAll": "Deselect all",
+  "highlight": "Highlight",
+  "addNote": "Add note",
+  "copyWithReference": "Copy with reference",
+  "copiedCitation": "Citation copied",
+  "colorYellow": "Yellow",
+  "colorGreen": "Green",
+  "colorBlue": "Blue",
+  "colorPink": "Pink",
+  "colorOrange": "Orange"
 }

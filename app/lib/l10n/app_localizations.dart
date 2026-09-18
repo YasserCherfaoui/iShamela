@@ -409,6 +409,72 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'عبارة كاملة'**
   String get exactPhrase;
+
+  /// No description provided for @selectAll.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحديد الكل'**
+  String get selectAll;
+
+  /// No description provided for @deselectAll.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلغاء تحديد الكل'**
+  String get deselectAll;
+
+  /// No description provided for @highlight.
+  ///
+  /// In ar, this message translates to:
+  /// **'تمييز'**
+  String get highlight;
+
+  /// No description provided for @addNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة ملاحظة'**
+  String get addNote;
+
+  /// No description provided for @copyWithReference.
+  ///
+  /// In ar, this message translates to:
+  /// **'نسخ مع المرجع'**
+  String get copyWithReference;
+
+  /// No description provided for @copiedCitation.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم نسخ الاقتباس'**
+  String get copiedCitation;
+
+  /// No description provided for @colorYellow.
+  ///
+  /// In ar, this message translates to:
+  /// **'أصفر'**
+  String get colorYellow;
+
+  /// No description provided for @colorGreen.
+  ///
+  /// In ar, this message translates to:
+  /// **'أخضر'**
+  String get colorGreen;
+
+  /// No description provided for @colorBlue.
+  ///
+  /// In ar, this message translates to:
+  /// **'أزرق'**
+  String get colorBlue;
+
+  /// No description provided for @colorPink.
+  ///
+  /// In ar, this message translates to:
+  /// **'وردي'**
+  String get colorPink;
+
+  /// No description provided for @colorOrange.
+  ///
+  /// In ar, this message translates to:
+  /// **'برتقالي'**
+  String get colorOrange;
 }
 
 class _AppLocalizationsDelegate

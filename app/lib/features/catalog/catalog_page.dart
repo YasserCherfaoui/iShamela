@@ -5,6 +5,7 @@ import 'package:ishamela/l10n/app_localizations.dart';
 import 'package:ishamela/core/format_bytes.dart';
 import 'package:ishamela/core/models/models.dart';
 import 'package:ishamela/core/providers.dart';
+import 'package:ishamela/features/catalog/catalog_search_field.dart';
 import 'package:ishamela/features/catalog/catalog_service.dart';
 import 'package:ishamela/features/downloads/download_service.dart';
 import 'package:ishamela/features/reader/reader_page.dart';
@@ -17,15 +18,8 @@ class CatalogPage extends ConsumerStatefulWidget {
 }
 
 class _CatalogPageState extends ConsumerState<CatalogPage> {
-  final _searchCtrl = TextEditingController();
   String _query = '';
   CatalogSearchScope _scope = CatalogSearchScope.all;
-
-  @override
-  void dispose() {
-    _searchCtrl.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -113,23 +107,9 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
                   ),
                 Padding(
                   padding: const EdgeInsets.all(12),
-                  child: TextField(
-                    controller: _searchCtrl,
-                    decoration: InputDecoration(
-                      hintText: l10n.searchHint,
-                      prefixIcon: const Icon(Icons.search),
-                      border: const OutlineInputBorder(),
-                      suffixIcon: _query.isEmpty
-                          ? null
-                          : IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                _searchCtrl.clear();
-                                setState(() => _query = '');
-                              },
-                            ),
-                    ),
-                    textInputAction: TextInputAction.search,
+                  child: CatalogSearchField(
+                    hintText: l10n.searchHint,
+                    initialQuery: _query,
                     onChanged: (v) => setState(() => _query = v),
                   ),
                 ),
@@ -379,6 +359,17 @@ class BookListPage extends ConsumerStatefulWidget {
 class _BookListPageState extends ConsumerState<BookListPage> {
   bool _selecting = false;
   final Set<int> _selected = {};
+  String _filter = '';
+
+  List<Book> get _visible {
+    final q = _filter.trim();
+    if (q.isEmpty) return widget.books;
+    final lower = q.toLowerCase();
+    return widget.books.where((b) {
+      return b.title.toLowerCase().contains(lower) ||
+          (b.authorName?.toLowerCase().contains(lower) ?? false);
+    }).toList();
+  }
 
   Future<DownloadService?> _service() async {
     return ref.read(downloadServiceProvider).when(
@@ -478,6 +469,20 @@ class _BookListPageState extends ConsumerState<BookListPage> {
           actions: [
             if (_selecting) ...[
               IconButton(
+                tooltip: l10n.selectAll,
+                onPressed: () => setState(() {
+                  for (final b in _visible) {
+                    if (b.canInstallOnDevice) _selected.add(b.bookId);
+                  }
+                }),
+                icon: const Icon(Icons.select_all),
+              ),
+              IconButton(
+                tooltip: l10n.deselectAll,
+                onPressed: () => setState(() => _selected.clear()),
+                icon: const Icon(Icons.deselect),
+              ),
+              IconButton(
                 tooltip: l10n.downloadSelected,
                 onPressed: _selected.isEmpty
                     ? null
@@ -512,25 +517,38 @@ class _BookListPageState extends ConsumerState<BookListPage> {
             ],
           ],
         ),
-        body: BookListView(
-          books: widget.books,
-          selecting: _selecting,
-          selected: _selected,
-          onToggle: (id) {
-            setState(() {
-              if (_selected.contains(id)) {
-                _selected.remove(id);
-              } else {
-                _selected.add(id);
-              }
-            });
-          },
-          onLongPressSelect: (id) {
-            setState(() {
-              _selecting = true;
-              _selected.add(id);
-            });
-          },
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+              child: CatalogSearchField(
+                hintText: l10n.searchHint,
+                onChanged: (v) => setState(() => _filter = v),
+              ),
+            ),
+            Expanded(
+              child: BookListView(
+                books: _visible,
+                selecting: _selecting,
+                selected: _selected,
+                onToggle: (id) {
+                  setState(() {
+                    if (_selected.contains(id)) {
+                      _selected.remove(id);
+                    } else {
+                      _selected.add(id);
+                    }
+                  });
+                },
+                onLongPressSelect: (id) {
+                  setState(() {
+                    _selecting = true;
+                    _selected.add(id);
+                  });
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -575,9 +593,18 @@ class BookListView extends ConsumerWidget {
           data: (s) => s.isInstalled(book.bookId),
           orElse: () => false,
         );
-        final sizeLabel = book.isbBytes > 0 ? ' · ${formatBytes(book.isbBytes)}' : '';
+        final installedPages = stateAsync.maybeWhen(
+          data: (s) => s.installedPageCount(book.bookId),
+          orElse: () => null,
+        );
+        final displayPages =
+            book.pageCount > 0 ? book.pageCount : (installedPages ?? 0);
+        final sizeLabel =
+            book.isbBytes > 0 ? ' · ${formatBytes(book.isbBytes)}' : '';
+        final pagesLabel =
+            displayPages > 0 ? ' · ${l10n.pagesCount(displayPages)}' : '';
         final subtitle =
-            '${book.authorName ?? ''} · ${l10n.pagesCount(book.pageCount)}'
+            '${book.authorName ?? ''}$pagesLabel'
             '$sizeLabel'
             '${book.categoryName != null ? ' · ${book.categoryName}' : ''}';
 

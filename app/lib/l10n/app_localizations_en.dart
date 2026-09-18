@@ -174,4 +174,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exactPhrase => 'Exact phrase';
+
+  @override
+  String get selectAll => 'Select all';
+
+  @override
+  String get deselectAll => 'Deselect all';
+
+  @override
+  String get highlight => 'Highlight';
+
+  @override
+  String get addNote => 'Add note';
+
+  @override
+  String get copyWithReference => 'Copy with reference';
+
+  @override
+  String get copiedCitation => 'Citation copied';
+
+  @override
+  String get colorYellow => 'Yellow';
+
+  @override
+  String get colorGreen => 'Green';
+
+  @override
+  String get colorBlue => 'Blue';
+
+  @override
+  String get colorPink => 'Pink';
+
+  @override
+  String get colorOrange => 'Orange';
 }

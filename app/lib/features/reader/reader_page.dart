@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ishamela/l10n/app_localizations.dart';
 
+import 'package:ishamela/core/db/state_database.dart';
 import 'package:ishamela/core/providers.dart';
 import 'package:ishamela/core/search/normalizer.dart';
 import 'package:ishamela/core/search/normalizer_map.dart';
+import 'package:ishamela/features/reader/annotated_body.dart';
 import 'package:ishamela/features/reader/body_html.dart';
 import 'package:ishamela/features/reader/book_database.dart';
 
@@ -82,6 +84,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   bool _exactPhrase = false;
   List<BookSearchHit> _hits = const [];
   Set<int> _highlightPageIds = {};
+  StateDatabase? _state;
 
   @override
   void initState() {
@@ -109,6 +112,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
       final mode = _parseReadingMode(state.setting('reading_mode'));
       setState(() {
         _db = db;
+        _state = state;
         _ids = ids;
         _toc = db.tocEntries();
         _index = index;
@@ -446,7 +450,8 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
       if (part != null && part.isNotEmpty) part,
       printNo,
     ].join(' · ');
-    final highlight = _highlightPageIds.contains(page.id);
+    final searchHit = _highlightPageIds.contains(page.id);
+    final author = widget.authorName ?? _db?.meta('author') ?? '';
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -460,9 +465,20 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
           const Divider(),
           Expanded(
             child: SingleChildScrollView(
-              child: highlight
+              child: searchHit
                   ? _highlightedBody(page.body)
-                  : buildBodyDisplay(page.body),
+                  : (_state == null
+                      ? buildBodyDisplay(page.body)
+                      : AnnotatedBody(
+                          body: page.body,
+                          bookId: widget.bookId,
+                          pageId: page.id,
+                          state: _state!,
+                          title: title,
+                          author: author,
+                          part: part,
+                          pageNumber: page.pageNumber,
+                        )),
             ),
           ),
         ],

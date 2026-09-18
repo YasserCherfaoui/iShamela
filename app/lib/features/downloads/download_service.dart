@@ -442,6 +442,7 @@ class DownloadService {
       normVersion: result.normVersion,
       sqliteBytes: dest.lengthSync(),
       installedAt: nowMs(),
+      pageCount: result.pageCount,
     );
   }
 }

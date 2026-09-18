@@ -74,5 +74,16 @@
   "modePagedV": "صفحات · عمودي",
   "modeContinuousV": "تمرير متصل",
   "searchInBook": "بحث في الكتاب",
-  "exactPhrase": "عبارة كاملة"
+  "exactPhrase": "عبارة كاملة",
+  "selectAll": "تحديد الكل",
+  "deselectAll": "إلغاء تحديد الكل",
+  "highlight": "تمييز",
+  "addNote": "إضافة ملاحظة",
+  "copyWithReference": "نسخ مع المرجع",
+  "copiedCitation": "تم نسخ الاقتباس",
+  "colorYellow": "أصفر",
+  "colorGreen": "أخضر",
+  "colorBlue": "أزرق",
+  "colorPink": "وردي",
+  "colorOrange": "برتقالي"
 }

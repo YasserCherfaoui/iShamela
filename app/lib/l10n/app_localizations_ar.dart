@@ -173,4 +173,37 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get exactPhrase => 'عبارة كاملة';
+
+  @override
+  String get selectAll => 'تحديد الكل';
+
+  @override
+  String get deselectAll => 'إلغاء تحديد الكل';
+
+  @override
+  String get highlight => 'تمييز';
+
+  @override
+  String get addNote => 'إضافة ملاحظة';
+
+  @override
+  String get copyWithReference => 'نسخ مع المرجع';
+
+  @override
+  String get copiedCitation => 'تم نسخ الاقتباس';
+
+  @override
+  String get colorYellow => 'أصفر';
+
+  @override
+  String get colorGreen => 'أخضر';
+
+  @override
+  String get colorBlue => 'أزرق';
+
+  @override
+  String get colorPink => 'وردي';
+
+  @override
+  String get colorOrange => 'برتقالي';
 }

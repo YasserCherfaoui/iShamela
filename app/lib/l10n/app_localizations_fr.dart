@@ -174,4 +174,37 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get exactPhrase => 'Expression exacte';
+
+  @override
+  String get selectAll => 'Tout sélectionner';
+
+  @override
+  String get deselectAll => 'Tout désélectionner';
+
+  @override
+  String get highlight => 'Surligner';
+
+  @override
+  String get addNote => 'Ajouter une note';
+
+  @override
+  String get copyWithReference => 'Copier avec référence';
+
+  @override
+  String get copiedCitation => 'Citation copiée';
+
+  @override
+  String get colorYellow => 'Jaune';
+
+  @override
+  String get colorGreen => 'Vert';
+
+  @override
+  String get colorBlue => 'Bleu';
+
+  @override
+  String get colorPink => 'Rose';
+
+  @override
+  String get colorOrange => 'Orange';
 }
