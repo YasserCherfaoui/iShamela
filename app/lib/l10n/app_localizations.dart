@@ -475,6 +475,102 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'برتقالي'**
   String get colorOrange;
+
+  /// No description provided for @tabSettings.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإعدادات'**
+  String get tabSettings;
+
+  /// No description provided for @textAppearance.
+  ///
+  /// In ar, this message translates to:
+  /// **'مظهر النص'**
+  String get textAppearance;
+
+  /// No description provided for @resetTextStyles.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعادة الافتراضي'**
+  String get resetTextStyles;
+
+  /// No description provided for @bold.
+  ///
+  /// In ar, this message translates to:
+  /// **'عريض'**
+  String get bold;
+
+  /// No description provided for @pickColor.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر لونًا'**
+  String get pickColor;
+
+  /// No description provided for @colorHex.
+  ///
+  /// In ar, this message translates to:
+  /// **'لون سداسي'**
+  String get colorHex;
+
+  /// No description provided for @roleBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'متن النص'**
+  String get roleBody;
+
+  /// No description provided for @roleTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'العناوين'**
+  String get roleTitle;
+
+  /// No description provided for @roleHonorific.
+  ///
+  /// In ar, this message translates to:
+  /// **'الصيغ الثابتة (صلى الله عليه وسلم…)'**
+  String get roleHonorific;
+
+  /// No description provided for @roleQuran.
+  ///
+  /// In ar, this message translates to:
+  /// **'آيات القرآن ﴿…﴾'**
+  String get roleQuran;
+
+  /// No description provided for @rolePunctuation.
+  ///
+  /// In ar, this message translates to:
+  /// **'علامات الترقيم'**
+  String get rolePunctuation;
+
+  /// No description provided for @readerFont.
+  ///
+  /// In ar, this message translates to:
+  /// **'خط القراءة'**
+  String get readerFont;
+
+  /// No description provided for @fontAmiri.
+  ///
+  /// In ar, this message translates to:
+  /// **'أميري'**
+  String get fontAmiri;
+
+  /// No description provided for @fontScheherazade.
+  ///
+  /// In ar, this message translates to:
+  /// **'شهرزاد الجديدة'**
+  String get fontScheherazade;
+
+  /// No description provided for @fontSystem.
+  ///
+  /// In ar, this message translates to:
+  /// **'خط النظام'**
+  String get fontSystem;
+
+  /// No description provided for @fontSize.
+  ///
+  /// In ar, this message translates to:
+  /// **'حجم الخط'**
+  String get fontSize;
 }
 
 class _AppLocalizationsDelegate

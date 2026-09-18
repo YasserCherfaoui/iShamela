@@ -8,6 +8,7 @@ import 'package:ishamela/core/db/state_database.dart';
 import 'package:ishamela/core/net/net.dart';
 import 'package:ishamela/features/catalog/catalog_service.dart';
 import 'package:ishamela/features/downloads/download_service.dart';
+import 'package:ishamela/features/reader/reader_styles.dart';
 
 final appPathsProvider = FutureProvider<AppPaths>((ref) => AppPaths.resolve());
 
@@ -39,6 +40,11 @@ final catalogSyncProvider = FutureProvider<CatalogSync>((ref) async {
   );
 });
 
+final catalogSyncTickProvider = FutureProvider<void>((ref) async {
+  final sync = await ref.watch(catalogSyncProvider.future);
+  await sync.sync();
+});
+
 /// Runs catalog sync, then exposes a repository (so the UI sees a just-installed DB).
 final catalogRepositoryProvider = FutureProvider<CatalogRepository>((ref) async {
   await ref.watch(catalogSyncTickProvider.future);
@@ -61,7 +67,28 @@ final downloadServiceProvider = FutureProvider<DownloadService>((ref) async {
   return service;
 });
 
-final catalogSyncTickProvider = FutureProvider<void>((ref) async {
-  final sync = await ref.watch(catalogSyncProvider.future);
-  await sync.sync();
-});
+final readerTextStylesProvider =
+    NotifierProvider<ReaderTextStylesNotifier, ReaderTextStyles>(
+  ReaderTextStylesNotifier.new,
+);
+
+class ReaderTextStylesNotifier extends Notifier<ReaderTextStyles> {
+  @override
+  ReaderTextStyles build() {
+    final async = ref.watch(stateDatabaseProvider);
+    return async.maybeWhen(
+      data: (db) => ReaderTextStyles.fromJsonString(
+        db.setting(ReaderTextStyles.settingsKey),
+      ),
+      orElse: ReaderTextStyles.defaults,
+    );
+  }
+
+  Future<void> save(ReaderTextStyles styles) async {
+    final db = await ref.read(stateDatabaseProvider.future);
+    db.setSetting(ReaderTextStyles.settingsKey, styles.toJsonString());
+    state = styles;
+  }
+
+  Future<void> reset() => save(ReaderTextStyles.defaults());
+}

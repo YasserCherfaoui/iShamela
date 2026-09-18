@@ -3,80 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:ishamela/l10n/app_localizations.dart';
 
 import 'package:ishamela/core/db/state_database.dart';
+import 'package:ishamela/features/reader/body_display_map.dart';
 import 'package:ishamela/features/reader/citation.dart';
+import 'package:ishamela/features/reader/reader_styles.dart';
+import 'package:ishamela/features/reader/text_roles.dart';
 
-final _tagRe = RegExp(
-  r'<!--.*?-->|</?([a-zA-Z][\w:-]*)(\s[^>]*)?>',
-  dotAll: true,
-);
-
-/// Maps whitelist-stripped display text ↔ verbatim `pages.body` offsets.
-class BodyDisplayMap {
-  BodyDisplayMap._(this.display, this.displayToBody);
-
-  final String display;
-
-  /// For each display UTF-16 index, the corresponding body index.
-  final List<int> displayToBody;
-
-  factory BodyDisplayMap.fromBody(String body) {
-    final buf = StringBuffer();
-    final map = <int>[];
-    var cursor = 0;
-    for (final m in _tagRe.allMatches(body)) {
-      for (var i = cursor; i < m.start; i++) {
-        buf.write(body[i]);
-        map.add(i);
-      }
-      final whole = m.group(0)!;
-      if (!whole.startsWith('<!--')) {
-        final name = (m.group(1) ?? '').toLowerCase();
-        final closing = whole.startsWith('</');
-        if (name == 'br' && !closing) {
-          buf.write('\n');
-          // Map synthetic newline to the tag start (nearest body anchor).
-          map.add(m.start);
-        }
-      }
-      cursor = m.end;
-    }
-    for (var i = cursor; i < body.length; i++) {
-      buf.write(body[i]);
-      map.add(i);
-    }
-    return BodyDisplayMap._(buf.toString(), map);
-  }
-
-  /// Convert a display selection `[start, end)` to body `[start, end)`.
-  (int, int) toBodyRange(int displayStart, int displayEnd) {
-    if (display.isEmpty || displayToBody.isEmpty) {
-      return (0, 0);
-    }
-    final a = displayStart.clamp(0, displayToBody.length);
-    final b = displayEnd.clamp(0, displayToBody.length);
-    if (a >= b) return (0, 0);
-    final bodyStart = displayToBody[a];
-    final bodyEnd = displayToBody[b - 1] + 1;
-    if (bodyEnd <= bodyStart) return (0, 0);
-    return (bodyStart, bodyEnd);
-  }
-
-  /// Body `[start, end)` → display `[start, end)` (best-effort).
-  (int, int) toDisplayRange(int bodyStart, int bodyEnd) {
-    var dStart = -1;
-    var dEnd = -1;
-    for (var i = 0; i < displayToBody.length; i++) {
-      final b = displayToBody[i];
-      if (dStart < 0 && b >= bodyStart) dStart = i;
-      if (b < bodyEnd) dEnd = i + 1;
-    }
-    if (dStart < 0) return (0, 0);
-    if (dEnd < dStart) dEnd = dStart;
-    return (dStart, dEnd.clamp(dStart, display.length));
-  }
-}
-
-/// Selectable body with SPEC-010 highlights / notes / copy-citation.
+/// Selectable body with SPEC-010 highlights / notes / copy-citation
+/// and SPEC-011 role coloring.
 class AnnotatedBody extends StatefulWidget {
   const AnnotatedBody({
     super.key,
@@ -88,6 +21,7 @@ class AnnotatedBody extends StatefulWidget {
     required this.author,
     this.part,
     this.pageNumber,
+    this.textStyles,
   });
 
   final String body;
@@ -98,6 +32,7 @@ class AnnotatedBody extends StatefulWidget {
   final String author;
   final String? part;
   final int? pageNumber;
+  final ReaderTextStyles? textStyles;
 
   @override
   State<AnnotatedBody> createState() => _AnnotatedBodyState();
@@ -107,11 +42,12 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
   List<Map<String, Object?>> _highlights = [];
   List<Map<String, Object?>> _notes = [];
   late BodyDisplayMap _map;
+  late TextRoleMap _roles;
 
   @override
   void initState() {
     super.initState();
-    _map = BodyDisplayMap.fromBody(widget.body);
+    _remapBody();
     _reload();
   }
 
@@ -121,9 +57,14 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
     if (oldWidget.pageId != widget.pageId ||
         oldWidget.bookId != widget.bookId ||
         oldWidget.body != widget.body) {
-      _map = BodyDisplayMap.fromBody(widget.body);
+      _remapBody();
       _reload();
     }
+  }
+
+  void _remapBody() {
+    _map = BodyDisplayMap.fromBody(widget.body);
+    _roles = classifyTextRoles(widget.body);
   }
 
   void _reload() {
@@ -134,12 +75,17 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
     });
   }
 
-  TextStyle _baseStyle() => const TextStyle(fontSize: 20, height: 1.8);
+  TextStyle _baseStyle(ReaderTextStyles styles) => TextStyle(
+        fontSize: styles.fontSize,
+        height: 1.8,
+        fontFamily: styles.font.familyName,
+      );
 
   List<InlineSpan> _buildSpans() {
     final display = _map.display;
-    final base = _baseStyle();
-    final colors = List<Color?>.filled(display.length, null);
+    final styles = widget.textStyles ?? ReaderTextStyles.defaults();
+    final base = _baseStyle(styles);
+    final hl = List<Color?>.filled(display.length, null);
     final noteFlags = List<bool>.filled(display.length, false);
 
     for (final h in _highlights) {
@@ -150,7 +96,7 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
       final c = Color(argb);
       final (ds, de) = _map.toDisplayRange(start, end);
       for (var i = ds; i < de && i < display.length; i++) {
-        colors[i] = c;
+        hl[i] = c;
       }
     }
     for (final n in _notes) {
@@ -165,17 +111,23 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
     final out = <InlineSpan>[];
     var i = 0;
     while (i < display.length) {
-      final c = colors[i];
+      final role = _roles.roleAt(i);
+      final bg = hl[i];
       final note = noteFlags[i];
       var j = i + 1;
       while (j < display.length &&
-          colors[j] == c &&
+          _roles.roleAt(j) == role &&
+          hl[j] == bg &&
           noteFlags[j] == note) {
         j++;
       }
-      var style = base;
-      if (c != null) {
-        style = style.copyWith(backgroundColor: c);
+      final rs = styles.styleFor(role);
+      var style = base.copyWith(
+        color: rs.color,
+        fontWeight: rs.bold ? FontWeight.bold : FontWeight.normal,
+      );
+      if (bg != null) {
+        style = style.copyWith(backgroundColor: bg);
       }
       if (note) {
         style = style.copyWith(
@@ -270,9 +222,22 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final styles = widget.textStyles ?? ReaderTextStyles.defaults();
+    final fontSize = styles.fontSize;
     return SelectableText.rich(
       TextSpan(children: _buildSpans()),
       textAlign: TextAlign.justify,
+      style: TextStyle(
+        fontSize: fontSize,
+        height: 1.8,
+        fontFamily: styles.font.familyName,
+      ),
+      strutStyle: StrutStyle(
+        fontSize: fontSize,
+        height: 1.8,
+        fontFamily: styles.font.familyName,
+        forceStrutHeight: true,
+      ),
       contextMenuBuilder: (context, editableTextState) {
         final sel = editableTextState.textEditingValue.selection;
         final items = <ContextMenuButtonItem>[

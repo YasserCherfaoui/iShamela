@@ -7,6 +7,7 @@ import 'package:ishamela/core/providers.dart';
 import 'package:ishamela/features/catalog/catalog_page.dart';
 import 'package:ishamela/features/downloads/downloads_page.dart';
 import 'package:ishamela/features/library/library_page.dart';
+import 'package:ishamela/features/settings/settings_page.dart';
 
 class IshamelaApp extends ConsumerWidget {
   const IshamelaApp({super.key});
@@ -56,6 +57,7 @@ class _HomeShellState extends State<HomeShell> {
       CatalogPage(),
       LibraryPage(),
       DownloadsPage(),
+      SettingsPage(),
     ];
     return Scaffold(
       body: pages[_index],
@@ -74,6 +76,10 @@ class _HomeShellState extends State<HomeShell> {
           NavigationDestination(
             icon: const Icon(Icons.download_outlined),
             label: l10n.tabDownloads,
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.settings_outlined),
+            label: l10n.tabSettings,
           ),
         ],
       ),

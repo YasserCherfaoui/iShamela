@@ -207,4 +207,52 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get colorOrange => 'Orange';
+
+  @override
+  String get tabSettings => 'Réglages';
+
+  @override
+  String get textAppearance => 'Apparence du texte';
+
+  @override
+  String get resetTextStyles => 'Réinitialiser';
+
+  @override
+  String get bold => 'Gras';
+
+  @override
+  String get pickColor => 'Choisir une couleur';
+
+  @override
+  String get colorHex => 'Couleur hex';
+
+  @override
+  String get roleBody => 'Corps du texte';
+
+  @override
+  String get roleTitle => 'Titres';
+
+  @override
+  String get roleHonorific => 'Formules (صلى الله عليه وسلم…)';
+
+  @override
+  String get roleQuran => 'Citations coraniques ﴿…﴾';
+
+  @override
+  String get rolePunctuation => 'Ponctuation';
+
+  @override
+  String get readerFont => 'Police de lecture';
+
+  @override
+  String get fontAmiri => 'Amiri';
+
+  @override
+  String get fontScheherazade => 'Scheherazade New';
+
+  @override
+  String get fontSystem => 'Système';
+
+  @override
+  String get fontSize => 'Taille de police';
 }

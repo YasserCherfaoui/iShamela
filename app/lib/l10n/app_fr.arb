@@ -85,5 +85,21 @@
   "colorGreen": "Vert",
   "colorBlue": "Bleu",
   "colorPink": "Rose",
-  "colorOrange": "Orange"
+  "colorOrange": "Orange",
+  "tabSettings": "Réglages",
+  "textAppearance": "Apparence du texte",
+  "resetTextStyles": "Réinitialiser",
+  "bold": "Gras",
+  "pickColor": "Choisir une couleur",
+  "colorHex": "Couleur hex",
+  "roleBody": "Corps du texte",
+  "roleTitle": "Titres",
+  "roleHonorific": "Formules (صلى الله عليه وسلم…)",
+  "roleQuran": "Citations coraniques ﴿…﴾",
+  "rolePunctuation": "Ponctuation",
+  "readerFont": "Police de lecture",
+  "fontAmiri": "Amiri",
+  "fontScheherazade": "Scheherazade New",
+  "fontSystem": "Système",
+  "fontSize": "Taille de police"
 }

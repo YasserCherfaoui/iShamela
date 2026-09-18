@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
+- Reader text roles & style settings (SPEC-011): unified honorific color, Quran spans (marks + inner text), Amiri/Scheherazade fonts + size, CRLF/`<br>` line breaks, equal-height selection strut; Settings tab.
 - Reader annotations (SPEC-010): colored highlights, anchored notes, and copy-with-bibliographic reference; stored in `state.sqlite` (`highlights`, `text_notes`).
 - Catalog UX: isolated search field (typing no longer loses focus), search retained on category/author book lists, select all / deselect all in multi-select, hide `0 pages` until a real count is known (catalog or installed).
 - Shamela-like reader & catalog UX (SPEC-009): scoped catalog search (books/authors/categories), HTML whitelist body display, TOC + بطاقة panes, reading modes, in-book search; catalog schema 3 (`betaka_text`, author/category FTS); book schema 2 (`toc`, `source_page_id`).

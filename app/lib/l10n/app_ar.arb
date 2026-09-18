@@ -85,5 +85,21 @@
   "colorGreen": "أخضر",
   "colorBlue": "أزرق",
   "colorPink": "وردي",
-  "colorOrange": "برتقالي"
+  "colorOrange": "برتقالي",
+  "tabSettings": "الإعدادات",
+  "textAppearance": "مظهر النص",
+  "resetTextStyles": "إعادة الافتراضي",
+  "bold": "عريض",
+  "pickColor": "اختر لونًا",
+  "colorHex": "لون سداسي",
+  "roleBody": "متن النص",
+  "roleTitle": "العناوين",
+  "roleHonorific": "الصيغ الثابتة (صلى الله عليه وسلم…)",
+  "roleQuran": "آيات القرآن ﴿…﴾",
+  "rolePunctuation": "علامات الترقيم",
+  "readerFont": "خط القراءة",
+  "fontAmiri": "أميري",
+  "fontScheherazade": "شهرزاد الجديدة",
+  "fontSystem": "خط النظام",
+  "fontSize": "حجم الخط"
 }

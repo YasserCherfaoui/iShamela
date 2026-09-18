@@ -34,3 +34,14 @@ flutter:
   assets:
     - assets/catalog/catalog.sqlite.zst
     - assets/catalog/catalog.json
+  fonts:
+    - family: Amiri
+      fonts:
+        - asset: assets/fonts/Amiri-Regular.ttf
+        - asset: assets/fonts/Amiri-Bold.ttf
+          weight: 700
+    - family: ScheherazadeNew
+      fonts:
+        - asset: assets/fonts/ScheherazadeNew-Regular.ttf
+        - asset: assets/fonts/ScheherazadeNew-Bold.ttf
+          weight: 700

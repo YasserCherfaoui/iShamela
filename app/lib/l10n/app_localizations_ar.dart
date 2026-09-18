@@ -206,4 +206,52 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get colorOrange => 'برتقالي';
+
+  @override
+  String get tabSettings => 'الإعدادات';
+
+  @override
+  String get textAppearance => 'مظهر النص';
+
+  @override
+  String get resetTextStyles => 'إعادة الافتراضي';
+
+  @override
+  String get bold => 'عريض';
+
+  @override
+  String get pickColor => 'اختر لونًا';
+
+  @override
+  String get colorHex => 'لون سداسي';
+
+  @override
+  String get roleBody => 'متن النص';
+
+  @override
+  String get roleTitle => 'العناوين';
+
+  @override
+  String get roleHonorific => 'الصيغ الثابتة (صلى الله عليه وسلم…)';
+
+  @override
+  String get roleQuran => 'آيات القرآن ﴿…﴾';
+
+  @override
+  String get rolePunctuation => 'علامات الترقيم';
+
+  @override
+  String get readerFont => 'خط القراءة';
+
+  @override
+  String get fontAmiri => 'أميري';
+
+  @override
+  String get fontScheherazade => 'شهرزاد الجديدة';
+
+  @override
+  String get fontSystem => 'خط النظام';
+
+  @override
+  String get fontSize => 'حجم الخط';
 }

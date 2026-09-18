@@ -478,6 +478,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                           author: author,
                           part: part,
                           pageNumber: page.pageNumber,
+                          textStyles: ref.watch(readerTextStylesProvider),
                         )),
             ),
           ),

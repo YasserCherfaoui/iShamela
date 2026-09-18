@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:ishamela/core/db/paths.dart';
 import 'package:ishamela/core/db/state_database.dart';
-import 'package:ishamela/features/reader/annotated_body.dart';
+import 'package:ishamela/features/reader/body_display_map.dart';
 import 'package:ishamela/features/reader/citation.dart';
 import 'package:path/path.dart' as p;
 import 'dart:io';
