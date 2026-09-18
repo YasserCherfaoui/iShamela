@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
+- Shamela-like reader & catalog UX (SPEC-009): scoped catalog search (books/authors/categories), HTML whitelist body display, TOC + بطاقة panes, reading modes, in-book search; catalog schema 3 (`betaka_text`, author/category FTS); book schema 2 (`toc`, `source_page_id`).
 - On-device install from Shamela4 (SPEC-008): catalog `source_pages_path` (schema v2), Dart `BundleInstaller` builds SPEC-002 SQLite+FTS from streamed `pages.jsonl`, `DownloadService` fetches pinned-revision Hub paths (no `.isb` CDN). Download UI gates on path presence, not `isb_bytes`.
 - Minimal reader (SPEC-005 first slice): open installed books from Library / Catalog / Downloads; RTL page swipe; jump by print page number; last-read position in `reading_state`.
 - Live catalog publish & library selection (SPEC-007): spec + `ishamela-publish` CLI, `docs/PUBLISH.md`, GitHub `publish-bundles` workflow; app multi-select / download-all with size confirmation, catalog footer + stale hint; default HF catalog URL covered by tests.

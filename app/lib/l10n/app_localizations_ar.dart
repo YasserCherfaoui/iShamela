@@ -137,4 +137,40 @@ class AppLocalizationsAr extends AppLocalizations {
   String readerProgress(int current, int total) {
     return '$current / $total';
   }
+
+  @override
+  String get searchScopeAll => 'الكل';
+
+  @override
+  String get searchScopeBooks => 'كتب';
+
+  @override
+  String get searchScopeAuthors => 'مؤلفون';
+
+  @override
+  String get searchScopeCategories => 'أقسام';
+
+  @override
+  String get toc => 'الفهرس';
+
+  @override
+  String get bookCard => 'بطاقة الكتاب';
+
+  @override
+  String get readingMode => 'وضع القراءة';
+
+  @override
+  String get modePagedH => 'صفحات · أفقي';
+
+  @override
+  String get modePagedV => 'صفحات · عمودي';
+
+  @override
+  String get modeContinuousV => 'تمرير متصل';
+
+  @override
+  String get searchInBook => 'بحث في الكتاب';
+
+  @override
+  String get exactPhrase => 'عبارة كاملة';
 }

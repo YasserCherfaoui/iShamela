@@ -337,6 +337,78 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'{current} / {total}'**
   String readerProgress(int current, int total);
+
+  /// No description provided for @searchScopeAll.
+  ///
+  /// In ar, this message translates to:
+  /// **'الكل'**
+  String get searchScopeAll;
+
+  /// No description provided for @searchScopeBooks.
+  ///
+  /// In ar, this message translates to:
+  /// **'كتب'**
+  String get searchScopeBooks;
+
+  /// No description provided for @searchScopeAuthors.
+  ///
+  /// In ar, this message translates to:
+  /// **'مؤلفون'**
+  String get searchScopeAuthors;
+
+  /// No description provided for @searchScopeCategories.
+  ///
+  /// In ar, this message translates to:
+  /// **'أقسام'**
+  String get searchScopeCategories;
+
+  /// No description provided for @toc.
+  ///
+  /// In ar, this message translates to:
+  /// **'الفهرس'**
+  String get toc;
+
+  /// No description provided for @bookCard.
+  ///
+  /// In ar, this message translates to:
+  /// **'بطاقة الكتاب'**
+  String get bookCard;
+
+  /// No description provided for @readingMode.
+  ///
+  /// In ar, this message translates to:
+  /// **'وضع القراءة'**
+  String get readingMode;
+
+  /// No description provided for @modePagedH.
+  ///
+  /// In ar, this message translates to:
+  /// **'صفحات · أفقي'**
+  String get modePagedH;
+
+  /// No description provided for @modePagedV.
+  ///
+  /// In ar, this message translates to:
+  /// **'صفحات · عمودي'**
+  String get modePagedV;
+
+  /// No description provided for @modeContinuousV.
+  ///
+  /// In ar, this message translates to:
+  /// **'تمرير متصل'**
+  String get modeContinuousV;
+
+  /// No description provided for @searchInBook.
+  ///
+  /// In ar, this message translates to:
+  /// **'بحث في الكتاب'**
+  String get searchInBook;
+
+  /// No description provided for @exactPhrase.
+  ///
+  /// In ar, this message translates to:
+  /// **'عبارة كاملة'**
+  String get exactPhrase;
 }
 
 class _AppLocalizationsDelegate

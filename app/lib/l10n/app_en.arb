@@ -62,5 +62,17 @@
       "current": {"type": "int"},
       "total": {"type": "int"}
     }
-  }
+  },
+  "searchScopeAll": "All",
+  "searchScopeBooks": "Books",
+  "searchScopeAuthors": "Authors",
+  "searchScopeCategories": "Categories",
+  "toc": "Contents",
+  "bookCard": "Book card",
+  "readingMode": "Reading mode",
+  "modePagedH": "Pages · horizontal",
+  "modePagedV": "Pages · vertical",
+  "modeContinuousV": "Continuous scroll",
+  "searchInBook": "Search in book",
+  "exactPhrase": "Exact phrase"
 }

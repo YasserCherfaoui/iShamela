@@ -62,5 +62,17 @@
       "current": {"type": "int"},
       "total": {"type": "int"}
     }
-  }
+  },
+  "searchScopeAll": "الكل",
+  "searchScopeBooks": "كتب",
+  "searchScopeAuthors": "مؤلفون",
+  "searchScopeCategories": "أقسام",
+  "toc": "الفهرس",
+  "bookCard": "بطاقة الكتاب",
+  "readingMode": "وضع القراءة",
+  "modePagedH": "صفحات · أفقي",
+  "modePagedV": "صفحات · عمودي",
+  "modeContinuousV": "تمرير متصل",
+  "searchInBook": "بحث في الكتاب",
+  "exactPhrase": "عبارة كاملة"
 }

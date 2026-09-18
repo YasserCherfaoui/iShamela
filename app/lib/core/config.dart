@@ -27,8 +27,8 @@ String get pagesBaseUrl {
 /// App identity written to book `meta.built_by` (SPEC-008).
 const String appBuiltBy = 'ishamela/0.1.0';
 
-/// Bundle schema versions the app can open (SPEC-002).
-const Set<String> supportedBookSchemaVersions = {'1'};
+/// Bundle schema versions the app can open (SPEC-002 / SPEC-009).
+const Set<String> supportedBookSchemaVersions = {'1', '2'};
 
-/// Catalog schema versions the app can open (SPEC-003 / SPEC-008).
-const Set<String> supportedCatalogSchemaVersions = {'2'};
+/// Catalog schema versions the app can open (SPEC-003 / SPEC-008 / SPEC-009).
+const Set<String> supportedCatalogSchemaVersions = {'2', '3'};

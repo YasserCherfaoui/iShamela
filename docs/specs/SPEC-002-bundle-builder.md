@@ -40,19 +40,21 @@ ishamela-build --all --out ./dist            # full corpus (CI use)
 - Idempotent: same inputs + same `NORM_VERSION` + same `SCHEMA_VERSION` ⇒ byte-identical output (set fixed SQLite `pragma`s, no timestamps inside the DB).
 - Exit non-zero with a clear message on: missing book id, empty page set, normalization producing empty index.
 
-## Output SQLite schema (`SCHEMA_VERSION = 1`)
+## Output SQLite schema (`SCHEMA_VERSION = 2`)
 
 ```sql
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 -- required keys: schema_version, norm_version, book_id, title, author,
 --                category_id, category_name, source_dataset, source_revision,
 --                page_count, built_by (tool version)
+-- optional: betaka (SPEC-009 book card text)
 
 CREATE TABLE pages (
-  id           INTEGER PRIMARY KEY,   -- sequential reading order, 1-based
-  part         TEXT,                  -- volume/juz' label if present upstream
-  page_number  INTEGER,               -- PRINT edition page number (nullable)
-  body         TEXT NOT NULL          -- verbatim source text, never modified
+  id              INTEGER PRIMARY KEY,   -- sequential reading order, 1-based
+  part            TEXT,                  -- volume/juz' label if present upstream
+  page_number     INTEGER,               -- PRINT edition page number (nullable)
+  body            TEXT NOT NULL,         -- verbatim source text, never modified
+  source_page_id  INTEGER                -- upstream pages.jsonl `page_id` (SPEC-009)
 );
 
 CREATE VIRTUAL TABLE pages_fts USING fts5(
@@ -61,13 +63,22 @@ CREATE VIRTUAL TABLE pages_fts USING fts5(
   tokenize='unicode61 remove_diacritics 0'
 );
 -- rowid of pages_fts == pages.id ; body_norm = normalize(body) per SPEC-001
+
+CREATE TABLE toc (
+  id INTEGER PRIMARY KEY,             -- upstream title_id
+  parent_id INTEGER,
+  title TEXT NOT NULL,                -- title_text verbatim
+  page_id INTEGER NOT NULL,           -- FK → pages.id (resolved)
+  position INTEGER NOT NULL
+);
 ```
 
 Notes for the implementer:
 
-- **Contentless FTS5** means snippets are built by the app: it fetches `pages.body` by rowid and highlights by re-running the query-side normalizer with offset mapping — that app-side part is SPEC-004 (reader/search UI), *not* this spec. This spec only guarantees correct rowid alignment.
+- **Contentless FTS5** means snippets are built by the app: it fetches `pages.body` by rowid and highlights by re-running the query-side normalizer with offset mapping — that app-side part is SPEC-005/009, *not* this spec. This spec only guarantees correct rowid alignment.
 - `remove_diacritics 0` because diacritics are already gone in `body_norm` (SPEC-001); don't double-process.
 - Build inside a temp file, `VACUUM`, then `PRAGMA optimize` before compressing.
+- TOC / `source_page_id` / optional `meta.betaka`: see [`SPEC-009-shamela-reader-ux.md`](SPEC-009-shamela-reader-ux.md). `SCHEMA_VERSION` `1` bundles (pages only) remain readable; new builds emit `2`.
 
 ## Compression & naming
 

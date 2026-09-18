@@ -305,30 +305,109 @@ class CatalogRepository {
   }
 
   List<Book> search(String query) {
-    final q = normalize(query);
-    if (q.isEmpty) return const [];
+    return scopedSearch(query, chipScope: CatalogSearchScope.books).books;
+  }
+
+  /// SPEC-009 scoped catalog search (books / authors / categories / all).
+  CatalogSearchResults scopedSearch(
+    String rawQuery, {
+    CatalogSearchScope chipScope = CatalogSearchScope.all,
+    int limitPerSection = 50,
+  }) {
+    final parsed = parseCatalogSearchQuery(rawQuery, chipScope: chipScope);
+    final q = normalize(parsed.query);
+    if (q.isEmpty) return CatalogSearchResults();
     final match = buildCatalogFtsMatch(q);
-    if (match.isEmpty) return const [];
+    if (match.isEmpty) return CatalogSearchResults();
+
     final db = openReadonlySqlite(paths.catalogSqlite);
     try {
-      return db
-          .select(
-            '''
-            SELECT b.*, a.name AS author_name, c.name AS category_name
-            FROM books_fts
-            JOIN books b ON b.book_id = books_fts.rowid
-            LEFT JOIN authors a ON a.id = b.author_id
-            JOIN categories c ON c.id = b.category_id
-            WHERE books_fts MATCH ?
-            ORDER BY b.title
-            ''',
-            [match],
-          )
-          .map(_bookFromRow)
-          .toList();
-    } on SqliteException {
-      // Malformed MATCH (rare after quoting) — treat as no hits.
-      return const [];
+      List<Book> books = const [];
+      List<Author> authors = const [];
+      List<Category> categories = const [];
+
+      if (parsed.scope == CatalogSearchScope.all ||
+          parsed.scope == CatalogSearchScope.books) {
+        try {
+          books = db
+              .select(
+                '''
+                SELECT b.*, a.name AS author_name, c.name AS category_name
+                FROM books_fts
+                JOIN books b ON b.book_id = books_fts.rowid
+                LEFT JOIN authors a ON a.id = b.author_id
+                JOIN categories c ON c.id = b.category_id
+                WHERE books_fts MATCH ?
+                ORDER BY b.title
+                LIMIT ?
+                ''',
+                [match, limitPerSection],
+              )
+              .map(_bookFromRow)
+              .toList();
+        } on SqliteException {
+          books = const [];
+        }
+      }
+      if (parsed.scope == CatalogSearchScope.all ||
+          parsed.scope == CatalogSearchScope.authors) {
+        try {
+          authors = db
+              .select(
+                '''
+                SELECT a.id, a.name, a.death_year_hijri
+                FROM authors_fts
+                JOIN authors a ON a.id = authors_fts.rowid
+                WHERE authors_fts MATCH ?
+                ORDER BY a.name
+                LIMIT ?
+                ''',
+                [match, limitPerSection],
+              )
+              .map(
+                (r) => Author(
+                  id: r['id'] as int,
+                  name: r['name'] as String,
+                  deathYearHijri: r['death_year_hijri'] as int?,
+                ),
+              )
+              .toList();
+        } on SqliteException {
+          authors = const [];
+        }
+      }
+      if (parsed.scope == CatalogSearchScope.all ||
+          parsed.scope == CatalogSearchScope.categories) {
+        try {
+          categories = db
+              .select(
+                '''
+                SELECT c.id, c.name, c.position
+                FROM categories_fts
+                JOIN categories c ON c.id = categories_fts.rowid
+                WHERE categories_fts MATCH ?
+                ORDER BY c.position, c.id
+                LIMIT ?
+                ''',
+                [match, limitPerSection],
+              )
+              .map(
+                (r) => Category(
+                  id: r['id'] as int,
+                  name: r['name'] as String,
+                  position: r['position'] as int,
+                ),
+              )
+              .toList();
+        } on SqliteException {
+          categories = const [];
+        }
+      }
+      return CatalogSearchResults(
+        books: books,
+        authors: authors,
+        categories: categories,
+      );
     } finally {
       db.dispose();
     }
@@ -349,6 +428,7 @@ class CatalogRepository {
       sha256: r['sha256'] as String,
       filename: r['filename'] as String,
       sourcePagesPath: r['source_pages_path'] as String?,
+      betakaText: r['betaka_text'] as String?,
     );
   }
 }
@@ -365,6 +445,43 @@ String buildCatalogFtsMatch(String normalizedQuery) {
     parts.add('"$escaped"*');
   }
   return parts.join(' ');
+}
+
+enum CatalogSearchScope { all, books, authors, categories }
+
+class CatalogSearchResults {
+  CatalogSearchResults({
+    this.books = const [],
+    this.authors = const [],
+    this.categories = const [],
+  });
+
+  final List<Book> books;
+  final List<Author> authors;
+  final List<Category> categories;
+
+  bool get isEmpty =>
+      books.isEmpty && authors.isEmpty && categories.isEmpty;
+}
+
+/// Parse optional `كتاب:` / `مؤلف:` / `قسم:` prefixes (SPEC-009).
+({CatalogSearchScope scope, String query}) parseCatalogSearchQuery(
+  String raw, {
+  CatalogSearchScope chipScope = CatalogSearchScope.all,
+}) {
+  final trimmed = raw.trim();
+  final lower = trimmed; // Arabic prefixes are exact
+  const prefixes = <String, CatalogSearchScope>{
+    'كتاب:': CatalogSearchScope.books,
+    'مؤلف:': CatalogSearchScope.authors,
+    'قسم:': CatalogSearchScope.categories,
+  };
+  for (final e in prefixes.entries) {
+    if (lower.startsWith(e.key)) {
+      return (scope: e.value, query: trimmed.substring(e.key.length).trim());
+    }
+  }
+  return (scope: chipScope, query: trimmed);
 }
 
 String sha256File(File file) {

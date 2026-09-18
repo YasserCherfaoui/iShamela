@@ -40,7 +40,7 @@ ishamela/bundles (HF dataset)
 
 App logic: if local `catalog_version` < remote, download and swap `catalog.sqlite`. The manifest MUST stay < 2 KB; it is the only unconditional network call in the app (SPEC-004).
 
-## Catalog schema (`CATALOG_SCHEMA_VERSION = 2`)
+## Catalog schema (`CATALOG_SCHEMA_VERSION = 3`)
 
 ```sql
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -65,15 +65,27 @@ CREATE TABLE books (
   sqlite_bytes INTEGER NOT NULL,      -- decompressed size, for storage UI
   sha256 TEXT NOT NULL,               -- of the .isb file (or placeholder zeros)
   filename TEXT NOT NULL,             -- e.g. book_43.isb
-  source_pages_path TEXT              -- SPEC-008: Hub-relative pages.jsonl path
+  source_pages_path TEXT,             -- SPEC-008: Hub-relative pages.jsonl path
+  betaka_text TEXT                    -- SPEC-009: book card (betaka_text from parquet)
 );
 
 CREATE VIRTUAL TABLE books_fts USING fts5(
   title_norm, author_norm, content='', tokenize='unicode61 remove_diacritics 0'
 );
 -- rowid == books.book_id; *_norm produced by SPEC-001 normalize()
+
+CREATE VIRTUAL TABLE authors_fts USING fts5(
+  name_norm, content='', tokenize='unicode61 remove_diacritics 0'
+);
+-- rowid == authors.id
+
+CREATE VIRTUAL TABLE categories_fts USING fts5(
+  name_norm, content='', tokenize='unicode61 remove_diacritics 0'
+);
+-- rowid == categories.id
 ```
 
+Scoped catalog search UI: [`SPEC-009-shamela-reader-ux.md`](SPEC-009-shamela-reader-ux.md).
 On-device install (SPEC-008) uses `source_pages_path` to fetch from Shamela4; see [`SPEC-008-on-device-install.md`](SPEC-008-on-device-install.md).
 
 ## Catalog content provenance (source vs CDN)

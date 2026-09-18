@@ -71,3 +71,4 @@ Highlighting algorithm (per result page):
 ## Out of scope
 
 - Multi-book/corpus search (post-v1), root search (ADR-001 §5), PDF reader, highlights-as-annotations (colored persistent highlights), text selection across pages.
+- TOC pane, HTML display whitelist, reading modes, بطاقة الكتاب, scoped catalog search — see [`SPEC-009-shamela-reader-ux.md`](SPEC-009-shamela-reader-ux.md).

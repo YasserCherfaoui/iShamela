@@ -23,7 +23,7 @@ from huggingface_hub import HfApi, hf_hub_download
 
 from ishamela_data.normalizer import NORM_VERSION, normalize
 
-SCHEMA_VERSION = "1"
+SCHEMA_VERSION = "2"
 SOURCE_DATASET = "AuthenticIlm/Shamela4_Full_DB"
 ZSTD_LEVEL = 19
 
@@ -98,13 +98,22 @@ def _create_schema(conn: sqlite3.Connection) -> None:
           id INTEGER PRIMARY KEY,
           part TEXT,
           page_number INTEGER,
-          body TEXT NOT NULL
+          body TEXT NOT NULL,
+          source_page_id INTEGER
         );
 
         CREATE VIRTUAL TABLE pages_fts USING fts5(
           body_norm,
           content='',
           tokenize='unicode61 remove_diacritics 0'
+        );
+
+        CREATE TABLE toc (
+          id INTEGER PRIMARY KEY,
+          parent_id INTEGER,
+          title TEXT NOT NULL,
+          page_id INTEGER NOT NULL,
+          position INTEGER NOT NULL
         );
         """
     )
@@ -124,12 +133,18 @@ def _iter_pages(pages_path: Path) -> Iterator[dict[str, Any]]:
                 ) from exc
 
 
-def _insert_pages(conn: sqlite3.Connection, pages_path: Path) -> tuple[int, int]:
-    """Insert pages and FTS rows. Returns (page_count, non_empty_norm_count)."""
+def _insert_pages(
+    conn: sqlite3.Connection, pages_path: Path
+) -> tuple[int, int, dict[int, int]]:
+    """Insert pages and FTS rows.
+
+    Returns ``(page_count, non_empty_norm_count, source_page_id → pages.id)``.
+    """
     page_count = 0
     non_empty_norm = 0
-    pages_rows: list[tuple[int, str | None, int | None, str]] = []
+    pages_rows: list[tuple[int, str | None, int | None, str, int | None]] = []
     fts_rows: list[tuple[int, str]] = []
+    source_to_id: dict[int, int] = {}
 
     # Prefer sequence_num; on collision allocate next free id (upstream can
     # repeat sequence_num — e.g. book 8428 — which would violate PRIMARY KEY).
@@ -173,17 +188,30 @@ def _insert_pages(conn: sqlite3.Connection, pages_path: Path) -> tuple[int, int]
                     f"page {page_id} has invalid page_num={page_num!r}"
                 ) from exc
 
+        source_page_id: int | None
+        raw_spid = obj.get("page_id")
+        if raw_spid is None:
+            source_page_id = None
+        else:
+            try:
+                source_page_id = int(raw_spid)
+            except (TypeError, ValueError) as exc:
+                raise BundleBuildError(
+                    f"page {page_id} has invalid page_id={raw_spid!r}"
+                ) from exc
+            source_to_id[source_page_id] = page_id
+
         body_norm = normalize(body)
-        pages_rows.append((page_id, part, page_number, body))
+        pages_rows.append((page_id, part, page_number, body, source_page_id))
         if body_norm:
             fts_rows.append((page_id, body_norm))
             non_empty_norm += 1
         page_count += 1
 
-        # Flush in batches to bound peak memory on huge books.
         if len(pages_rows) >= 500:
             conn.executemany(
-                "INSERT INTO pages (id, part, page_number, body) VALUES (?, ?, ?, ?)",
+                "INSERT INTO pages (id, part, page_number, body, source_page_id) "
+                "VALUES (?, ?, ?, ?, ?)",
                 pages_rows,
             )
             conn.executemany(
@@ -195,7 +223,8 @@ def _insert_pages(conn: sqlite3.Connection, pages_path: Path) -> tuple[int, int]
 
     if pages_rows:
         conn.executemany(
-            "INSERT INTO pages (id, part, page_number, body) VALUES (?, ?, ?, ?)",
+            "INSERT INTO pages (id, part, page_number, body, source_page_id) "
+            "VALUES (?, ?, ?, ?, ?)",
             pages_rows,
         )
         conn.executemany(
@@ -203,7 +232,48 @@ def _insert_pages(conn: sqlite3.Connection, pages_path: Path) -> tuple[int, int]
             fts_rows,
         )
 
-    return page_count, non_empty_norm
+    return page_count, non_empty_norm, source_to_id
+
+
+def _insert_toc(
+    conn: sqlite3.Connection,
+    toc_path: Path,
+    source_to_id: dict[int, int],
+) -> int:
+    """Insert TOC rows; skip entries whose upstream page_id cannot be resolved."""
+    if not toc_path.is_file():
+        return 0
+    rows: list[tuple[int, int | None, str, int, int]] = []
+    skipped = 0
+    for obj in _iter_pages(toc_path):
+        try:
+            title_id = int(obj["title_id"])
+            title = obj["title_text"]
+            upstream_page = int(obj["page_id"])
+        except (KeyError, TypeError, ValueError):
+            skipped += 1
+            continue
+        if not isinstance(title, str):
+            title = str(title)
+        page_id = source_to_id.get(upstream_page)
+        if page_id is None:
+            skipped += 1
+            continue
+        parent_raw = obj.get("parent_id")
+        parent_id = None if parent_raw is None else int(parent_raw)
+        try:
+            position = int(obj.get("shamela_title_id") or title_id)
+        except (TypeError, ValueError):
+            position = title_id
+        rows.append((title_id, parent_id, title, page_id, position))
+    if rows:
+        conn.executemany(
+            "INSERT INTO toc (id, parent_id, title, page_id, position) "
+            "VALUES (?, ?, ?, ?, ?)",
+            rows,
+        )
+    _ = skipped
+    return len(rows)
 
 
 def _write_meta(
@@ -258,6 +328,8 @@ def build_bundle_from_paths(
     source_revision: str,
     source_dataset: str = SOURCE_DATASET,
     keep_sqlite: bool = False,
+    toc_path: Path | None = None,
+    betaka: str | None = None,
 ) -> BundleResult:
     """Build ``book_<id>.isb`` (+ sidecar) from local pages.jsonl + BookMeta."""
     if not pages_path.is_file():
@@ -277,7 +349,9 @@ def build_bundle_from_paths(
         conn = _open_sqlite(sqlite_tmp)
         try:
             _create_schema(conn)
-            page_count, non_empty_norm = _insert_pages(conn, pages_path)
+            page_count, non_empty_norm, source_to_id = _insert_pages(
+                conn, pages_path
+            )
             if page_count == 0:
                 raise BundleBuildError(
                     f"empty page set for book_id={book.book_id}"
@@ -286,6 +360,11 @@ def build_bundle_from_paths(
                 raise BundleBuildError(
                     f"normalization producing empty index for book_id={book.book_id}"
                 )
+            if toc_path is None:
+                candidate = pages_path.with_name("toc.jsonl")
+                toc_path = candidate if candidate.is_file() else None
+            if toc_path is not None:
+                _insert_toc(conn, toc_path, source_to_id)
             _write_meta(
                 conn,
                 book=book,
@@ -293,6 +372,11 @@ def build_bundle_from_paths(
                 source_revision=source_revision,
                 source_dataset=source_dataset,
             )
+            if betaka:
+                conn.execute(
+                    "INSERT INTO meta (key, value) VALUES (?, ?)",
+                    ("betaka", betaka),
+                )
             conn.commit()
             conn.execute("VACUUM")
             conn.execute("PRAGMA optimize")

@@ -249,8 +249,8 @@ on the web UI if more terms appear in README prose.
 
 1. **D4 empty listing** — temporary hub glitch, private files, or truly empty
    revision? Re-run `audit_pdfs.py` when the card shows files.
-2. **HTML in `body`** — how much should the reader sanitize vs display raw?
-   (Product decision for SPEC-005; do not mutate stored `body`.)
+2. **HTML in `body`** — resolved by SPEC-009: store verbatim; display via
+   whitelist parser (do not mutate stored `body`).
 3. **D1×D2 linking** — invest in a dedicated aligner (author + normalized title
    + edition) before promising “open scan of this page.”
 4. **Presentation forms (U+FB50+)** — monitor search misses; SPEC-001 currently

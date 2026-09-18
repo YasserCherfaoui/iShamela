@@ -27,7 +27,7 @@ from ishamela_data.build_bundle import (
 )
 from ishamela_data.normalizer import NORM_VERSION, normalize
 
-CATALOG_SCHEMA_VERSION = 2
+CATALOG_SCHEMA_VERSION = 3
 ZSTD_LEVEL = 19
 MIN_APP_VERSION = "0.1.0"
 # App CDN (SPEC-007): Shamela4_Full_DB resolve root.
@@ -116,12 +116,25 @@ def _create_schema(conn: sqlite3.Connection) -> None:
           sqlite_bytes INTEGER NOT NULL,
           sha256 TEXT NOT NULL,
           filename TEXT NOT NULL,
-          source_pages_path TEXT
+          source_pages_path TEXT,
+          betaka_text TEXT
         );
 
         CREATE VIRTUAL TABLE books_fts USING fts5(
           title_norm,
           author_norm,
+          content='',
+          tokenize='unicode61 remove_diacritics 0'
+        );
+
+        CREATE VIRTUAL TABLE authors_fts USING fts5(
+          name_norm,
+          content='',
+          tokenize='unicode61 remove_diacritics 0'
+        );
+
+        CREATE VIRTUAL TABLE categories_fts USING fts5(
+          name_norm,
           content='',
           tokenize='unicode61 remove_diacritics 0'
         );
@@ -302,6 +315,11 @@ def build_catalog_from_paths(
                 "filename": f"book_{book_id}.isb",
                 "source_pages_path": path_index.get(book_id)
                 or sc.get("source_pages_path"),
+                "betaka_text": (
+                    str(bm["betaka_text"])
+                    if bm.get("betaka_text") not in (None, "")
+                    else sc.get("betaka_text")
+                ),
             }
         )
 
@@ -333,14 +351,30 @@ def build_catalog_from_paths(
             for aid in sorted(needed_author_ids):
                 au = authors_by_id[aid]
                 death = au.get("death_hijri")
+                name = str(au["name_ar"])
                 conn.execute(
                     "INSERT INTO authors (id, name, death_year_hijri) VALUES (?, ?, ?)",
                     (
                         aid,
-                        str(au["name_ar"]),
+                        name,
                         None if death is None else int(death),
                     ),
                 )
+                name_norm = normalize(name)
+                if name_norm:
+                    conn.execute(
+                        "INSERT INTO authors_fts (rowid, name_norm) VALUES (?, ?)",
+                        (aid, name_norm),
+                    )
+
+            for cid in sorted(needed_category_ids):
+                cat = categories_by_id[cid]
+                name_norm = normalize(str(cat["name_ar"]))
+                if name_norm:
+                    conn.execute(
+                        "INSERT INTO categories_fts (rowid, name_norm) VALUES (?, ?)",
+                        (cid, name_norm),
+                    )
 
             for row in book_rows:
                 conn.execute(
@@ -348,8 +382,8 @@ def build_catalog_from_paths(
                     INSERT INTO books (
                       book_id, title, author_id, category_id, page_count,
                       volume_count, isb_bytes, sqlite_bytes, sha256, filename,
-                      source_pages_path
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                      source_pages_path, betaka_text
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         row["book_id"],
@@ -363,6 +397,7 @@ def build_catalog_from_paths(
                         row["sha256"],
                         row["filename"],
                         row.get("source_pages_path"),
+                        row.get("betaka_text"),
                     ),
                 )
                 conn.execute(

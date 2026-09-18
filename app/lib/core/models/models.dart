@@ -69,6 +69,7 @@ class Book {
     this.categoryName,
     this.volumeCount,
     this.sourcePagesPath,
+    this.betakaText,
   });
 
   final int bookId;
@@ -86,6 +87,9 @@ class Book {
 
   /// Hub-relative `pages.jsonl` path (SPEC-008). Null/empty ⇒ not installable.
   final String? sourcePagesPath;
+
+  /// Book card text from catalog (SPEC-009 `betaka_text`).
+  final String? betakaText;
 
   bool get canInstallOnDevice =>
       sourcePagesPath != null && sourcePagesPath!.isNotEmpty;

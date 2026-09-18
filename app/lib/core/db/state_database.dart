@@ -50,6 +50,17 @@ class StateDatabase {
       ''');
       db.execute('PRAGMA user_version = 2');
     }
+    final version3 =
+        db.select('PRAGMA user_version').first.columnAt(0) as int;
+    if (version3 < 3) {
+      db.execute('''
+        CREATE TABLE IF NOT EXISTS settings (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL
+        )
+      ''');
+      db.execute('PRAGMA user_version = 3');
+    }
     return StateDatabase(db);
   }
 
@@ -173,6 +184,29 @@ class StateDatabase {
         updated_at=excluded.updated_at
       ''',
       [bookId, pageId, updatedAt],
+    );
+  }
+
+  String? setting(String key) {
+    try {
+      final rows = _db.select(
+        'SELECT value FROM settings WHERE key = ? LIMIT 1',
+        [key],
+      );
+      if (rows.isEmpty) return null;
+      return rows.first['value'] as String;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void setSetting(String key, String value) {
+    _db.execute(
+      '''
+      INSERT INTO settings (key, value) VALUES (?, ?)
+      ON CONFLICT(key) DO UPDATE SET value=excluded.value
+      ''',
+      [key, value],
     );
   }
 }

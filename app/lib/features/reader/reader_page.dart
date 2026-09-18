@@ -3,9 +3,36 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ishamela/l10n/app_localizations.dart';
 
 import 'package:ishamela/core/providers.dart';
+import 'package:ishamela/core/search/normalizer.dart';
+import 'package:ishamela/core/search/normalizer_map.dart';
+import 'package:ishamela/features/reader/body_html.dart';
 import 'package:ishamela/features/reader/book_database.dart';
 
-/// Minimal SPEC-005 reader: open installed book, page through verbatim body.
+enum ReadingMode { pagedH, pagedV, continuousV }
+
+ReadingMode _parseReadingMode(String? raw) {
+  switch (raw) {
+    case 'paged_v':
+      return ReadingMode.pagedV;
+    case 'continuous_v':
+      return ReadingMode.continuousV;
+    default:
+      return ReadingMode.pagedH;
+  }
+}
+
+String _readingModeKey(ReadingMode mode) {
+  switch (mode) {
+    case ReadingMode.pagedH:
+      return 'paged_h';
+    case ReadingMode.pagedV:
+      return 'paged_v';
+    case ReadingMode.continuousV:
+      return 'continuous_v';
+  }
+}
+
+/// SPEC-005 / SPEC-009 reader: TOC, HTML body, modes, بطاقة, in-book search.
 class ReaderPage extends ConsumerStatefulWidget {
   const ReaderPage({
     super.key,
@@ -42,10 +69,19 @@ class ReaderPage extends ConsumerStatefulWidget {
 class _ReaderPageState extends ConsumerState<ReaderPage> {
   BookDatabase? _db;
   List<int> _ids = const [];
+  List<TocEntry> _toc = const [];
   int _index = 0;
-  PageController? _controller;
+  PageController? _pageController;
   final _jumpCtrl = TextEditingController();
+  final _searchCtrl = TextEditingController();
   Object? _error;
+  ReadingMode _mode = ReadingMode.pagedH;
+  bool _showToc = true;
+  bool _showCard = true;
+  bool _searchOpen = false;
+  bool _exactPhrase = false;
+  List<BookSearchHit> _hits = const [];
+  Set<int> _highlightPageIds = {};
 
   @override
   void initState() {
@@ -70,11 +106,14 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         final i = ids.indexOf(saved);
         if (i >= 0) index = i;
       }
+      final mode = _parseReadingMode(state.setting('reading_mode'));
       setState(() {
         _db = db;
         _ids = ids;
+        _toc = db.tocEntries();
         _index = index;
-        _controller = PageController(initialPage: index);
+        _mode = mode;
+        _pageController = PageController(initialPage: index);
       });
     } catch (e) {
       setState(() => _error = e);
@@ -83,8 +122,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
 
   @override
   void dispose() {
-    _controller?.dispose();
+    _pageController?.dispose();
     _jumpCtrl.dispose();
+    _searchCtrl.dispose();
     _db?.close();
     super.dispose();
   }
@@ -98,14 +138,35 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     );
   }
 
+  Future<void> _setMode(ReadingMode mode) async {
+    final state = await ref.read(stateDatabaseProvider.future);
+    state.setSetting('reading_mode', _readingModeKey(mode));
+    setState(() {
+      _mode = mode;
+      _pageController?.dispose();
+      _pageController = PageController(initialPage: _index);
+    });
+  }
+
   void _onPage(int i) {
     setState(() => _index = i);
     _persist(_ids[i]);
   }
 
+  void _jumpToId(int pageId) {
+    final i = _ids.indexOf(pageId);
+    if (i < 0) return;
+    if (_mode == ReadingMode.continuousV) {
+      setState(() => _index = i);
+      _persist(pageId);
+    } else {
+      _pageController?.jumpToPage(i);
+      _onPage(i);
+    }
+  }
+
   void _jumpToPrintPage() {
-    final raw = _jumpCtrl.text.trim();
-    final n = int.tryParse(raw);
+    final n = int.tryParse(_jumpCtrl.text.trim());
     if (n == null || _db == null) return;
     final page = _db!.pageByPrintNumber(n);
     if (page == null) {
@@ -114,16 +175,26 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
       );
       return;
     }
-    final i = _ids.indexOf(page.id);
-    if (i < 0) return;
-    _controller?.jumpToPage(i);
-    _onPage(i);
+    _jumpToId(page.id);
+  }
+
+  void _runSearch() {
+    if (_db == null) return;
+    final hits = _db!.searchInBook(
+      _searchCtrl.text,
+      exactPhrase: _exactPhrase,
+    );
+    setState(() {
+      _hits = hits;
+      _highlightPageIds = hits.map((h) => h.pageId).toSet();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final title = widget.title ?? _db?.meta('title') ?? 'book_${widget.bookId}';
+    final wide = MediaQuery.sizeOf(context).width >= 800;
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -135,20 +206,69 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Center(
-                  child: Text(
-                    l10n.readerProgress(_index + 1, _ids.length),
-                    style: Theme.of(context).textTheme.bodySmall,
+                  child: Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Text(
+                      l10n.readerProgress(_index + 1, _ids.length),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   ),
                 ),
               ),
+            IconButton(
+              tooltip: l10n.searchInBook,
+              icon: const Icon(Icons.search),
+              onPressed: () => setState(() => _searchOpen = !_searchOpen),
+            ),
+            IconButton(
+              tooltip: l10n.toc,
+              icon: const Icon(Icons.list_alt),
+              onPressed: () {
+                if (wide) {
+                  setState(() => _showToc = !_showToc);
+                } else {
+                  _openTocSheet(context, l10n);
+                }
+              },
+            ),
+            IconButton(
+              tooltip: l10n.bookCard,
+              icon: const Icon(Icons.info_outline),
+              onPressed: () {
+                if (wide) {
+                  setState(() => _showCard = !_showCard);
+                } else {
+                  _openCardSheet(context, l10n, title);
+                }
+              },
+            ),
+            PopupMenuButton<ReadingMode>(
+              tooltip: l10n.readingMode,
+              onSelected: _setMode,
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: ReadingMode.pagedH,
+                  child: Text(l10n.modePagedH),
+                ),
+                PopupMenuItem(
+                  value: ReadingMode.pagedV,
+                  child: Text(l10n.modePagedV),
+                ),
+                PopupMenuItem(
+                  value: ReadingMode.continuousV,
+                  child: Text(l10n.modeContinuousV),
+                ),
+              ],
+            ),
           ],
         ),
         body: _error != null
             ? Center(child: Text('$_error'))
-            : _db == null || _controller == null
+            : _db == null
                 ? const Center(child: CircularProgressIndicator())
                 : Column(
                     children: [
+                      if (_searchOpen) _searchBar(l10n),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
                         child: Row(
@@ -173,53 +293,252 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                           ],
                         ),
                       ),
+                      if (_hits.isNotEmpty) _searchHits(l10n),
                       Expanded(
-                        child: PageView.builder(
-                          controller: _controller,
-                          // RTL: page 0 on the right; swipe left for next.
-                          reverse: true,
-                          itemCount: _ids.length,
-                          onPageChanged: _onPage,
-                          itemBuilder: (context, i) {
-                            final page = _db!.pageById(_ids[i])!;
-                            final printNo = page.pageNumber?.toString() ?? '—';
-                            final part = page.part;
-                            final header = [
-                              title,
-                              if (part != null && part.isNotEmpty) part,
-                              printNo,
-                            ].join(' · ');
-                            return Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Text(
-                                    header,
-                                    style: Theme.of(context).textTheme.labelLarge,
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const Divider(),
-                                  Expanded(
-                                    child: SingleChildScrollView(
-                                      child: SelectableText(
-                                        page.body,
-                                        textAlign: TextAlign.justify,
-                                        style: const TextStyle(
-                                          fontSize: 20,
-                                          height: 1.8,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                        child: Row(
+                          children: [
+                            if (wide && _showToc)
+                              SizedBox(
+                                width: 260,
+                                child: _tocList(l10n),
                               ),
-                            );
-                          },
+                            if (wide && _showToc) const VerticalDivider(width: 1),
+                            Expanded(child: _bodyPane(title)),
+                            if (wide && _showCard) const VerticalDivider(width: 1),
+                            if (wide && _showCard)
+                              SizedBox(
+                                width: 280,
+                                child: _cardPane(l10n, title),
+                              ),
+                          ],
                         ),
                       ),
                     ],
                   ),
+      ),
+    );
+  }
+
+  Widget _searchBar(AppLocalizations l10n) {
+    return Material(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _searchCtrl,
+                decoration: InputDecoration(
+                  hintText: l10n.searchInBook,
+                  isDense: true,
+                  border: const OutlineInputBorder(),
+                ),
+                onSubmitted: (_) => _runSearch(),
+              ),
+            ),
+            const SizedBox(width: 8),
+            FilterChip(
+              label: Text(l10n.exactPhrase),
+              selected: _exactPhrase,
+              onSelected: (v) => setState(() => _exactPhrase = v),
+            ),
+            IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: _runSearch,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _searchHits(AppLocalizations l10n) {
+    return SizedBox(
+      height: 120,
+      child: ListView.builder(
+        itemCount: _hits.length,
+        itemBuilder: (context, i) {
+          final h = _hits[i];
+          final snip = h.body.length > 120 ? '${h.body.substring(0, 120)}…' : h.body;
+          return ListTile(
+            dense: true,
+            title: Text(
+              'ص ${h.pageNumber ?? '—'}',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+            subtitle: Text(snip, maxLines: 2, overflow: TextOverflow.ellipsis),
+            onTap: () {
+              _jumpToId(h.pageId);
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _tocList(AppLocalizations l10n) {
+    if (_toc.isEmpty) {
+      return Center(child: Text(l10n.noBooks));
+    }
+    return ListView.builder(
+      itemCount: _toc.length,
+      itemBuilder: (context, i) {
+        final e = _toc[i];
+        final selected = _ids.isNotEmpty && _ids[_index] == e.pageId;
+        return ListTile(
+          dense: true,
+          selected: selected,
+          title: Text(e.title, maxLines: 2, overflow: TextOverflow.ellipsis),
+          onTap: () => _jumpToId(e.pageId),
+        );
+      },
+    );
+  }
+
+  Widget _cardPane(AppLocalizations l10n, String title) {
+    final betaka = _db?.meta('betaka');
+    final author = widget.authorName ?? _db?.meta('author') ?? '';
+    final category = _db?.meta('category_name') ?? '';
+    final pages = _db?.meta('page_count') ?? '${_ids.length}';
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: [
+        Text(l10n.bookCard, style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        Text(title, style: Theme.of(context).textTheme.titleSmall),
+        if (author.isNotEmpty) Text(author),
+        if (category.isNotEmpty) Text(category),
+        Text(l10n.pagesCount(int.tryParse(pages) ?? _ids.length)),
+        const Divider(),
+        if (betaka != null && betaka.isNotEmpty)
+          SelectableText(betaka, style: const TextStyle(height: 1.6))
+        else
+          Text(l10n.noBooks),
+      ],
+    );
+  }
+
+  Widget _bodyPane(String title) {
+    if (_mode == ReadingMode.continuousV) {
+      return ListView.builder(
+        itemCount: _ids.length,
+        itemBuilder: (context, i) => _pageContent(title, i),
+      );
+    }
+    final vertical = _mode == ReadingMode.pagedV;
+    return PageView.builder(
+      controller: _pageController,
+      scrollDirection: vertical ? Axis.vertical : Axis.horizontal,
+      reverse: !vertical,
+      itemCount: _ids.length,
+      onPageChanged: _onPage,
+      itemBuilder: (context, i) => _pageContent(title, i),
+    );
+  }
+
+  Widget _pageContent(String title, int i) {
+    final page = _db!.pageById(_ids[i])!;
+    final printNo = page.pageNumber?.toString() ?? '—';
+    final part = page.part;
+    final header = [
+      title,
+      if (part != null && part.isNotEmpty) part,
+      printNo,
+    ].join(' · ');
+    final highlight = _highlightPageIds.contains(page.id);
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            header,
+            style: Theme.of(context).textTheme.labelLarge,
+            textAlign: TextAlign.center,
+          ),
+          const Divider(),
+          Expanded(
+            child: SingleChildScrollView(
+              child: highlight
+                  ? _highlightedBody(page.body)
+                  : buildBodyDisplay(page.body),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _highlightedBody(String body) {
+    final nr = normalizeWithMap(body);
+    final q = normalize(_searchCtrl.text);
+    final tokens = _exactPhrase
+        ? [q]
+        : q.split(RegExp(r'\s+')).where((t) => t.isNotEmpty);
+    final ranges = <({int start, int end})>[];
+    for (final t in tokens) {
+      ranges.addAll(findHighlightRanges(nr, t));
+    }
+    ranges.sort((a, b) => a.start.compareTo(b.start));
+    // Prefer HTML display when no overlaps complicate; fall back to plain spans.
+    if (ranges.isEmpty) return buildBodyDisplay(body);
+    final spans = <InlineSpan>[];
+    var cursor = 0;
+    final base = const TextStyle(fontSize: 20, height: 1.8);
+    final hi = base.copyWith(
+      backgroundColor: Colors.yellow.shade200,
+    );
+    for (final r in ranges) {
+      if (r.start < cursor) continue;
+      if (r.start > cursor) {
+        spans.add(TextSpan(text: body.substring(cursor, r.start), style: base));
+      }
+      final end = r.end.clamp(0, body.length);
+      spans.add(TextSpan(text: body.substring(r.start, end), style: hi));
+      cursor = end;
+    }
+    if (cursor < body.length) {
+      spans.add(TextSpan(text: body.substring(cursor), style: base));
+    }
+    return Text.rich(TextSpan(children: spans), textAlign: TextAlign.justify);
+  }
+
+  void _openTocSheet(BuildContext context, AppLocalizations l10n) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (_) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: SafeArea(
+          child: SizedBox(
+            height: MediaQuery.sizeOf(context).height * 0.6,
+            child: Column(
+              children: [
+                ListTile(title: Text(l10n.toc)),
+                Expanded(child: _tocList(l10n)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openCardSheet(
+    BuildContext context,
+    AppLocalizations l10n,
+    String title,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (_) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: SafeArea(
+          child: SizedBox(
+            height: MediaQuery.sizeOf(context).height * 0.5,
+            child: _cardPane(l10n, title),
+          ),
+        ),
       ),
     );
   }

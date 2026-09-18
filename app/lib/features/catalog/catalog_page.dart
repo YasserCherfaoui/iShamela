@@ -19,6 +19,7 @@ class CatalogPage extends ConsumerStatefulWidget {
 class _CatalogPageState extends ConsumerState<CatalogPage> {
   final _searchCtrl = TextEditingController();
   String _query = '';
+  CatalogSearchScope _scope = CatalogSearchScope.all;
 
   @override
   void dispose() {
@@ -132,10 +133,32 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
                     onChanged: (v) => setState(() => _query = v),
                   ),
                 ),
+                if (_query.trim().isNotEmpty)
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      children: [
+                        for (final s in CatalogSearchScope.values)
+                          Padding(
+                            padding: const EdgeInsetsDirectional.only(end: 8),
+                            child: ChoiceChip(
+                              label: Text(_scopeLabel(l10n, s)),
+                              selected: _scope == s,
+                              onSelected: (_) => setState(() => _scope = s),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                 Expanded(
                   child: _query.trim().isEmpty
                       ? _BrowseTabs(catalog: catalog)
-                      : _SearchResults(catalog: catalog, query: _query),
+                      : _SearchResults(
+                          catalog: catalog,
+                          query: _query,
+                          scope: _scope,
+                        ),
                 ),
                 SafeArea(
                   top: false,
@@ -157,6 +180,19 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
         ),
       ),
     );
+  }
+
+  String _scopeLabel(AppLocalizations l10n, CatalogSearchScope s) {
+    switch (s) {
+      case CatalogSearchScope.all:
+        return l10n.searchScopeAll;
+      case CatalogSearchScope.books:
+        return l10n.searchScopeBooks;
+      case CatalogSearchScope.authors:
+        return l10n.searchScopeAuthors;
+      case CatalogSearchScope.categories:
+        return l10n.searchScopeCategories;
+    }
   }
 }
 
@@ -248,17 +284,79 @@ class _AuthorList extends StatelessWidget {
 }
 
 class _SearchResults extends StatelessWidget {
-  const _SearchResults({required this.catalog, required this.query});
+  const _SearchResults({
+    required this.catalog,
+    required this.query,
+    required this.scope,
+  });
   final CatalogRepository catalog;
   final String query;
+  final CatalogSearchScope scope;
 
   @override
   Widget build(BuildContext context) {
-    final books = catalog.search(query);
-    if (books.isEmpty) {
-      return Center(child: Text(AppLocalizations.of(context).noBooks));
+    final l10n = AppLocalizations.of(context);
+    final hits = catalog.scopedSearch(query, chipScope: scope);
+    if (hits.isEmpty) {
+      return Center(child: Text(l10n.noBooks));
     }
-    return BookListView(books: books);
+    return ListView(
+      children: [
+        if (hits.categories.isNotEmpty) ...[
+          ListTile(
+            title: Text(
+              l10n.categories,
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+          ),
+          for (final c in hits.categories)
+            ListTile(
+              leading: const Icon(Icons.folder_outlined),
+              title: Text(c.name),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => BookListPage(
+                    title: c.name,
+                    books: catalog.booksByCategory(c.id),
+                    allowDownloadAll: true,
+                  ),
+                ),
+              ),
+            ),
+        ],
+        if (hits.authors.isNotEmpty) ...[
+          ListTile(
+            title: Text(
+              l10n.authors,
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+          ),
+          for (final a in hits.authors)
+            ListTile(
+              leading: const Icon(Icons.person_outline),
+              title: Text(a.name),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => BookListPage(
+                    title: a.name,
+                    books: catalog.booksByAuthor(a.id),
+                    allowDownloadAll: true,
+                  ),
+                ),
+              ),
+            ),
+        ],
+        if (hits.books.isNotEmpty) ...[
+          ListTile(
+            title: Text(
+              l10n.books,
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+          ),
+          BookListView(books: hits.books, shrinkWrap: true),
+        ],
+      ],
+    );
   }
 }
 
@@ -447,6 +545,7 @@ class BookListView extends ConsumerWidget {
     this.selected = const {},
     this.onToggle,
     this.onLongPressSelect,
+    this.shrinkWrap = false,
   });
 
   final List<Book> books;
@@ -454,6 +553,7 @@ class BookListView extends ConsumerWidget {
   final Set<int> selected;
   final void Function(int bookId)? onToggle;
   final void Function(int bookId)? onLongPressSelect;
+  final bool shrinkWrap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -466,6 +566,8 @@ class BookListView extends ConsumerWidget {
     }
 
     return ListView.builder(
+      shrinkWrap: shrinkWrap,
+      physics: shrinkWrap ? const NeverScrollableScrollPhysics() : null,
       itemCount: books.length,
       itemBuilder: (context, i) {
         final book = books[i];

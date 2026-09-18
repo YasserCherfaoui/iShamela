@@ -232,7 +232,7 @@ void main() {
       builtBy: 'ishamela/test',
     );
     expect(result.pageCount, 3);
-    expect(result.schemaVersion, '1');
+    expect(result.schemaVersion, '2');
     expect(result.normVersion, normVersion);
 
     final db = openReadonlySqlite(paths.bookSqlite(900001));

@@ -194,6 +194,7 @@ class DownloadService {
   Future<void> _deletePartials(int bookId) async {
     for (final f in [
       paths.tmpPagesJsonl(bookId),
+      paths.tmpTocJsonl(bookId),
       paths.tmpIsb(bookId),
       paths.bookSqlitePart(bookId),
     ]) {
@@ -340,6 +341,29 @@ class DownloadService {
         _notify();
       },
     );
+
+    // TOC is optional (SPEC-009); 404 is fine.
+    final tocRel = book.sourcePagesPath!.replaceAll(
+      RegExp(r'pages\.jsonl$'),
+      'toc.jsonl',
+    );
+    if (tocRel != book.sourcePagesPath) {
+      final tocDest = paths.tmpTocJsonl(book.bookId);
+      try {
+        await _downloader.downloadToFile(
+          url: catalogUrl(pagesBaseUrl, tocRel),
+          dest: tocDest,
+          existingBytes: 0,
+          cancelToken: token,
+        );
+      } on DioException catch (e) {
+        if (e.response?.statusCode == 404) {
+          if (tocDest.existsSync()) tocDest.deleteSync();
+        } else if (!CancelToken.isCancel(e)) {
+          rethrow;
+        }
+      }
+    }
   }
 
   Future<void> _install(Book book, CancelToken token) async {
@@ -364,6 +388,7 @@ class DownloadService {
       book: book,
       sourceRevision: sourceRevision,
       builtBy: builtBy,
+      tocJsonl: paths.tmpTocJsonl(book.bookId),
       isCancelled: () => token.isCancelled,
       onProgress: (pagesDone) {
         state.upsertDownload(
@@ -408,6 +433,8 @@ class DownloadService {
     }
 
     await pages.delete();
+    final toc = paths.tmpTocJsonl(book.bookId);
+    if (toc.existsSync()) await toc.delete();
 
     state.upsertInstalled(
       bookId: book.bookId,

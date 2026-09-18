@@ -26,7 +26,7 @@
     },
     "schema_version": {
       "type": "integer",
-      "const": 2
+      "const": 3
     },
     "norm_version": {
       "type": "string",
