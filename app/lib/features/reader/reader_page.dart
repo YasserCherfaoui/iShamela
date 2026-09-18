@@ -555,9 +555,11 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                               pageNumber: page.pageNumber,
                               textStyles: ref.watch(readerTextStylesProvider),
                               onNotesChanged: () {
-                                if (mounted) {
-                                  setState(() => _notesTick++);
-                                }
+                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  if (mounted) {
+                                    setState(() => _notesTick++);
+                                  }
+                                });
                               },
                             )),
                   if (footnotes != null && footnotes.isNotEmpty) ...[

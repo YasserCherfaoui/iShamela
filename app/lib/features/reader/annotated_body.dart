@@ -53,7 +53,8 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
   void initState() {
     super.initState();
     _remapBody();
-    _reload();
+    _loadAnnotations();
+    _notifyNotesChanged();
   }
 
   @override
@@ -72,17 +73,26 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
     _roles = classifyTextRoles(widget.body);
   }
 
+  void _loadAnnotations() {
+    _highlights =
+        widget.state.highlightsForPage(widget.bookId, widget.pageId);
+    _notes = widget.state.notesForPage(widget.bookId, widget.pageId);
+    final all = widget.state.notesForBook(widget.bookId);
+    _noteIndexById = {
+      for (var i = 0; i < all.length; i++) all[i]['id'] as int: i + 1,
+    };
+  }
+
   void _reload() {
-    setState(() {
-      _highlights =
-          widget.state.highlightsForPage(widget.bookId, widget.pageId);
-      _notes = widget.state.notesForPage(widget.bookId, widget.pageId);
-      final all = widget.state.notesForBook(widget.bookId);
-      _noteIndexById = {
-        for (var i = 0; i < all.length; i++) all[i]['id'] as int: i + 1,
-      };
+    setState(_loadAnnotations);
+    _notifyNotesChanged();
+  }
+
+  /// Parent may call setState; never invoke during our own build/init.
+  void _notifyNotesChanged() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onNotesChanged?.call();
     });
-    widget.onNotesChanged?.call();
   }
 
   TextStyle _baseStyle(ReaderTextStyles styles) => TextStyle(
