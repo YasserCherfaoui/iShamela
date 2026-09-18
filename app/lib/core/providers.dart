@@ -9,6 +9,7 @@ import 'package:ishamela/core/net/net.dart';
 import 'package:ishamela/features/catalog/catalog_service.dart';
 import 'package:ishamela/features/downloads/download_service.dart';
 import 'package:ishamela/features/reader/reader_styles.dart';
+import 'package:ishamela/ui/theme/reader_theme_tokens.dart';
 
 final appPathsProvider = FutureProvider<AppPaths>((ref) => AppPaths.resolve());
 
@@ -71,6 +72,29 @@ final readerTextStylesProvider =
     NotifierProvider<ReaderTextStylesNotifier, ReaderTextStyles>(
   ReaderTextStylesNotifier.new,
 );
+
+final readingAtmosphereProvider =
+    NotifierProvider<ReadingAtmosphereNotifier, ReadingAtmosphere>(
+  ReadingAtmosphereNotifier.new,
+);
+
+class ReadingAtmosphereNotifier extends Notifier<ReadingAtmosphere> {
+  @override
+  ReadingAtmosphere build() {
+    final async = ref.watch(stateDatabaseProvider);
+    return async.maybeWhen(
+      data: (db) =>
+          ReadingAtmosphere.fromId(db.setting(ReadingAtmosphere.settingsKey)),
+      orElse: () => ReadingAtmosphere.paper,
+    );
+  }
+
+  Future<void> save(ReadingAtmosphere atmosphere) async {
+    final db = await ref.read(stateDatabaseProvider.future);
+    db.setSetting(ReadingAtmosphere.settingsKey, atmosphere.id);
+    state = atmosphere;
+  }
+}
 
 class ReaderTextStylesNotifier extends Notifier<ReaderTextStyles> {
   @override

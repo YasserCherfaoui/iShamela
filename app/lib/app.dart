@@ -5,9 +5,13 @@ import 'package:ishamela/l10n/app_localizations.dart';
 
 import 'package:ishamela/core/providers.dart';
 import 'package:ishamela/features/catalog/catalog_page.dart';
+import 'package:ishamela/features/downloads/download_service.dart';
+import 'package:ishamela/features/downloads/download_tabs.dart';
 import 'package:ishamela/features/downloads/downloads_page.dart';
 import 'package:ishamela/features/library/library_page.dart';
 import 'package:ishamela/features/settings/settings_page.dart';
+import 'package:ishamela/ui/app_bottom_nav.dart';
+import 'package:ishamela/ui/theme/ishamela_theme.dart';
 
 class IshamelaApp extends ConsumerWidget {
   const IshamelaApp({super.key});
@@ -16,6 +20,7 @@ class IshamelaApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Kick off catalog sync once.
     ref.watch(catalogSyncTickProvider);
+    final atmosphere = ref.watch(readingAtmosphereProvider);
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -28,61 +33,151 @@ class IshamelaApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1B5E4B),
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-      ),
+      theme: buildIshamelaTheme(atmosphere),
       home: const HomeShell(),
     );
   }
 }
 
-class HomeShell extends StatefulWidget {
+class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key});
 
   @override
-  State<HomeShell> createState() => _HomeShellState();
+  ConsumerState<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends State<HomeShell> {
+class _HomeShellState extends ConsumerState<HomeShell> {
   int _index = 0;
+  DownloadService? _svc;
+
+  void _onDownloadsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _svc?.removeListener(_onDownloadsChanged);
+    super.dispose();
+  }
+
+  void _bindDownloadService(DownloadService svc) {
+    if (_svc == svc) return;
+    _svc?.removeListener(_onDownloadsChanged);
+    _svc = svc;
+    _svc!.addListener(_onDownloadsChanged);
+  }
+
+  int _activeDownloadCount() {
+    final svc = _svc;
+    if (svc == null) return 0;
+    return filterDownloadTasks(svc.listTasks(), DownloadsTab.active).length;
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final wide = MediaQuery.sizeOf(context).width >= 800;
     final pages = const [
       CatalogPage(),
       LibraryPage(),
       DownloadsPage(),
       SettingsPage(),
     ];
-    return Scaffold(
-      body: pages[_index],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.menu_book_outlined),
-            label: l10n.tabCatalog,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.library_books_outlined),
-            label: l10n.tabLibrary,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.download_outlined),
-            label: l10n.tabDownloads,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.settings_outlined),
-            label: l10n.tabSettings,
-          ),
-        ],
+
+    ref.listen(downloadServiceProvider, (prev, next) {
+      next.whenData(_bindDownloadService);
+    });
+    final downloadsAsync = ref.watch(downloadServiceProvider);
+    downloadsAsync.whenData(_bindDownloadService);
+
+    final activeCount = _activeDownloadCount();
+    final destinations = [
+      AppBottomNavDestination(
+        icon: Icons.menu_book_outlined,
+        label: l10n.tabCatalog,
       ),
+      AppBottomNavDestination(
+        icon: Icons.library_books_outlined,
+        label: l10n.tabLibrary,
+      ),
+      AppBottomNavDestination(
+        icon: Icons.download_outlined,
+        label: l10n.tabDownloads,
+        badgeCount: activeCount > 0 ? activeCount : null,
+      ),
+      AppBottomNavDestination(
+        icon: Icons.settings_outlined,
+        label: l10n.tabSettings,
+      ),
+    ];
+
+    final body = pages[_index];
+
+    if (wide) {
+      return Directionality(
+        textDirection: TextDirection.rtl,
+        child: Scaffold(
+          body: Row(
+            children: [
+              NavigationRail(
+                selectedIndex: _index,
+                onDestinationSelected: (i) => setState(() => _index = i),
+                labelType: NavigationRailLabelType.all,
+                destinations: [
+                  for (final d in destinations)
+                    NavigationRailDestination(
+                      icon: _railIcon(d),
+                      selectedIcon: _railIcon(d, selected: true),
+                      label: Text(d.label),
+                    ),
+                ],
+              ),
+              const VerticalDivider(width: 1),
+              Expanded(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 760),
+                    child: body,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        body: body,
+        bottomNavigationBar: AppBottomNav(
+          destinations: destinations,
+          selectedIndex: _index,
+          onDestinationSelected: (i) => setState(() => _index = i),
+        ),
+      ),
+    );
+  }
+
+  Widget _railIcon(AppBottomNavDestination d, {bool selected = false}) {
+    final count = d.badgeCount ?? 0;
+    Widget icon = Icon(d.icon);
+    if (selected) {
+      final t = Theme.of(context).colorScheme;
+      icon = Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: t.primaryContainer,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Icon(d.icon, color: t.onPrimaryContainer),
+      );
+    }
+    if (count <= 0) return icon;
+    return Badge(
+      label: Text(count > 99 ? '99+' : '$count'),
+      child: icon,
     );
   }
 }

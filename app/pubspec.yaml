@@ -45,3 +45,13 @@ flutter:
         - asset: assets/fonts/ScheherazadeNew-Regular.ttf
         - asset: assets/fonts/ScheherazadeNew-Bold.ttf
           weight: 700
+    - family: IBMPlexSansArabic
+      fonts:
+        - asset: assets/fonts/IBMPlexSansArabic-Regular.otf
+          weight: 400
+        - asset: assets/fonts/IBMPlexSansArabic-Medium.otf
+          weight: 500
+        - asset: assets/fonts/IBMPlexSansArabic-SemiBold.otf
+          weight: 600
+        - asset: assets/fonts/IBMPlexSansArabic-Bold.otf
+          weight: 700
