@@ -2,8 +2,6 @@ import 'package:ishamela/core/db/open_readonly.dart';
 import 'package:ishamela/core/db/paths.dart';
 import 'package:ishamela/core/search/normalizer.dart';
 import 'package:ishamela/core/search/normalizer_map.dart';
-import 'package:ishamela/features/catalog/catalog_service.dart'
-    show buildCatalogFtsMatch;
 import 'package:sqlite3/sqlite3.dart';
 
 /// One page from an installed book bundle (SPEC-002 / SPEC-005).
@@ -48,6 +46,7 @@ class BookSearchHit {
     required this.pageId,
     required this.body,
     required this.highlightRanges,
+    required this.snippet,
     this.pageNumber,
     this.part,
   });
@@ -57,7 +56,96 @@ class BookSearchHit {
   final String? part;
   final String body;
   final List<({int start, int end})> highlightRanges;
+
+  /// Display snippet around the first hit (SPEC-005).
+  final String snippet;
 }
+
+/// SPEC-005 in-book MATCH: quoted tokens, implicit AND, **no** prefix `*`.
+/// FTS5 operator characters are stripped so user input is literal.
+String buildBookFtsMatch(String normalizedQuery) {
+  final parts = <String>[];
+  for (final raw in normalizedQuery.split(RegExp(r'\s+'))) {
+    if (raw.isEmpty) continue;
+    final cleaned = raw
+        .replaceAll(RegExp(r'["*\^:(){}]'), '')
+        .replaceAll(RegExp(r'^-+|-+$'), '')
+        .trim();
+    if (cleaned.isEmpty) continue;
+    final escaped = cleaned.replaceAll('"', '""');
+    parts.add('"$escaped"');
+  }
+  return parts.join(' ');
+}
+
+/// ~[words] words each side of the first highlight, from original body.
+String bookSearchSnippet(
+  String body,
+  List<({int start, int end})> ranges, {
+  int words = 10,
+}) {
+  if (body.isEmpty) return '';
+  int start;
+  int end;
+  if (ranges.isEmpty) {
+    start = 0;
+    end = body.length;
+  } else {
+    start = ranges.first.start.clamp(0, body.length);
+    end = ranges.first.end.clamp(0, body.length);
+    if (end < start) end = start;
+    start = _expandWordsLeft(body, start, words);
+    end = _expandWordsRight(body, end, words);
+  }
+  var snip = body.substring(start, end);
+  snip = snip.replaceAll(RegExp(r'<[^>]*>'), ' ');
+  snip = snip.replaceAll(RegExp(r'\s+'), ' ').trim();
+  if (snip.isEmpty) {
+    snip = body
+        .replaceAll(RegExp(r'<[^>]*>'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    if (snip.length > 160) snip = '${snip.substring(0, 159)}…';
+    return snip;
+  }
+  final prefix = start > 0 ? '…' : '';
+  final suffix = end < body.length ? '…' : '';
+  return '$prefix$snip$suffix';
+}
+
+int _expandWordsLeft(String body, int index, int words) {
+  var i = index;
+  var n = 0;
+  while (i > 0 && n < words) {
+    i--;
+    if (_isSpace(body.codeUnitAt(i))) {
+      while (i > 0 && _isSpace(body.codeUnitAt(i - 1))) {
+        i--;
+      }
+      n++;
+    }
+  }
+  return i;
+}
+
+int _expandWordsRight(String body, int index, int words) {
+  var i = index;
+  var n = 0;
+  while (i < body.length && n < words) {
+    if (_isSpace(body.codeUnitAt(i))) {
+      while (i < body.length && _isSpace(body.codeUnitAt(i))) {
+        i++;
+      }
+      n++;
+    } else {
+      i++;
+    }
+  }
+  return i;
+}
+
+bool _isSpace(int c) =>
+    c == 0x20 || c == 0x09 || c == 0x0A || c == 0x0D || c == 0x00A0;
 
 /// Read-only access to an installed book SQLite file.
 class BookDatabase {
@@ -169,14 +257,15 @@ class BookDatabase {
     }
   }
 
-  /// In-book FTS (SPEC-005 MATCH construction).
+  /// In-book FTS (SPEC-005 MATCH — exact tokens, not catalog prefix).
   List<BookSearchHit> searchInBook(String query, {bool exactPhrase = false}) {
     final q = normalize(query);
     if (q.isEmpty) return const [];
+    final cleanedPhrase = q.replaceAll(RegExp(r'["*\^:(){}]'), '').trim();
     final match = exactPhrase
-        ? '"${q.replaceAll('"', '""')}"'
-        : buildCatalogFtsMatch(q);
-    if (match.isEmpty) return const [];
+        ? '"${cleanedPhrase.replaceAll('"', '""')}"'
+        : buildBookFtsMatch(q);
+    if (match.isEmpty || match == '""') return const [];
     try {
       final rows = _db.select(
         '''
@@ -190,8 +279,12 @@ class BookDatabase {
         [match],
       );
       final tokens = exactPhrase
-          ? [q]
-          : q.split(RegExp(r'\s+')).where((t) => t.isNotEmpty).toList();
+          ? (cleanedPhrase.isEmpty ? <String>[] : [cleanedPhrase])
+          : q
+              .split(RegExp(r'\s+'))
+              .map((t) => t.replaceAll(RegExp(r'["*\^:(){}]'), '').trim())
+              .where((t) => t.isNotEmpty)
+              .toList();
       return rows.map((r) {
         final body = r['body'] as String;
         final nr = normalizeWithMap(body);
@@ -205,6 +298,7 @@ class BookDatabase {
           part: r['part'] as String?,
           body: body,
           highlightRanges: ranges,
+          snippet: bookSearchSnippet(body, ranges),
         );
       }).toList();
     } catch (_) {

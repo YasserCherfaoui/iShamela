@@ -7,6 +7,7 @@ All notable changes to this project are documented in this file.
 ### Added
 
 - Downloads & Library UX (SPEC-013): Downloads tabs (active/failed/completed) with multi-select bulk actions and no progress on finished/failed; Library category/author/all-books tabs, search, bulk uninstall, hover/long-press book card. Library open uses lazy tab loading and batched catalog queries (no per-book SQLite opens).
+- Reader: in-book search uses exact-token FTS MATCH (SPEC-005; no catalog prefix `*`) and snippets around the hit; bottom chrome shows print page, jump field, prev/next, and scrubber.
 - Reader chrome (SPEC-012): full-text copy-with-reference; numbered note badges + Notes tab beside TOC; sticky TOC highlight; `pages.footnotes` (book schema 3) shown under body.
 - Reader text roles & style settings (SPEC-011): unified honorific color, Quran spans (marks + inner text), Amiri/Scheherazade fonts + size, CRLF/`<br>` line breaks, equal-height selection strut; Settings tab.
 - Reader annotations (SPEC-010): colored highlights, anchored notes, and copy-with-bibliographic reference; stored in `state.sqlite` (`highlights`, `text_notes`).

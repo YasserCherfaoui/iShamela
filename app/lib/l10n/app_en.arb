@@ -55,6 +55,8 @@
   "openBook": "Open",
   "jumpToPrintPage": "Print page number",
   "go": "Go",
+  "previousPage": "Previous page",
+  "nextPage": "Next page",
   "pageNotFound": "Page not found",
   "readerProgress": "{current} / {total}",
   "@readerProgress": {

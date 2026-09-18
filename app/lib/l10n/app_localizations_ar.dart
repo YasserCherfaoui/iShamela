@@ -131,6 +131,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get go => 'انتقال';
 
   @override
+  String get previousPage => 'الصفحة السابقة';
+
+  @override
+  String get nextPage => 'الصفحة التالية';
+
+  @override
   String get pageNotFound => 'الصفحة غير موجودة';
 
   @override

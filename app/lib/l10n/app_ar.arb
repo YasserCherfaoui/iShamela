@@ -55,6 +55,8 @@
   "openBook": "فتح",
   "jumpToPrintPage": "رقم الصفحة المطبوعة",
   "go": "انتقال",
+  "previousPage": "الصفحة السابقة",
+  "nextPage": "الصفحة التالية",
   "pageNotFound": "الصفحة غير موجودة",
   "readerProgress": "{current} / {total}",
   "@readerProgress": {

@@ -132,6 +132,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get go => 'Aller';
 
   @override
+  String get previousPage => 'Page précédente';
+
+  @override
+  String get nextPage => 'Page suivante';
+
+  @override
   String get pageNotFound => 'Page introuvable';
 
   @override

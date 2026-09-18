@@ -326,6 +326,18 @@ abstract class AppLocalizations {
   /// **'انتقال'**
   String get go;
 
+  /// No description provided for @previousPage.
+  ///
+  /// In ar, this message translates to:
+  /// **'الصفحة السابقة'**
+  String get previousPage;
+
+  /// No description provided for @nextPage.
+  ///
+  /// In ar, this message translates to:
+  /// **'الصفحة التالية'**
+  String get nextPage;
+
   /// No description provided for @pageNotFound.
   ///
   /// In ar, this message translates to:

@@ -120,6 +120,8 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         _index = index;
         _mode = mode;
         _pageController = PageController(initialPage: index);
+        final page = db.pageById(ids[index]);
+        _jumpCtrl.text = page?.pageNumber?.toString() ?? '';
       });
     } catch (e) {
       setState(() => _error = e);
@@ -155,15 +157,42 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   }
 
   void _onPage(int i) {
-    setState(() => _index = i);
+    setState(() {
+      _index = i;
+      _syncJumpField();
+    });
     _persist(_ids[i]);
+  }
+
+  void _syncJumpField() {
+    if (_db == null || _ids.isEmpty) return;
+    final page = _db!.pageById(_ids[_index]);
+    final n = page?.pageNumber;
+    final text = n?.toString() ?? '';
+    if (_jumpCtrl.text != text) {
+      _jumpCtrl.text = text;
+    }
+  }
+
+  void _goRelative(int delta) {
+    final next = _index + delta;
+    if (next < 0 || next >= _ids.length) return;
+    if (_mode == ReadingMode.continuousV) {
+      _onPage(next);
+    } else {
+      _pageController?.jumpToPage(next);
+      _onPage(next);
+    }
   }
 
   void _jumpToId(int pageId) {
     final i = _ids.indexOf(pageId);
     if (i < 0) return;
     if (_mode == ReadingMode.continuousV) {
-      setState(() => _index = i);
+      setState(() {
+        _index = i;
+        _syncJumpField();
+      });
       _persist(pageId);
     } else {
       _pageController?.jumpToPage(i);
@@ -208,19 +237,6 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         appBar: AppBar(
           title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
           actions: [
-            if (_ids.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Center(
-                  child: Directionality(
-                    textDirection: TextDirection.ltr,
-                    child: Text(
-                      l10n.readerProgress(_index + 1, _ids.length),
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ),
-                ),
-              ),
             IconButton(
               tooltip: l10n.searchInBook,
               icon: const Icon(Icons.search),
@@ -275,30 +291,6 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                 : Column(
                     children: [
                       if (_searchOpen) _searchBar(l10n),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _jumpCtrl,
-                                keyboardType: TextInputType.number,
-                                decoration: InputDecoration(
-                                  hintText: l10n.jumpToPrintPage,
-                                  isDense: true,
-                                  border: const OutlineInputBorder(),
-                                ),
-                                onSubmitted: (_) => _jumpToPrintPage(),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            FilledButton(
-                              onPressed: _jumpToPrintPage,
-                              child: Text(l10n.go),
-                            ),
-                          ],
-                        ),
-                      ),
                       if (_hits.isNotEmpty) _searchHits(l10n),
                       Expanded(
                         child: Row(
@@ -319,6 +311,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                           ],
                         ),
                       ),
+                      _bottomNavBar(l10n),
                     ],
                   ),
       ),
@@ -361,25 +354,206 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
 
   Widget _searchHits(AppLocalizations l10n) {
     return SizedBox(
-      height: 120,
+      height: 140,
       child: ListView.builder(
         itemCount: _hits.length,
         itemBuilder: (context, i) {
           final h = _hits[i];
-          final snip = h.body.length > 120 ? '${h.body.substring(0, 120)}…' : h.body;
           return ListTile(
             dense: true,
             title: Text(
               'ص ${h.pageNumber ?? '—'}',
               style: Theme.of(context).textTheme.labelLarge,
             ),
-            subtitle: Text(snip, maxLines: 2, overflow: TextOverflow.ellipsis),
+            subtitle: Text(
+              h.snippet,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
             onTap: () {
               _jumpToId(h.pageId);
             },
           );
         },
       ),
+    );
+  }
+
+  Widget _bottomNavBar(AppLocalizations l10n) {
+    if (_ids.isEmpty || _db == null) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final page = _db!.pageById(_ids[_index]);
+    final printNo = page?.pageNumber?.toString() ?? '—';
+    final part = page?.part;
+    final canPrev = _index > 0;
+    final canNext = _index < _ids.length - 1;
+    final pageLabel = part != null && part.isNotEmpty
+        ? 'ج$part · ص$printNo'
+        : 'ص$printNo';
+
+    return Material(
+      color: cs.surface,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: cs.outlineVariant)),
+          color: cs.surfaceContainerLowest,
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_ids.length > 1)
+                  SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      trackHeight: 2,
+                      thumbShape: const RoundSliderThumbShape(
+                        enabledThumbRadius: 6,
+                      ),
+                      overlayShape: const RoundSliderOverlayShape(
+                        overlayRadius: 14,
+                      ),
+                      activeTrackColor: cs.primary,
+                      inactiveTrackColor: cs.outlineVariant,
+                    ),
+                    child: Slider(
+                      value: _index.toDouble(),
+                      min: 0,
+                      max: (_ids.length - 1).toDouble(),
+                      onChanged: (v) {
+                        final i = v.round();
+                        if (_mode == ReadingMode.continuousV) {
+                          _onPage(i);
+                        } else {
+                          _pageController?.jumpToPage(i);
+                          _onPage(i);
+                        }
+                      },
+                    ),
+                  ),
+                // RTL Row: first child = right. Prev on the right, next on the
+                // left so arrows face *outward* (→  …  ←), not at each other.
+                Row(
+                  children: [
+                    _navArrow(
+                      tooltip: l10n.previousPage,
+                      icon: Icons.chevron_right,
+                      enabled: canPrev,
+                      onPressed: () => _goRelative(-1),
+                    ),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              pageLabel,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          SizedBox(
+                            width: 72,
+                            child: TextField(
+                              controller: _jumpCtrl,
+                              keyboardType: TextInputType.number,
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodyMedium,
+                              decoration: InputDecoration(
+                                isDense: true,
+                                hintText: 'ص',
+                                filled: true,
+                                fillColor: cs.surface,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 10,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(
+                                    color: cs.outlineVariant,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(
+                                    color: cs.outlineVariant,
+                                  ),
+                                ),
+                              ),
+                              onSubmitted: (_) => _jumpToPrintPage(),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          FilledButton.tonal(
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
+                              ),
+                              minimumSize: const Size(0, 40),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            onPressed: _jumpToPrintPage,
+                            child: Text(l10n.go),
+                          ),
+                          const SizedBox(width: 8),
+                          Directionality(
+                            textDirection: TextDirection.ltr,
+                            child: Text(
+                              l10n.readerProgress(_index + 1, _ids.length),
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: cs.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    _navArrow(
+                      tooltip: l10n.nextPage,
+                      icon: Icons.chevron_left,
+                      enabled: canNext,
+                      onPressed: () => _goRelative(1),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _navArrow({
+    required String tooltip,
+    required IconData icon,
+    required bool enabled,
+    required VoidCallback onPressed,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    return IconButton.filledTonal(
+      tooltip: tooltip,
+      onPressed: enabled ? onPressed : null,
+      style: IconButton.styleFrom(
+        foregroundColor: cs.onSecondaryContainer,
+        disabledForegroundColor: cs.onSurface.withValues(alpha: 0.28),
+        backgroundColor: enabled
+            ? cs.secondaryContainer
+            : cs.surfaceContainerHighest,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        minimumSize: const Size(44, 44),
+      ),
+      icon: Icon(icon, size: 28),
     );
   }
 
