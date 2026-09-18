@@ -167,5 +167,27 @@
       "count": {"type": "int"}
     }
   },
-  "copyBibliography": "Copier la référence"
+  "copyBibliography": "Copier la référence",
+  "historyTitle": "Historique de lecture",
+  "historyClear": "Effacer l'historique",
+  "historyClearConfirm": "L'historique de lecture sera définitivement supprimé.",
+  "historyEmpty": "Rien lu encore — ouvrez un livre de votre bibliothèque",
+  "historyLink": "Historique",
+  "today": "Aujourd'hui",
+  "yesterday": "Hier",
+  "thisWeek": "Cette semaine",
+  "older": "Plus ancien",
+  "removeFromHistory": "Retirer de l'historique",
+  "notInstalled": "Non installé",
+  "bookmarks": "Signets",
+  "bookmarkAdded": "Signet ajouté · p. {page}",
+  "@bookmarkAdded": {
+    "placeholders": {
+      "page": {"type": "String"}
+    }
+  },
+  "bookmarkRemoved": "Signet retiré",
+  "renameBookmark": "Renommer le signet",
+  "bookmarksEmpty": "Pas encore de signets — touchez l'icône pendant la lecture",
+  "undo": "Annuler"
 }

@@ -167,5 +167,27 @@
       "count": {"type": "int"}
     }
   },
-  "copyBibliography": "نسخ التوثيق"
+  "copyBibliography": "نسخ التوثيق",
+  "historyTitle": "سجل القراءة",
+  "historyClear": "مسح السجل",
+  "historyClearConfirm": "سيُحذف سجل القراءة نهائيًا.",
+  "historyEmpty": "لم تقرأ شيئًا بعد — افتح كتابًا من مكتبتك",
+  "historyLink": "السجل",
+  "today": "اليوم",
+  "yesterday": "أمس",
+  "thisWeek": "هذا الأسبوع",
+  "older": "أقدم",
+  "removeFromHistory": "إزالة من السجل",
+  "notInstalled": "غير مثبّت",
+  "bookmarks": "العلامات",
+  "bookmarkAdded": "أُضيفت علامة · ص {page}",
+  "@bookmarkAdded": {
+    "placeholders": {
+      "page": {"type": "String"}
+    }
+  },
+  "bookmarkRemoved": "أُزيلت العلامة",
+  "renameBookmark": "إعادة تسمية العلامة",
+  "bookmarksEmpty": "لا علامات بعد — اضغط رمز العلامة أثناء القراءة",
+  "undo": "تراجع"
 }

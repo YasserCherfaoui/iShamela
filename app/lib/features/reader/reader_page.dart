@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ishamela/l10n/app_localizations.dart';
 
 import 'package:ishamela/core/db/state_database.dart';
+import 'package:ishamela/core/models/models.dart';
 import 'package:ishamela/core/providers.dart';
 import 'package:ishamela/core/search/normalizer.dart';
 import 'package:ishamela/core/search/normalizer_map.dart';
@@ -51,17 +52,25 @@ class ReaderPage extends ConsumerStatefulWidget {
     required this.bookId,
     this.title,
     this.authorName,
+    this.initialPageId,
+    this.initialPrintPage,
   });
 
   final int bookId;
   final String? title;
   final String? authorName;
 
+  /// Prefer [initialPrintPage] when set (SPEC-014 resume).
+  final int? initialPageId;
+  final int? initialPrintPage;
+
   static Future<void> open(
     BuildContext context, {
     required int bookId,
     String? title,
     String? authorName,
+    int? initialPageId,
+    int? initialPrintPage,
   }) {
     return Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -69,6 +78,8 @@ class ReaderPage extends ConsumerStatefulWidget {
           bookId: bookId,
           title: title,
           authorName: authorName,
+          initialPageId: initialPageId,
+          initialPrintPage: initialPrintPage,
         ),
       ),
     );
@@ -83,6 +94,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   List<int> _ids = const [];
   List<TocEntry> _toc = const [];
   int _notesTick = 0;
+  int _bookmarksTick = 0;
   int _index = 0;
   PageController? _pageController;
   final _jumpCtrl = TextEditingController();
@@ -115,11 +127,50 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
       }
       final saved = state.readingPageId(widget.bookId);
       var index = 0;
-      if (saved != null) {
+      var resumeMissing = false;
+      if (widget.initialPrintPage != null) {
+        final p = db.pageByPrintNumber(widget.initialPrintPage!);
+        if (p != null) {
+          final i = ids.indexOf(p.id);
+          if (i >= 0) index = i;
+        } else {
+          resumeMissing = true;
+        }
+      } else if (widget.initialPageId != null) {
+        final i = ids.indexOf(widget.initialPageId!);
+        if (i >= 0) {
+          index = i;
+        } else {
+          resumeMissing = true;
+        }
+      }
+      if ((widget.initialPrintPage != null || widget.initialPageId != null) &&
+          resumeMissing &&
+          saved != null) {
+        final i = ids.indexOf(saved);
+        if (i >= 0) index = i;
+      } else if (widget.initialPrintPage == null &&
+          widget.initialPageId == null &&
+          saved != null) {
         final i = ids.indexOf(saved);
         if (i >= 0) index = i;
       }
       final mode = _parseReadingMode(state.setting('reading_mode'));
+      final page = db.pageById(ids[index]);
+      final section = _sectionTitleForToc(db.tocEntries(), ids[index]);
+      state.upsertReadingState(
+        bookId: widget.bookId,
+        pageId: ids[index],
+        updatedAt: DateTime.now().millisecondsSinceEpoch,
+      );
+      state.touchReadingHistory(
+        bookId: widget.bookId,
+        pageId: ids[index],
+        part: page?.part,
+        printPage: page?.pageNumber,
+        sectionTitle: section,
+        nowMs: DateTime.now().millisecondsSinceEpoch,
+      );
       setState(() {
         _db = db;
         _state = state;
@@ -128,9 +179,14 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         _index = index;
         _mode = mode;
         _pageController = PageController(initialPage: index);
-        final page = db.pageById(ids[index]);
         _jumpCtrl.text = page?.pageNumber?.toString() ?? '';
       });
+      if (resumeMissing && mounted) {
+        final l10n = AppLocalizations.of(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.pageNotFound)),
+        );
+      }
     } catch (e) {
       setState(() => _error = e);
     }
@@ -138,6 +194,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
 
   @override
   void dispose() {
+    _closeHistorySession();
     _pageController?.dispose();
     _jumpCtrl.dispose();
     _searchCtrl.dispose();
@@ -145,12 +202,54 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     super.dispose();
   }
 
-  Future<void> _persist(int pageId) async {
-    final state = await ref.read(stateDatabaseProvider.future);
+  void _closeHistorySession() {
+    final state = _state;
+    final db = _db;
+    if (state == null || db == null || _ids.isEmpty) return;
+    final pageId = _ids[_index];
+    final page = db.pageById(pageId);
+    final now = DateTime.now().millisecondsSinceEpoch;
     state.upsertReadingState(
       bookId: widget.bookId,
       pageId: pageId,
-      updatedAt: DateTime.now().millisecondsSinceEpoch,
+      updatedAt: now,
+    );
+    state.touchReadingHistory(
+      bookId: widget.bookId,
+      pageId: pageId,
+      part: page?.part,
+      printPage: page?.pageNumber,
+      sectionTitle: _sectionTitleFor(pageId),
+      nowMs: now,
+      closing: true,
+    );
+  }
+
+  String? _sectionTitleFor(int pageId) =>
+      _sectionTitleForToc(_toc, pageId);
+
+  static String? _sectionTitleForToc(List<TocEntry> toc, int pageId) {
+    if (toc.isEmpty) return null;
+    final i = stickyTocIndex(toc.map((e) => e.pageId).toList(), pageId);
+    return toc[i].title;
+  }
+
+  Future<void> _persist(int pageId) async {
+    final state = await ref.read(stateDatabaseProvider.future);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    state.upsertReadingState(
+      bookId: widget.bookId,
+      pageId: pageId,
+      updatedAt: now,
+    );
+    final page = _db?.pageById(pageId);
+    state.touchReadingHistory(
+      bookId: widget.bookId,
+      pageId: pageId,
+      part: page?.part,
+      printPage: page?.pageNumber,
+      sectionTitle: _sectionTitleFor(pageId),
+      nowMs: now,
     );
   }
 
@@ -291,6 +390,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                 icon: const Icon(Icons.search),
                 onPressed: () => _openSearchSheet(l10n),
               ),
+            _bookmarkToggleButton(l10n, page),
             if (wide)
               TextButton(
                 onPressed: () => setState(() => _showToc = !_showToc),
@@ -635,12 +735,71 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     );
   }
 
+  Widget _bookmarkToggleButton(AppLocalizations l10n, BookPage? page) {
+    final _ = _bookmarksTick;
+    final state = _state;
+    final marked = state != null &&
+        page != null &&
+        state.isPageBookmarked(
+          bookId: widget.bookId,
+          pageId: page.id,
+          part: page.part,
+        );
+    final gold = IshamelaTokens.of(context).goldSoft;
+    return IconButton(
+      tooltip: l10n.bookmarks,
+      icon: Icon(
+        marked ? Icons.bookmark : Icons.bookmark_border,
+        color: marked ? gold : null,
+      ),
+      onPressed: page == null || state == null
+          ? null
+          : () => _toggleBookmark(l10n, page),
+    );
+  }
+
+  void _toggleBookmark(AppLocalizations l10n, BookPage page) {
+    final state = _state;
+    if (state == null) return;
+    final printLabel = page.pageNumber?.toString() ?? '—';
+    final addedId = state.toggleBookmark(
+      bookId: widget.bookId,
+      pageId: page.id,
+      part: page.part,
+      printPage: page.pageNumber,
+      createdAt: DateTime.now().millisecondsSinceEpoch,
+    );
+    setState(() => _bookmarksTick++);
+    final messenger = ScaffoldMessenger.of(context);
+    if (addedId != null) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.bookmarkAdded(printLabel)),
+          action: SnackBarAction(
+            label: l10n.undo,
+            onPressed: () {
+              state.deleteBookmark(addedId);
+              if (mounted) setState(() => _bookmarksTick++);
+            },
+          ),
+        ),
+      );
+    } else {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.bookmarkRemoved)),
+      );
+    }
+  }
+
   Widget _sideIndexPane(AppLocalizations l10n) {
-    // Depend on tick so badge rebuilds when annotations change.
-    final _ = _notesTick;
+    // Depend on ticks so badges rebuild when annotations/bookmarks change.
+    final ticks = _notesTick + _bookmarksTick;
+    assert(ticks >= 0);
     final noteCount = _state?.notesForBook(widget.bookId).length ?? 0;
+    final bookmarkCount = _state?.bookmarksForBook(widget.bookId).length ?? 0;
+    final gold = IshamelaTokens.of(context).gold;
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Column(
         children: [
           TabBar(
@@ -650,11 +809,29 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    Text(l10n.bookmarks),
+                    if (bookmarkCount > 0) ...[
+                      const SizedBox(width: 6),
+                      Badge(
+                        backgroundColor: gold,
+                        label: Text(
+                          '$bookmarkCount',
+                          style: const TextStyle(fontSize: 10),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Tab(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                     Text(l10n.notesTab),
                     if (noteCount > 0) ...[
                       const SizedBox(width: 6),
                       Badge(
-                        backgroundColor: IshamelaTokens.of(context).gold,
+                        backgroundColor: gold,
                         label: Text(
                           '$noteCount',
                           style: const TextStyle(fontSize: 10),
@@ -670,6 +847,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
             child: TabBarView(
               children: [
                 _tocList(l10n),
+                _bookmarksList(l10n),
                 _notesList(l10n),
               ],
             ),
@@ -744,6 +922,90 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         );
       },
     );
+  }
+
+  Widget _bookmarksList(AppLocalizations l10n) {
+    final _ = _bookmarksTick;
+    final marks = _state?.bookmarksForBook(widget.bookId) ?? const [];
+    if (marks.isEmpty) {
+      return Center(child: Text(l10n.bookmarksEmpty));
+    }
+    final t = IshamelaTokens.of(context);
+    return ListView.builder(
+      itemCount: marks.length,
+      itemBuilder: (context, i) {
+        final b = marks[i];
+        final section = _sectionTitleFor(b.pageId);
+        final printNo = b.printPage?.toString() ?? '—';
+        final label = (b.label != null && b.label!.isNotEmpty)
+            ? b.label!
+            : (section ?? 'ص$printNo');
+        return ListTile(
+          dense: true,
+          leading: Icon(Icons.bookmark, color: t.goldSoft, size: 20),
+          title: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis),
+          trailing: Text(
+            printNo,
+            style: TextStyle(
+              fontFamily: kFontUi,
+              fontSize: 11,
+              color: t.muted,
+            ),
+          ),
+          onTap: () => _jumpToId(b.pageId),
+          onLongPress: () => _bookmarkActions(l10n, b),
+        );
+      },
+    );
+  }
+
+  Future<void> _bookmarkActions(AppLocalizations l10n, Bookmark b) async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text(l10n.renameBookmark),
+              onTap: () => Navigator.pop(ctx, 'rename'),
+            ),
+            ListTile(
+              title: Text(l10n.delete),
+              onTap: () => Navigator.pop(ctx, 'delete'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (choice == null || _state == null) return;
+    if (choice == 'delete') {
+      _state!.deleteBookmark(b.id);
+      setState(() => _bookmarksTick++);
+      return;
+    }
+    if (!mounted) return;
+    final ctrl = TextEditingController(text: b.label ?? '');
+    final renamed = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.renameBookmark),
+        content: TextField(controller: ctrl, autofocus: true),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text),
+            child: Text(l10n.confirm),
+          ),
+        ],
+      ),
+    );
+    if (renamed == null || !mounted) return;
+    _state!.updateBookmarkLabel(b.id, renamed);
+    setState(() => _bookmarksTick++);
   }
 
   Widget _notesList(AppLocalizations l10n) {

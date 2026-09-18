@@ -368,4 +368,60 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get copyBibliography => 'Copier la référence';
+
+  @override
+  String get historyTitle => 'Historique de lecture';
+
+  @override
+  String get historyClear => 'Effacer l\'historique';
+
+  @override
+  String get historyClearConfirm =>
+      'L\'historique de lecture sera définitivement supprimé.';
+
+  @override
+  String get historyEmpty =>
+      'Rien lu encore — ouvrez un livre de votre bibliothèque';
+
+  @override
+  String get historyLink => 'Historique';
+
+  @override
+  String get today => 'Aujourd\'hui';
+
+  @override
+  String get yesterday => 'Hier';
+
+  @override
+  String get thisWeek => 'Cette semaine';
+
+  @override
+  String get older => 'Plus ancien';
+
+  @override
+  String get removeFromHistory => 'Retirer de l\'historique';
+
+  @override
+  String get notInstalled => 'Non installé';
+
+  @override
+  String get bookmarks => 'Signets';
+
+  @override
+  String bookmarkAdded(String page) {
+    return 'Signet ajouté · p. $page';
+  }
+
+  @override
+  String get bookmarkRemoved => 'Signet retiré';
+
+  @override
+  String get renameBookmark => 'Renommer le signet';
+
+  @override
+  String get bookmarksEmpty =>
+      'Pas encore de signets — touchez l\'icône pendant la lecture';
+
+  @override
+  String get undo => 'Annuler';
 }

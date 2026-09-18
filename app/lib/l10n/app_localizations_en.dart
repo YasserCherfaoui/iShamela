@@ -367,4 +367,59 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get copyBibliography => 'Copy citation';
+
+  @override
+  String get historyTitle => 'Reading history';
+
+  @override
+  String get historyClear => 'Clear history';
+
+  @override
+  String get historyClearConfirm =>
+      'Reading history will be permanently deleted.';
+
+  @override
+  String get historyEmpty => 'Nothing read yet — open a book from your library';
+
+  @override
+  String get historyLink => 'History';
+
+  @override
+  String get today => 'Today';
+
+  @override
+  String get yesterday => 'Yesterday';
+
+  @override
+  String get thisWeek => 'This week';
+
+  @override
+  String get older => 'Older';
+
+  @override
+  String get removeFromHistory => 'Remove from history';
+
+  @override
+  String get notInstalled => 'Not installed';
+
+  @override
+  String get bookmarks => 'Bookmarks';
+
+  @override
+  String bookmarkAdded(String page) {
+    return 'Bookmark added · p. $page';
+  }
+
+  @override
+  String get bookmarkRemoved => 'Bookmark removed';
+
+  @override
+  String get renameBookmark => 'Rename bookmark';
+
+  @override
+  String get bookmarksEmpty =>
+      'No bookmarks yet — tap the bookmark icon while reading';
+
+  @override
+  String get undo => 'Undo';
 }

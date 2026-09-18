@@ -167,5 +167,27 @@
       "count": {"type": "int"}
     }
   },
-  "copyBibliography": "Copy citation"
+  "copyBibliography": "Copy citation",
+  "historyTitle": "Reading history",
+  "historyClear": "Clear history",
+  "historyClearConfirm": "Reading history will be permanently deleted.",
+  "historyEmpty": "Nothing read yet — open a book from your library",
+  "historyLink": "History",
+  "today": "Today",
+  "yesterday": "Yesterday",
+  "thisWeek": "This week",
+  "older": "Older",
+  "removeFromHistory": "Remove from history",
+  "notInstalled": "Not installed",
+  "bookmarks": "Bookmarks",
+  "bookmarkAdded": "Bookmark added · p. {page}",
+  "@bookmarkAdded": {
+    "placeholders": {
+      "page": {"type": "String"}
+    }
+  },
+  "bookmarkRemoved": "Bookmark removed",
+  "renameBookmark": "Rename bookmark",
+  "bookmarksEmpty": "No bookmarks yet — tap the bookmark icon while reading",
+  "undo": "Undo"
 }

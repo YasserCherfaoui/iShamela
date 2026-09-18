@@ -129,3 +129,47 @@ class DownloadTask {
   final String? error;
   final int updatedAt;
 }
+
+/// SPEC-014 reading session row.
+class ReadingHistoryEntry {
+  ReadingHistoryEntry({
+    required this.id,
+    required this.bookId,
+    required this.pageId,
+    required this.openedAt,
+    this.part,
+    this.printPage,
+    this.sectionTitle,
+    this.closedAt,
+  });
+
+  final int id;
+  final int bookId;
+  final String? part;
+  final int pageId;
+  final int? printPage;
+  final String? sectionTitle;
+  final int openedAt;
+  final int? closedAt;
+}
+
+/// SPEC-014 page bookmark.
+class Bookmark {
+  Bookmark({
+    required this.id,
+    required this.bookId,
+    required this.pageId,
+    required this.createdAt,
+    this.part = '',
+    this.printPage,
+    this.label,
+  });
+
+  final int id;
+  final int bookId;
+  final String part;
+  final int pageId;
+  final int? printPage;
+  final String? label;
+  final int createdAt;
+}

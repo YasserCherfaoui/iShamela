@@ -11,6 +11,7 @@ import 'package:ishamela/core/db/state_database.dart';
 import 'package:ishamela/core/search/normalizer.dart';
 import 'package:ishamela/features/catalog/catalog_service.dart';
 import 'package:ishamela/features/downloads/download_service.dart';
+import 'package:ishamela/features/library/history_page.dart';
 import 'package:ishamela/features/reader/reader_page.dart';
 import 'package:ishamela/ui/app_search_field.dart';
 import 'package:ishamela/ui/book_card.dart';
@@ -834,12 +835,13 @@ class _ContinueReadingHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final latest = state.latestReadingState();
-    if (latest == null || !state.isInstalled(latest.bookId)) {
+    final latest = state.latestReadingHistory();
+    if (latest == null) {
       return const SizedBox.shrink();
     }
     final book = catalog.bookById(latest.bookId);
     if (book == null) return const SizedBox.shrink();
+    final installed = state.isInstalled(latest.bookId);
     final l10n = AppLocalizations.of(context);
     final t = IshamelaTokens.of(context);
     final total = book.pageCount > 0
@@ -851,33 +853,62 @@ class _ContinueReadingHero extends StatelessWidget {
     return Material(
       color: t.green900,
       borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => ReaderPage.open(
-          context,
-          bookId: book.bookId,
-          title: book.title,
-          authorName: book.authorName,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      l10n.continueReading,
-                      style: TextStyle(
-                        fontFamily: kFontUi,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 11,
-                        color: t.goldSoft,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        l10n.continueReading,
+                        style: TextStyle(
+                          fontFamily: kFontUi,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
+                          color: t.goldSoft,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
+                      Text(
+                        ' · ',
+                        style: TextStyle(
+                          fontFamily: kFontUi,
+                          fontSize: 11,
+                          color: t.goldSoft,
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => HistoryPage.open(context),
+                        child: Text(
+                          l10n.historyLink,
+                          style: TextStyle(
+                            fontFamily: kFontUi,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 11,
+                            color: t.gold,
+                            decoration: TextDecoration.underline,
+                            decorationColor: t.gold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  InkWell(
+                    onTap: installed
+                        ? () => ReaderPage.open(
+                              context,
+                              bookId: book.bookId,
+                              title: book.title,
+                              authorName: book.authorName,
+                              initialPageId: latest.pageId,
+                              initialPrintPage: latest.printPage,
+                            )
+                        : null,
+                    child: Text(
                       book.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -888,33 +919,44 @@ class _ContinueReadingHero extends StatelessWidget {
                         color: Colors.white,
                       ),
                     ),
-                    if (total > 0) ...[
-                      const SizedBox(height: 10),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(999),
-                        child: TweenAnimationBuilder<double>(
-                          tween: Tween(begin: 0, end: progress),
-                          duration: const Duration(milliseconds: 400),
-                          curve: Curves.easeOutCubic,
-                          builder: (context, v, _) => LinearProgressIndicator(
-                            value: v,
-                            minHeight: 4,
-                            backgroundColor: Colors.white24,
-                            color: t.goldSoft,
-                          ),
+                  ),
+                  if (total > 0 && installed) ...[
+                    const SizedBox(height: 10),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0, end: progress),
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, v, _) => LinearProgressIndicator(
+                          value: v,
+                          minHeight: 4,
+                          backgroundColor: Colors.white24,
+                          color: t.goldSoft,
                         ),
                       ),
-                    ],
+                    ),
                   ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            if (installed)
+              InkWell(
+                onTap: () => ReaderPage.open(
+                  context,
+                  bookId: book.bookId,
+                  title: book.title,
+                  authorName: book.authorName,
+                  initialPageId: latest.pageId,
+                  initialPrintPage: latest.printPage,
+                ),
+                child: CircleAvatar(
+                  backgroundColor: t.gold,
+                  child: const Icon(Icons.play_arrow, color: Colors.white),
                 ),
               ),
-              const SizedBox(width: 12),
-              CircleAvatar(
-                backgroundColor: t.gold,
-                child: const Icon(Icons.play_arrow, color: Colors.white),
-              ),
-            ],
-          ),
+          ],
         ),
       ),
     );

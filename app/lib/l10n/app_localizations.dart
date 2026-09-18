@@ -769,6 +769,108 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'نسخ التوثيق'**
   String get copyBibliography;
+
+  /// No description provided for @historyTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'سجل القراءة'**
+  String get historyTitle;
+
+  /// No description provided for @historyClear.
+  ///
+  /// In ar, this message translates to:
+  /// **'مسح السجل'**
+  String get historyClear;
+
+  /// No description provided for @historyClearConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'سيُحذف سجل القراءة نهائيًا.'**
+  String get historyClearConfirm;
+
+  /// No description provided for @historyEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم تقرأ شيئًا بعد — افتح كتابًا من مكتبتك'**
+  String get historyEmpty;
+
+  /// No description provided for @historyLink.
+  ///
+  /// In ar, this message translates to:
+  /// **'السجل'**
+  String get historyLink;
+
+  /// No description provided for @today.
+  ///
+  /// In ar, this message translates to:
+  /// **'اليوم'**
+  String get today;
+
+  /// No description provided for @yesterday.
+  ///
+  /// In ar, this message translates to:
+  /// **'أمس'**
+  String get yesterday;
+
+  /// No description provided for @thisWeek.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا الأسبوع'**
+  String get thisWeek;
+
+  /// No description provided for @older.
+  ///
+  /// In ar, this message translates to:
+  /// **'أقدم'**
+  String get older;
+
+  /// No description provided for @removeFromHistory.
+  ///
+  /// In ar, this message translates to:
+  /// **'إزالة من السجل'**
+  String get removeFromHistory;
+
+  /// No description provided for @notInstalled.
+  ///
+  /// In ar, this message translates to:
+  /// **'غير مثبّت'**
+  String get notInstalled;
+
+  /// No description provided for @bookmarks.
+  ///
+  /// In ar, this message translates to:
+  /// **'العلامات'**
+  String get bookmarks;
+
+  /// No description provided for @bookmarkAdded.
+  ///
+  /// In ar, this message translates to:
+  /// **'أُضيفت علامة · ص {page}'**
+  String bookmarkAdded(String page);
+
+  /// No description provided for @bookmarkRemoved.
+  ///
+  /// In ar, this message translates to:
+  /// **'أُزيلت العلامة'**
+  String get bookmarkRemoved;
+
+  /// No description provided for @renameBookmark.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعادة تسمية العلامة'**
+  String get renameBookmark;
+
+  /// No description provided for @bookmarksEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا علامات بعد — اضغط رمز العلامة أثناء القراءة'**
+  String get bookmarksEmpty;
+
+  /// No description provided for @undo.
+  ///
+  /// In ar, this message translates to:
+  /// **'تراجع'**
+  String get undo;
 }
 
 class _AppLocalizationsDelegate

@@ -11,10 +11,16 @@ Open an installed bundle, read it page by page with faithful Arabic rendering, a
 - **Navigation:** page-by-page (RTL swipe: forward = right-to-left), jump to print page number (input field validates against `pages.page_number`), jump by part/volume when `pages.part` is populated, scrubber slider.
 - **Display:** `pages.body` rendered verbatim. Footnote separators and ornate parentheses ﴿﴾ appear exactly as stored. Every page shows a header: book title · part · **print page number** (citation-critical; show "—" when NULL, never invent one).
 - **Typography:** font size slider (persisted), at least two bundled Arabic text fonts suitable for classical texts (e.g., Amiri, Scheherazade New — both OFL; verify licenses in-repo under `app/assets/fonts/OFL.txt`), line-height control, sepia/light/dark themes.
-- **Reading state:** last-read page per book, bookmarks (page + optional note) — stored in `state.sqlite` via a migration this spec owns:
+- **Reading state:** last-read page per book — stored in `state.sqlite` via a migration this spec owns:
 
 ```sql
 CREATE TABLE reading_state (book_id INTEGER PRIMARY KEY, page_id INTEGER NOT NULL, updated_at INTEGER NOT NULL);
+```
+
+- **Bookmarks:** the sketch below was **never shipped**. Page bookmarks (schema, toggle UX, TOC tab) are delivered by [`SPEC-014-reading-history-bookmarks.md`](SPEC-014-reading-history-bookmarks.md), which **supersedes** this sketch (`label` instead of `note`; text notes remain SPEC-010):
+
+```sql
+-- SUPERSEDED by SPEC-014 — do not implement this shape
 CREATE TABLE bookmarks (id INTEGER PRIMARY KEY AUTOINCREMENT, book_id INTEGER NOT NULL, page_id INTEGER NOT NULL, note TEXT, created_at INTEGER NOT NULL);
 ```
 
@@ -66,7 +72,7 @@ Highlighting algorithm (per result page):
 - [ ] User input containing `*`, `-`, `"` and `NEAR` does not crash or change semantics (treated literally).
 - [ ] Token-boundary test: searching `علم` does not highlight the substring inside `العلماء` unless FTS5 matched it (align behavior with actual FTS5 results on the fixture).
 - [ ] All budgets above measured and recorded in the PR description (device model named).
-- [ ] Bookmarks + copy-citation work; citation shows the print page number.
+- [ ] Copy-citation works; citation shows the print page number. (Bookmarks: see SPEC-014.)
 
 ## Out of scope
 

@@ -110,6 +110,47 @@ class StateDatabase {
       }
       db.execute('PRAGMA user_version = 5');
     }
+    final version6 =
+        db.select('PRAGMA user_version').first.columnAt(0) as int;
+    if (version6 < 6) {
+      db.execute('''
+        CREATE TABLE IF NOT EXISTS reading_history (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          book_id INTEGER NOT NULL,
+          part TEXT,
+          page_id INTEGER NOT NULL,
+          print_page INTEGER,
+          section_title TEXT,
+          opened_at INTEGER NOT NULL,
+          closed_at INTEGER
+        )
+      ''');
+      db.execute(
+        'CREATE INDEX IF NOT EXISTS reading_history_opened '
+        'ON reading_history(opened_at DESC)',
+      );
+      db.execute(
+        'CREATE INDEX IF NOT EXISTS reading_history_book '
+        'ON reading_history(book_id, opened_at DESC)',
+      );
+      db.execute('''
+        CREATE TABLE IF NOT EXISTS bookmarks (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          book_id INTEGER NOT NULL,
+          part TEXT NOT NULL DEFAULT '',
+          page_id INTEGER NOT NULL,
+          print_page INTEGER,
+          label TEXT,
+          created_at INTEGER NOT NULL,
+          UNIQUE(book_id, part, page_id)
+        )
+      ''');
+      db.execute(
+        'CREATE INDEX IF NOT EXISTS bookmarks_book '
+        'ON bookmarks(book_id, created_at DESC)',
+      );
+      db.execute('PRAGMA user_version = 6');
+    }
     return StateDatabase(db);
   }
 
@@ -377,6 +418,248 @@ class StateDatabase {
 
   void deleteNote(int id) {
     _db.execute('DELETE FROM text_notes WHERE id = ?', [id]);
+  }
+
+  // --- SPEC-014 reading history & bookmarks ---
+
+  static const historyCoalesce = Duration(minutes: 30);
+  static const historyMaxAge = Duration(days: 90);
+  static const historyMaxRows = 500;
+
+  String _bookmarkPartKey(String? part) => part ?? '';
+
+  /// Open or coalesce a history session; prune on insert. Spec-testable windows.
+  int touchReadingHistory({
+    required int bookId,
+    required int pageId,
+    required int nowMs,
+    String? part,
+    int? printPage,
+    String? sectionTitle,
+    bool closing = false,
+    Duration coalesceWindow = historyCoalesce,
+    Duration maxAge = historyMaxAge,
+    int maxRows = historyMaxRows,
+  }) {
+    final newest = _db.select(
+      '''
+      SELECT id, opened_at FROM reading_history
+      WHERE book_id = ?
+      ORDER BY opened_at DESC LIMIT 1
+      ''',
+      [bookId],
+    );
+    final closedAt = closing ? nowMs : null;
+    if (newest.isNotEmpty) {
+      final openedAt = newest.first['opened_at'] as int;
+      if (nowMs - openedAt <= coalesceWindow.inMilliseconds) {
+        final id = newest.first['id'] as int;
+        _db.execute(
+          '''
+          UPDATE reading_history SET
+            part = ?, page_id = ?, print_page = ?, section_title = ?,
+            closed_at = ?
+          WHERE id = ?
+          ''',
+          [part, pageId, printPage, sectionTitle, closedAt, id],
+        );
+        return id;
+      }
+    }
+    _db.execute(
+      '''
+      INSERT INTO reading_history
+        (book_id, part, page_id, print_page, section_title, opened_at, closed_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ''',
+      [bookId, part, pageId, printPage, sectionTitle, nowMs, closedAt],
+    );
+    final id = _db.lastInsertRowId;
+    _pruneReadingHistory(nowMs: nowMs, maxAge: maxAge, maxRows: maxRows);
+    return id;
+  }
+
+  void _pruneReadingHistory({
+    required int nowMs,
+    required Duration maxAge,
+    required int maxRows,
+  }) {
+    final cutoff = nowMs - maxAge.inMilliseconds;
+    _db.execute(
+      'DELETE FROM reading_history WHERE opened_at < ?',
+      [cutoff],
+    );
+    final count =
+        _db.select('SELECT COUNT(*) AS n FROM reading_history').first['n']
+            as int;
+    if (count <= maxRows) return;
+    final overflow = count - maxRows;
+    _db.execute(
+      '''
+      DELETE FROM reading_history WHERE id IN (
+        SELECT id FROM reading_history ORDER BY opened_at ASC LIMIT ?
+      )
+      ''',
+      [overflow],
+    );
+  }
+
+  List<ReadingHistoryEntry> listReadingHistory() {
+    return _db
+        .select(
+          '''
+          SELECT id, book_id, part, page_id, print_page, section_title,
+                 opened_at, closed_at
+          FROM reading_history ORDER BY opened_at DESC
+          ''',
+        )
+        .map(_historyFromRow)
+        .toList();
+  }
+
+  ReadingHistoryEntry? latestReadingHistory() {
+    final rows = _db.select(
+      '''
+      SELECT id, book_id, part, page_id, print_page, section_title,
+             opened_at, closed_at
+      FROM reading_history ORDER BY opened_at DESC LIMIT 1
+      ''',
+    );
+    if (rows.isEmpty) return null;
+    return _historyFromRow(rows.first);
+  }
+
+  void clearReadingHistory() {
+    _db.execute('DELETE FROM reading_history');
+  }
+
+  void deleteReadingHistory(int id) {
+    _db.execute('DELETE FROM reading_history WHERE id = ?', [id]);
+  }
+
+  ReadingHistoryEntry _historyFromRow(Row r) {
+    return ReadingHistoryEntry(
+      id: r['id'] as int,
+      bookId: r['book_id'] as int,
+      part: r['part'] as String?,
+      pageId: r['page_id'] as int,
+      printPage: r['print_page'] as int?,
+      sectionTitle: r['section_title'] as String?,
+      openedAt: r['opened_at'] as int,
+      closedAt: r['closed_at'] as int?,
+    );
+  }
+
+  List<Bookmark> bookmarksForBook(int bookId) {
+    return _db
+        .select(
+          '''
+          SELECT id, book_id, part, page_id, print_page, label, created_at
+          FROM bookmarks WHERE book_id = ?
+          ORDER BY created_at DESC
+          ''',
+          [bookId],
+        )
+        .map(_bookmarkFromRow)
+        .toList();
+  }
+
+  Bookmark? bookmarkForPage({
+    required int bookId,
+    required int pageId,
+    String? part,
+  }) {
+    final key = _bookmarkPartKey(part);
+    final rows = _db.select(
+      '''
+      SELECT id, book_id, part, page_id, print_page, label, created_at
+      FROM bookmarks WHERE book_id = ? AND part = ? AND page_id = ?
+      LIMIT 1
+      ''',
+      [bookId, key, pageId],
+    );
+    if (rows.isEmpty) return null;
+    return _bookmarkFromRow(rows.first);
+  }
+
+  bool isPageBookmarked({
+    required int bookId,
+    required int pageId,
+    String? part,
+  }) =>
+      bookmarkForPage(bookId: bookId, pageId: pageId, part: part) != null;
+
+  /// Returns the bookmark id when added, or null when removed.
+  int? toggleBookmark({
+    required int bookId,
+    required int pageId,
+    required int createdAt,
+    String? part,
+    int? printPage,
+    String? label,
+  }) {
+    final existing = bookmarkForPage(
+      bookId: bookId,
+      pageId: pageId,
+      part: part,
+    );
+    if (existing != null) {
+      deleteBookmark(existing.id);
+      return null;
+    }
+    return insertBookmark(
+      bookId: bookId,
+      pageId: pageId,
+      part: part,
+      printPage: printPage,
+      label: label,
+      createdAt: createdAt,
+    );
+  }
+
+  int insertBookmark({
+    required int bookId,
+    required int pageId,
+    required int createdAt,
+    String? part,
+    int? printPage,
+    String? label,
+  }) {
+    final key = _bookmarkPartKey(part);
+    _db.execute(
+      '''
+      INSERT INTO bookmarks
+        (book_id, part, page_id, print_page, label, created_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ''',
+      [bookId, key, pageId, printPage, label, createdAt],
+    );
+    return _db.lastInsertRowId;
+  }
+
+  void updateBookmarkLabel(int id, String? label) {
+    final stored =
+        (label == null || label.trim().isEmpty) ? null : label.trim();
+    _db.execute(
+      'UPDATE bookmarks SET label = ? WHERE id = ?',
+      [stored, id],
+    );
+  }
+
+  void deleteBookmark(int id) {
+    _db.execute('DELETE FROM bookmarks WHERE id = ?', [id]);
+  }
+
+  Bookmark _bookmarkFromRow(Row r) {
+    return Bookmark(
+      id: r['id'] as int,
+      bookId: r['book_id'] as int,
+      part: (r['part'] as String?) ?? '',
+      pageId: r['page_id'] as int,
+      printPage: r['print_page'] as int?,
+      label: r['label'] as String?,
+      createdAt: r['created_at'] as int,
+    );
   }
 }
 

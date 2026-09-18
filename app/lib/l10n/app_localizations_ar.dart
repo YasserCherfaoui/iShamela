@@ -366,4 +366,57 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get copyBibliography => 'نسخ التوثيق';
+
+  @override
+  String get historyTitle => 'سجل القراءة';
+
+  @override
+  String get historyClear => 'مسح السجل';
+
+  @override
+  String get historyClearConfirm => 'سيُحذف سجل القراءة نهائيًا.';
+
+  @override
+  String get historyEmpty => 'لم تقرأ شيئًا بعد — افتح كتابًا من مكتبتك';
+
+  @override
+  String get historyLink => 'السجل';
+
+  @override
+  String get today => 'اليوم';
+
+  @override
+  String get yesterday => 'أمس';
+
+  @override
+  String get thisWeek => 'هذا الأسبوع';
+
+  @override
+  String get older => 'أقدم';
+
+  @override
+  String get removeFromHistory => 'إزالة من السجل';
+
+  @override
+  String get notInstalled => 'غير مثبّت';
+
+  @override
+  String get bookmarks => 'العلامات';
+
+  @override
+  String bookmarkAdded(String page) {
+    return 'أُضيفت علامة · ص $page';
+  }
+
+  @override
+  String get bookmarkRemoved => 'أُزيلت العلامة';
+
+  @override
+  String get renameBookmark => 'إعادة تسمية العلامة';
+
+  @override
+  String get bookmarksEmpty => 'لا علامات بعد — اضغط رمز العلامة أثناء القراءة';
+
+  @override
+  String get undo => 'تراجع';
 }
