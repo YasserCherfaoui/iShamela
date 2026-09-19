@@ -610,4 +610,44 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get noteLabel => 'ملاحظة';
+
+  @override
+  String downloadingBook(String title) {
+    return 'جاري تنزيل «$title»';
+  }
+
+  @override
+  String downloadingNBooks(int count) {
+    return 'جاري تنزيل $count كتب';
+  }
+
+  @override
+  String get viewDownloads => 'عرض';
+
+  @override
+  String downloadCompleteSnack(String title) {
+    return 'اكتمل تنزيل «$title»';
+  }
+
+  @override
+  String get open => 'فتح';
+
+  @override
+  String downloadFailedSnack(String title) {
+    return 'تعذّر تنزيل «$title»';
+  }
+
+  @override
+  String get retry => 'إعادة المحاولة';
+
+  @override
+  String alreadyInstalled(String title) {
+    return '«$title» مثبّت مسبقاً';
+  }
+
+  @override
+  String get preparingLibrary => 'يجري تجهيز المكتبة…';
+
+  @override
+  String get appTagline => 'مكتبتك في العلوم الشرعية — دون اتصال';
 }

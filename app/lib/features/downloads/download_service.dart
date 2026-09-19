@@ -12,8 +12,10 @@ import 'package:ishamela/core/net/bundle_downloader.dart';
 import 'package:ishamela/features/catalog/catalog_service.dart';
 import 'package:ishamela/features/downloads/batch_plan.dart';
 import 'package:ishamela/features/downloads/bundle_installer.dart';
+import 'package:ishamela/features/downloads/enqueue_result.dart';
 
 export 'package:ishamela/features/downloads/batch_plan.dart';
+export 'package:ishamela/features/downloads/enqueue_result.dart';
 
 typedef NowMs = int Function();
 
@@ -90,19 +92,21 @@ class DownloadService {
     unawaited(_pump());
   }
 
-  Future<void> enqueue(int bookId) async {
+  /// Enqueue is idempotent (SPEC-020 DL-03/04).
+  Future<EnqueueResult> enqueue(int bookId) async {
     final book = catalog.bookById(bookId);
-    if (book == null) {
-      throw StateError('book $bookId not in catalog');
+    if (book == null || !book.canInstallOnDevice) {
+      return EnqueueResult.rejected;
     }
-    if (!book.canInstallOnDevice) {
-      throw StateError('book $bookId has no source_pages_path');
+    if (state.isInstalled(bookId)) {
+      return EnqueueResult.alreadyInstalled;
     }
-    if (state.isInstalled(bookId)) return;
     final existing = state.listDownloads().where((r) => r['book_id'] == bookId);
     if (existing.isNotEmpty) {
       final status = DownloadStatus.parse(existing.first['status'] as String);
-      if (isDownloadInFlight(status)) return;
+      if (isActiveOrQueued(status)) {
+        return EnqueueResult.alreadyQueued;
+      }
     }
     state.upsertDownload(
       bookId: bookId,
@@ -113,6 +117,7 @@ class DownloadService {
     );
     _notify();
     await _pump();
+    return EnqueueResult.started;
   }
 
   /// Enqueue many books; skips installed, in-flight, and uninstallable (SPEC-007/008).

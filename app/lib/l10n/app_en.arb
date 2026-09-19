@@ -330,5 +330,40 @@
       "title": {"type": "String"}
     }
   },
-  "noteLabel": "Note"
+  "noteLabel": "Note",
+  "downloadingBook": "Downloading «{title}»",
+  "@downloadingBook": {
+    "placeholders": {
+      "title": {"type": "String"}
+    }
+  },
+  "downloadingNBooks": "Downloading {count} books",
+  "@downloadingNBooks": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "viewDownloads": "View",
+  "downloadCompleteSnack": "Finished downloading «{title}»",
+  "@downloadCompleteSnack": {
+    "placeholders": {
+      "title": {"type": "String"}
+    }
+  },
+  "open": "Open",
+  "downloadFailedSnack": "Could not download «{title}»",
+  "@downloadFailedSnack": {
+    "placeholders": {
+      "title": {"type": "String"}
+    }
+  },
+  "retry": "Retry",
+  "alreadyInstalled": "«{title}» is already installed",
+  "@alreadyInstalled": {
+    "placeholders": {
+      "title": {"type": "String"}
+    }
+  },
+  "preparingLibrary": "Preparing your library…",
+  "appTagline": "Your library of Islamic sciences — offline"
 }

@@ -30,6 +30,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_native_splash: ^2.4.7
 
 flutter:
   generate: true
@@ -37,6 +38,9 @@ flutter:
   assets:
     - assets/catalog/catalog.sqlite.zst
     - assets/catalog/catalog.json
+    - assets/brand/generated/splash/splash.png
+    - assets/brand/generated/splash/splash-android12.png
+    - assets/brand/generated/master-128.png
   fonts:
     - family: Amiri
       fonts:

@@ -330,5 +330,40 @@
       "title": {"type": "String"}
     }
   },
-  "noteLabel": "Note"
+  "noteLabel": "Note",
+  "downloadingBook": "Téléchargement de «{title}»",
+  "@downloadingBook": {
+    "placeholders": {
+      "title": {"type": "String"}
+    }
+  },
+  "downloadingNBooks": "Téléchargement de {count} livres",
+  "@downloadingNBooks": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "viewDownloads": "Voir",
+  "downloadCompleteSnack": "Téléchargement terminé «{title}»",
+  "@downloadCompleteSnack": {
+    "placeholders": {
+      "title": {"type": "String"}
+    }
+  },
+  "open": "Ouvrir",
+  "downloadFailedSnack": "Échec du téléchargement «{title}»",
+  "@downloadFailedSnack": {
+    "placeholders": {
+      "title": {"type": "String"}
+    }
+  },
+  "retry": "Réessayer",
+  "alreadyInstalled": "«{title}» est déjà installé",
+  "@alreadyInstalled": {
+    "placeholders": {
+      "title": {"type": "String"}
+    }
+  },
+  "preparingLibrary": "Préparation de votre bibliothèque…",
+  "appTagline": "Votre bibliothèque des sciences islamiques — hors ligne"
 }

@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
+- Brand assets, splash & download feedback (SPEC-020): Warm Manuscript icon (SVG→rasters script), native+Flutter splash, catalog affordance mapper + idempotent enqueue, themed download snackbar host.
 - Storage manager (SPEC-015): `installed_size_bytes` on `state.sqlite` v7, Settings storage card, manage-storage screen with size-sorted uninstall.
 - App language & About (SPEC-016): persisted `app_locale` (ar/en/fr), Settings language sheet, About with version/licenses/dataset attribution (`package_info_plus`, `url_launcher`).
 - Library-wide text search (SPEC-017): Titles | Full text scope, streamed FTS across installed books (concurrency 2), exact-phrase chip.

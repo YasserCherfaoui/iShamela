@@ -330,5 +330,40 @@
       "title": {"type": "String"}
     }
   },
-  "noteLabel": "ملاحظة"
+  "noteLabel": "ملاحظة",
+  "downloadingBook": "جاري تنزيل «{title}»",
+  "@downloadingBook": {
+    "placeholders": {
+      "title": {"type": "String"}
+    }
+  },
+  "downloadingNBooks": "جاري تنزيل {count} كتب",
+  "@downloadingNBooks": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "viewDownloads": "عرض",
+  "downloadCompleteSnack": "اكتمل تنزيل «{title}»",
+  "@downloadCompleteSnack": {
+    "placeholders": {
+      "title": {"type": "String"}
+    }
+  },
+  "open": "فتح",
+  "downloadFailedSnack": "تعذّر تنزيل «{title}»",
+  "@downloadFailedSnack": {
+    "placeholders": {
+      "title": {"type": "String"}
+    }
+  },
+  "retry": "إعادة المحاولة",
+  "alreadyInstalled": "«{title}» مثبّت مسبقاً",
+  "@alreadyInstalled": {
+    "placeholders": {
+      "title": {"type": "String"}
+    }
+  },
+  "preparingLibrary": "يجري تجهيز المكتبة…",
+  "appTagline": "مكتبتك في العلوم الشرعية — دون اتصال"
 }

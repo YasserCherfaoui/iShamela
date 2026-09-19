@@ -1,0 +1,12 @@
+# SPEC-020 SP-01 — native splash (flutter_native_splash).
+flutter_native_splash:
+  color: "#0E3B30"
+  image: assets/brand/generated/splash/splash.png
+  android_12:
+    color: "#0E3B30"
+    image: assets/brand/generated/splash/splash-android12.png
+    icon_background_color: "#0E3B30"
+  android: true
+  ios: true
+  web: true
+  fullscreen: true

@@ -468,6 +468,47 @@ void main() {
     final queued = blocked.listTasks().map((t) => t.bookId).toSet();
     expect(queued, {900002, 900003});
   });
+
+  test('enqueue is idempotent for installed and already-queued', () async {
+    final paths = await _tempPaths();
+    await File(p.join(_fixtures.path, 'catalog.sqlite'))
+        .copy(paths.catalogSqlite.path);
+    final state = await StateDatabase.open(paths);
+    final catalog = CatalogRepository(paths);
+    state.upsertInstalled(
+      bookId: 900001,
+      schemaVersion: 1,
+      normVersion: '1.0.0',
+      sqliteBytes: 100,
+      installedAt: 1,
+    );
+    final blocked = DownloadService(
+      downloader: BundleDownloader(Dio()),
+      paths: paths,
+      state: state,
+      catalog: catalog,
+      pagesBaseUrl: 'https://example.test/pages/',
+      maxConcurrent: 0,
+    );
+    expect(await blocked.enqueue(900001), EnqueueResult.alreadyInstalled);
+
+    // Seed a queued row for a downloadable book if present in fixture.
+    final other = catalog.bookById(900002);
+    if (other != null && other.canInstallOnDevice) {
+      state.upsertDownload(
+        bookId: 900002,
+        status: DownloadStatus.queued.name,
+        bytesDone: 0,
+        bytesTotal: null,
+        updatedAt: 1,
+      );
+      expect(await blocked.enqueue(900002), EnqueueResult.alreadyQueued);
+      expect(
+        blocked.listTasks().where((t) => t.bookId == 900002).length,
+        1,
+      );
+    }
+  });
 }
 
 /// Adapter that stalls until [gate] completes (for cancel tests).

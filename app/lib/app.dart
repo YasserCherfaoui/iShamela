@@ -6,10 +6,12 @@ import 'package:ishamela/l10n/app_localizations.dart';
 import 'package:ishamela/core/providers.dart';
 import 'package:ishamela/features/catalog/catalog_page.dart';
 import 'package:ishamela/features/downloads/download_service.dart';
+import 'package:ishamela/features/downloads/download_snack_host.dart';
 import 'package:ishamela/features/downloads/download_tabs.dart';
 import 'package:ishamela/features/downloads/downloads_page.dart';
 import 'package:ishamela/features/library/library_page.dart';
 import 'package:ishamela/features/settings/settings_page.dart';
+import 'package:ishamela/features/splash/startup_splash.dart';
 import 'package:ishamela/ui/app_bottom_nav.dart';
 import 'package:ishamela/ui/theme/ishamela_theme.dart';
 
@@ -35,6 +37,12 @@ class IshamelaApp extends ConsumerWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       theme: buildIshamelaTheme(atmosphere),
+      // SP-06: catalog sync is background; splash only awaits local DB.
+      builder: (context, child) {
+        return StartupSplashGate(
+          child: DownloadSnackHost(child: child ?? const SizedBox.shrink()),
+        );
+      },
       home: const HomeShell(),
     );
   }

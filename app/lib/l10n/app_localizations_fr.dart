@@ -615,4 +615,45 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get noteLabel => 'Note';
+
+  @override
+  String downloadingBook(String title) {
+    return 'Téléchargement de «$title»';
+  }
+
+  @override
+  String downloadingNBooks(int count) {
+    return 'Téléchargement de $count livres';
+  }
+
+  @override
+  String get viewDownloads => 'Voir';
+
+  @override
+  String downloadCompleteSnack(String title) {
+    return 'Téléchargement terminé «$title»';
+  }
+
+  @override
+  String get open => 'Ouvrir';
+
+  @override
+  String downloadFailedSnack(String title) {
+    return 'Échec du téléchargement «$title»';
+  }
+
+  @override
+  String get retry => 'Réessayer';
+
+  @override
+  String alreadyInstalled(String title) {
+    return '«$title» est déjà installé';
+  }
+
+  @override
+  String get preparingLibrary => 'Préparation de votre bibliothèque…';
+
+  @override
+  String get appTagline =>
+      'Votre bibliothèque des sciences islamiques — hors ligne';
 }

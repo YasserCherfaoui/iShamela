@@ -1,0 +1,13 @@
+master-64.png
+master-128.png
+master-256.png
+master-512.png
+master-1024.png
+splash/splash.png
+splash/splash-android12.png
+android/mipmap-xxxhdpi/ic_launcher_foreground.png
+android/mipmap-xxxhdpi/ic_launcher_monochrome.png
+ios/icon-1024.png
+web/favicon-32.png
+web/maskable-512.png
+desktop/icon-512.png

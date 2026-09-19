@@ -10,7 +10,9 @@ import 'package:ishamela/core/providers.dart';
 import 'package:ishamela/features/catalog/catalog_search_field.dart';
 import 'package:ishamela/features/catalog/author_page.dart';
 import 'package:ishamela/features/catalog/catalog_service.dart';
+import 'package:ishamela/features/downloads/book_affordance.dart';
 import 'package:ishamela/features/downloads/download_service.dart';
+import 'package:ishamela/features/downloads/download_snack_host.dart';
 import 'package:ishamela/features/reader/reader_page.dart';
 import 'package:ishamela/ui/book_card.dart';
 import 'package:ishamela/ui/empty_state.dart';
@@ -530,14 +532,6 @@ class _BookListPageState extends ConsumerState<BookListPage> {
     }).toList();
   }
 
-  Future<DownloadService?> _service() async {
-    return ref.read(downloadServiceProvider).when(
-          data: (s) => s,
-          loading: () => null,
-          error: (_, __) => null,
-        );
-  }
-
   Future<void> _confirmAndEnqueue(List<Book> books) async {
     final l10n = AppLocalizations.of(context);
     final state = await ref.read(stateDatabaseProvider.future);
@@ -618,8 +612,18 @@ class _BookListPageState extends ConsumerState<BookListPage> {
       },
     );
     if (!mounted || ok != true) return;
-    final svc = await _service();
-    await svc?.enqueueMany(plan.toEnqueue);
+    final targets = downloadableNotInstalledNotQueued(
+      books: plan.toEnqueue,
+      isInstalled: state.isInstalled,
+      downloadStatus: (id) {
+        final rows = state.listDownloads().where((r) => r['book_id'] == id);
+        if (rows.isEmpty) return null;
+        return DownloadStatus.parse(rows.first['status'] as String);
+      },
+    );
+    for (final book in targets) {
+      await ref.read(downloadSnackProvider.notifier).enqueueBook(book.bookId);
+    }
     if (!mounted) return;
     setState(() {
       _selecting = false;
@@ -641,13 +645,26 @@ class _BookListPageState extends ConsumerState<BookListPage> {
                   runSpacing: 8,
                   children: [
                     OutlinedButton(
-                      onPressed: () => setState(() {
-                        for (final b in _visible) {
-                          if (b.canInstallOnDevice) {
-                            _selected.add(b.bookId);
-                          }
+                      onPressed: () async {
+                        final state = await ref.read(stateDatabaseProvider.future);
+                        if (!mounted) return;
+                        final statuses = <int, DownloadStatus?>{};
+                        for (final row in state.listDownloads()) {
+                          statuses[row['book_id'] as int] = DownloadStatus.parse(
+                            row['status'] as String,
+                          );
                         }
-                      }),
+                        final targets = downloadableNotInstalledNotQueued(
+                          books: _visible,
+                          isInstalled: state.isInstalled,
+                          downloadStatus: (id) => statuses[id],
+                        );
+                        setState(() {
+                          _selected
+                            ..clear()
+                            ..addAll(targets.map((b) => b.bookId));
+                        });
+                      },
                       child: Text(l10n.selectAll),
                     ),
                     OutlinedButton(
@@ -802,29 +819,66 @@ class BookListView extends ConsumerWidget {
           book.categoryName!,
       ];
       final canDownload = book.canInstallOnDevice;
-      final inFlight = status == DownloadStatus.downloading ||
-          status == DownloadStatus.queued ||
-          status == DownloadStatus.verifying ||
-          status == DownloadStatus.installing;
+      final bytesDone = downloadsAsync.maybeWhen(
+        data: (svc) {
+          final tasks =
+              svc.listTasks().where((t) => t.bookId == book.bookId);
+          return tasks.isEmpty ? 0 : tasks.first.bytesDone;
+        },
+        orElse: () => 0,
+      );
+      final bytesTotal = downloadsAsync.maybeWhen(
+        data: (svc) {
+          final tasks =
+              svc.listTasks().where((t) => t.bookId == book.bookId);
+          return tasks.isEmpty ? null : tasks.first.bytesTotal;
+        },
+        orElse: () => null,
+      );
+      final affordance = mapBookAffordance(
+        installed: installed,
+        canInstallOnDevice: canDownload,
+        status: status,
+        bytesDone: bytesDone,
+        bytesTotal: bytesTotal,
+      );
 
       Widget? trailing;
-      if (installed) {
-        trailing = MetaChipInstalled(label: l10n.installed);
-      } else if (inFlight) {
-        trailing = const ProgressRing(value: 0.35);
-      } else if (canDownload) {
-        trailing = TonalIconButton(
-          tooltip: l10n.download,
-          icon: Icons.download,
-          onPressed: () async {
-            final svc = await downloadsAsync.when(
-              data: (s) async => s,
-              loading: () async => null,
-              error: (_, __) async => null,
-            );
-            await svc?.enqueue(book.bookId);
-          },
-        );
+      switch (affordance.kind) {
+        case BookAffordanceKind.installed:
+          trailing = MetaChipInstalled(label: l10n.installed);
+        case BookAffordanceKind.progress:
+        case BookAffordanceKind.paused:
+          trailing = ProgressRing(
+            value: affordance.progress,
+            goldArc: affordance.kind == BookAffordanceKind.paused,
+            onTap: () async {
+              final svc = downloadsAsync.maybeWhen(
+                data: (s) => s,
+                orElse: () => null,
+              );
+              if (svc == null) return;
+              if (affordance.kind == BookAffordanceKind.paused ||
+                  status == DownloadStatus.paused) {
+                await svc.resume(book.bookId);
+              } else if (status == DownloadStatus.queued ||
+                  status == DownloadStatus.downloading) {
+                await svc.pause(book.bookId);
+              }
+            },
+          );
+        case BookAffordanceKind.download:
+          trailing = TonalIconButton(
+            tooltip: l10n.download,
+            icon: Icons.download,
+            onPressed: () async {
+              await ref
+                  .read(downloadSnackProvider.notifier)
+                  .enqueueBook(book.bookId);
+            },
+          );
+        case BookAffordanceKind.unavailable:
+          trailing = null;
       }
 
       return Padding(
@@ -851,7 +905,10 @@ class BookListView extends ConsumerWidget {
               canDownload || installed ? null : l10n.unavailableForDownload,
           trailing: trailing,
           selected: selecting ? selected.contains(book.bookId) : null,
-          onSelectedChanged: selecting && canDownload && !installed
+          onSelectedChanged: selecting &&
+                  canDownload &&
+                  !installed &&
+                  affordance.kind == BookAffordanceKind.download
               ? (_) => onToggle?.call(book.bookId)
               : null,
           onTap: installed
@@ -863,7 +920,9 @@ class BookListView extends ConsumerWidget {
                     authorId: book.authorId,
                   )
               : null,
-          onLongPress: installed || !canDownload
+          onLongPress: installed ||
+                  !canDownload ||
+                  affordance.kind != BookAffordanceKind.download
               ? null
               : () => onLongPressSelect?.call(book.bookId),
         ),

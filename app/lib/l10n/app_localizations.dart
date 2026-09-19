@@ -1183,6 +1183,66 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'ملاحظة'**
   String get noteLabel;
+
+  /// No description provided for @downloadingBook.
+  ///
+  /// In ar, this message translates to:
+  /// **'جاري تنزيل «{title}»'**
+  String downloadingBook(String title);
+
+  /// No description provided for @downloadingNBooks.
+  ///
+  /// In ar, this message translates to:
+  /// **'جاري تنزيل {count} كتب'**
+  String downloadingNBooks(int count);
+
+  /// No description provided for @viewDownloads.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرض'**
+  String get viewDownloads;
+
+  /// No description provided for @downloadCompleteSnack.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتمل تنزيل «{title}»'**
+  String downloadCompleteSnack(String title);
+
+  /// No description provided for @open.
+  ///
+  /// In ar, this message translates to:
+  /// **'فتح'**
+  String get open;
+
+  /// No description provided for @downloadFailedSnack.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تنزيل «{title}»'**
+  String downloadFailedSnack(String title);
+
+  /// No description provided for @retry.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعادة المحاولة'**
+  String get retry;
+
+  /// No description provided for @alreadyInstalled.
+  ///
+  /// In ar, this message translates to:
+  /// **'«{title}» مثبّت مسبقاً'**
+  String alreadyInstalled(String title);
+
+  /// No description provided for @preparingLibrary.
+  ///
+  /// In ar, this message translates to:
+  /// **'يجري تجهيز المكتبة…'**
+  String get preparingLibrary;
+
+  /// No description provided for @appTagline.
+  ///
+  /// In ar, this message translates to:
+  /// **'مكتبتك في العلوم الشرعية — دون اتصال'**
+  String get appTagline;
 }
 
 class _AppLocalizationsDelegate
