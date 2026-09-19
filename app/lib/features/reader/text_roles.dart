@@ -13,6 +13,9 @@ enum TextRole {
 }
 
 /// Longest-first phrase table — all map to [TextRole.honorific] (SPEC-011).
+///
+/// Includes expanded Arabic strings and Shamela Unicode ligatures (U+FD40–U+FD4F,
+/// U+FDFA/U+FDFB/U+FDFD–U+FDFF) attested in SPEC-006 `d1_codepoints.tsv`.
 const honorificPhrases = <String>[
   'صلى الله عليه وآله وسلم',
   'رضي الله عنهم أجمعين',
@@ -31,6 +34,28 @@ const honorificPhrases = <String>[
   'رحمه الله',
   'عز وجل',
   'عزوجل',
+  // Unicode ligatures (one code point each).
+  '\uFDFA', // ﷺ sallallahu alayhe wasallam
+  '\uFDFB', // ﷻ jalla jalaluhu
+  '\uFDFD', // ﷽ basmala
+  '\uFDFE', // ﷻ-class: subhanahu wa taala
+  '\uFDFF', // ﷿ azza wa jall
+  '\uFD40', // ؒ rahimahu allah
+  '\uFD41', // ؓ radi allahu anh
+  '\uFD42', // ؓ radi allahu anha
+  '\uFD43', // ؓ radi allahu anhum
+  '\uFD44', // ؓ radi allahu anhuma
+  '\uFD45', // ؓ radi allahu anhunna
+  '\uFD46', // ؐ sallallahu alayhi wa-aalih
+  '\uFD47', // ؑ alayhi as-salaam
+  '\uFD48', // ؓ alayhim as-salaam
+  '\uFD49', // ؓ alayhimaa as-salaam
+  '\uFD4A', // ؓ alayhi as-salaatu was-salaam
+  '\uFD4B', // ؓ quddisa sirrah
+  '\uFD4C', // ؐ sallallahu alayhi wa-aalihee wa-sallam
+  '\uFD4D', // ؑ alayhaa as-salaam
+  '\uFD4E', // ؓ tabaaraka wa-taaalaa
+  '\uFD4F', // ؓ rahimahum allah
 ];
 
 final _punctuation = <int>{

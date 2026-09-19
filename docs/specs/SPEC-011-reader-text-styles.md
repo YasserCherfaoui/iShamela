@@ -22,10 +22,22 @@ Matching runs on **display text** (HTML tags stripped per SPEC-009) after a **di
 
 Phrases (all map to **`honorific`**; sort by length desc when matching):
 
+Expanded Arabic (NFC):
+
 - `صلى الله عليه وآله وسلم`, `صلى الله عليه وسلم`, `عليه الصلاة والسلام`
 - `رضي الله عنهم أجمعين`, `رضي الله عنهما`, `رضي الله عنهم`, `رضي الله عنها`, `رضي الله عنه`
 - `رحمه الله تعالى`, `رحمهما الله`, `رحمهم الله`, `رحمها الله`, `رحمه الله`
 - `سبحانه وتعالى`, `تبارك وتعالى`, `عز وجل`, `عزوجل`
+
+Unicode Arabic ligatures (single code points; Shamela4 presentation forms — census in SPEC-006 `d1_codepoints.tsv`):
+
+- Salawat / peace: U+FDFA `ﷺ`, U+FD46, U+FD4C, U+FD4E, U+FD47–U+FD4A, U+FD4D
+- Radiyallah: U+FD41–U+FD45
+- Rahimahullah / quddisa: U+FD40, U+FD4F, U+FD4B
+- Divine formulae: U+FDFF `﷿`, U+FDFB `ﷻ`, U+FDFE (subḥānahu wa taʿālā), U+FD4E (tabāraka wa taʿālā)
+- Basmala: U+FDFD `﷽`
+
+(Do **not** fold/NFKC these — match the stored code point as displayed.)
 
 Non-overlapping: once a display index is claimed, later matches skip it. Priority: **title > honorific phrases (longest first) > quran spans > punctuation > body**.
 
@@ -100,7 +112,7 @@ Declared in `pubspec.yaml` `flutter.fonts`. Offline-only — no runtime font CDN
 ## Acceptance criteria
 
 - [x] Title spans classify as `title`.
-- [x] All phrase-table hits classify as `honorific` and share one style.
+- [x] All phrase-table hits classify as `honorific` and share one style (expanded Arabic **and** Unicode ligatures such as `ﷺ` / `﷿` / `ﷻ`).
 - [x] `﴿نص﴾` classifies marks **and** inner text as `quran`.
 - [x] `\r` / `\r\n` / `<br>` produce visible line breaks in display.
 - [x] Selection uses forced strut → equal-height selection rects across roles.

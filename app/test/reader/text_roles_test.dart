@@ -34,6 +34,17 @@ void main() {
     );
   });
 
+  test('Unicode honorific ligatures classify as honorific', () {
+    // Corpus forms from SPEC-006 census (ﷺ ﷿ ﷻ ؓ …).
+    const body = 'النبي\uFDFA قال أبو بكر\uFD41 وعائشة\uFD42 والله\uFDFF و\uFDFB';
+    final roles = classifyTextRoles(body);
+    for (final ch in ['\uFDFA', '\uFD41', '\uFD42', '\uFDFF', '\uFDFB']) {
+      final i = roles.display.indexOf(ch);
+      expect(i, greaterThanOrEqualTo(0), reason: 'missing $ch');
+      expect(roles.roleAt(i), TextRole.honorific, reason: ch);
+    }
+  });
+
   test('quran marks color inner text too', () {
     const body = '﴿آية كريمة﴾، نص.';
     final roles = classifyTextRoles(body);
