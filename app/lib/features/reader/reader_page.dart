@@ -933,7 +933,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                           fontWeight:
                               selected ? FontWeight.w700 : FontWeight.w400,
                           fontSize: 14,
-                          color: selected ? t.green900 : t.ink,
+                          color: selected ? t.emphasis : t.ink,
                         ),
                       ),
                     ),

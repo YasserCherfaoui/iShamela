@@ -49,6 +49,15 @@ void main() {
       expect(theme.scaffoldBackgroundColor, IshamelaTokens.paperLight.paper);
     });
 
+    test('night keeps brand-deep green900; emphasis is titles mint', () {
+      final theme = buildIshamelaTheme(ReadingAtmosphere.night);
+      final chrome = theme.extension<IshamelaTokens>()!;
+      expect(chrome.green900, const Color(0xFF0E3B30));
+      expect(chrome.emphasis, const Color(0xFF8FC7AC));
+      expect(chrome.paper, const Color(0xFF101B17));
+      expect(theme.brightness, Brightness.dark);
+    });
+
     test('ReadingAtmosphere round-trip', () {
       expect(ReadingAtmosphere.fromId('night'), ReadingAtmosphere.night);
       expect(ReadingAtmosphere.sepia.id, 'sepia');

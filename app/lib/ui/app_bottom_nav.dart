@@ -92,7 +92,7 @@ class _NavIcon extends StatelessWidget {
             color: t.green100,
             borderRadius: BorderRadius.circular(999),
           ),
-          child: Icon(icon, color: t.green900),
+          child: Icon(icon, color: t.emphasis),
         ),
       );
     }

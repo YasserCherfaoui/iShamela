@@ -23,7 +23,7 @@ class TonalIconButton extends StatelessWidget {
       tooltip: tooltip,
       onPressed: enabled ? onPressed : null,
       style: IconButton.styleFrom(
-        foregroundColor: t.green900,
+        foregroundColor: t.emphasis,
         disabledForegroundColor: t.muted.withValues(alpha: 0.4),
         backgroundColor: enabled ? t.green100 : t.segmentTrack,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

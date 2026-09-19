@@ -13,6 +13,7 @@ class IshamelaTokens extends ThemeExtension<IshamelaTokens> {
     required this.green900,
     required this.green700,
     required this.green100,
+    required this.emphasis,
     required this.gold,
     required this.goldSoft,
     required this.goldPale,
@@ -28,9 +29,20 @@ class IshamelaTokens extends ThemeExtension<IshamelaTokens> {
   final Color hairline;
   final Color ink;
   final Color muted;
+
+  /// Brand deep fill (hero card, spines). Stays dark in every atmosphere.
   final Color green900;
+
+  /// Interactive mid green (filled buttons, focus rings).
   final Color green700;
+
+  /// Soft container (selected pill track, tonal button bg).
   final Color green100;
+
+  /// Brand emphasis *foreground* (section headers, selected nav/segments,
+  /// icons on [green100]). Equals [green900] on paper/sepia; mint titles on night.
+  final Color emphasis;
+
   final Color gold;
   final Color goldSoft;
   final Color goldPale;
@@ -51,6 +63,7 @@ class IshamelaTokens extends ThemeExtension<IshamelaTokens> {
     green900: Color(0xFF0E3B30),
     green700: Color(0xFF17614E),
     green100: Color(0xFFDFEBE2),
+    emphasis: Color(0xFF0E3B30),
     gold: Color(0xFFA67C2E),
     goldSoft: Color(0xFFC6A15B),
     goldPale: Color(0xFFF4E9CF),
@@ -84,6 +97,7 @@ class IshamelaTokens extends ThemeExtension<IshamelaTokens> {
     Color? green900,
     Color? green700,
     Color? green100,
+    Color? emphasis,
     Color? gold,
     Color? goldSoft,
     Color? goldPale,
@@ -102,6 +116,7 @@ class IshamelaTokens extends ThemeExtension<IshamelaTokens> {
       green900: green900 ?? this.green900,
       green700: green700 ?? this.green700,
       green100: green100 ?? this.green100,
+      emphasis: emphasis ?? this.emphasis,
       gold: gold ?? this.gold,
       goldSoft: goldSoft ?? this.goldSoft,
       goldPale: goldPale ?? this.goldPale,
@@ -125,6 +140,7 @@ class IshamelaTokens extends ThemeExtension<IshamelaTokens> {
       green900: Color.lerp(green900, other.green900, t)!,
       green700: Color.lerp(green700, other.green700, t)!,
       green100: Color.lerp(green100, other.green100, t)!,
+      emphasis: Color.lerp(emphasis, other.emphasis, t)!,
       gold: Color.lerp(gold, other.gold, t)!,
       goldSoft: Color.lerp(goldSoft, other.goldSoft, t)!,
       goldPale: Color.lerp(goldPale, other.goldPale, t)!,

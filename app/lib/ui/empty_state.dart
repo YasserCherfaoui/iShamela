@@ -44,7 +44,7 @@ class EmptyState extends StatelessWidget {
                 onPressed: onAction,
                 style: FilledButton.styleFrom(
                   backgroundColor: t.green100,
-                  foregroundColor: t.green900,
+                  foregroundColor: t.emphasis,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),

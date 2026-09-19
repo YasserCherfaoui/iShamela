@@ -44,7 +44,7 @@ class DownloadCard extends StatelessWidget {
       DownloadCardTone.active => t.green700,
       DownloadCardTone.paused => t.gold,
       DownloadCardTone.failed => const Color(0xFFA6402E),
-      DownloadCardTone.completed => t.green900,
+      DownloadCardTone.completed => t.emphasis,
     };
     final barColor = switch (tone) {
       DownloadCardTone.active => t.green700,

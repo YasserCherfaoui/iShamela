@@ -100,7 +100,7 @@ class _AuthorPageState extends ConsumerState<AuthorPage> {
                     CircleAvatar(
                       radius: 28,
                       backgroundColor: t.green100,
-                      child: Icon(Icons.person, color: t.green900),
+                      child: Icon(Icons.person, color: t.emphasis),
                     ),
                     const SizedBox(width: 14),
                     Expanded(

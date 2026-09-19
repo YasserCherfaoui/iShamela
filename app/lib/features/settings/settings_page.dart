@@ -59,7 +59,7 @@ class SettingsPage extends ConsumerWidget {
             fontFamily: kFontUi,
             fontWeight: FontWeight.w700,
             fontSize: 13,
-            color: t.green900,
+            color: t.emphasis,
           ),
         ),
         const SizedBox(height: 8),
@@ -96,7 +96,7 @@ class SettingsPage extends ConsumerWidget {
                   style: TextStyle(
                     fontFamily: kFontUi,
                     fontWeight: FontWeight.w700,
-                    color: t.green900,
+                    color: t.emphasis,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -179,7 +179,7 @@ class SettingsPage extends ConsumerWidget {
             fontFamily: kFontUi,
             fontWeight: FontWeight.w700,
             fontSize: 13,
-            color: t.green900,
+            color: t.emphasis,
           ),
         ),
         const SizedBox(height: 8),
@@ -516,7 +516,7 @@ class _StorageCardState extends ConsumerState<_StorageCard> {
               style: TextStyle(
                 fontFamily: kFontUi,
                 fontWeight: FontWeight.w700,
-                color: t.green900,
+                color: t.emphasis,
               ),
             ),
             const SizedBox(height: 8),
@@ -572,7 +572,7 @@ class _StorageCardState extends ConsumerState<_StorageCard> {
               },
               style: FilledButton.styleFrom(
                 backgroundColor: t.green100,
-                foregroundColor: t.green900,
+                foregroundColor: t.emphasis,
               ),
               child: Text(l10n.manageStorage),
             ),
@@ -611,7 +611,7 @@ class _LanguageAndAppCard extends ConsumerWidget {
               style: TextStyle(
                 fontFamily: kFontUi,
                 fontWeight: FontWeight.w700,
-                color: t.green900,
+                color: t.emphasis,
               ),
             ),
           ),

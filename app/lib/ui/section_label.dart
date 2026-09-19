@@ -22,7 +22,7 @@ class SectionLabel extends StatelessWidget {
               fontFamily: kFontUi,
               fontWeight: FontWeight.w700,
               fontSize: 13,
-              color: t.green900,
+              color: t.emphasis,
             ),
           ),
           const SizedBox(width: 12),

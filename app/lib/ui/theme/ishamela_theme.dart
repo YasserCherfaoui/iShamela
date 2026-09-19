@@ -19,15 +19,15 @@ ThemeData buildIshamelaTheme(ReadingAtmosphere atmosphere) {
     primary: chrome.green700,
     onPrimary: Colors.white,
     primaryContainer: chrome.green100,
-    onPrimaryContainer: chrome.green900,
+    onPrimaryContainer: chrome.emphasis,
     secondary: chrome.green100,
-    onSecondary: chrome.green900,
+    onSecondary: chrome.emphasis,
     secondaryContainer: chrome.green100,
-    onSecondaryContainer: chrome.green900,
+    onSecondaryContainer: chrome.emphasis,
     tertiary: chrome.gold,
     onTertiary: Colors.white,
     tertiaryContainer: chrome.goldPale,
-    onTertiaryContainer: chrome.green900,
+    onTertiaryContainer: chrome.emphasis,
     error: const Color(0xFFA6402E),
     onError: Colors.white,
     surface: chrome.card,
@@ -75,13 +75,13 @@ ThemeData buildIshamelaTheme(ReadingAtmosphere atmosphere) {
           fontFamily: kFontUi,
           fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
           fontSize: 12,
-          color: selected ? chrome.green900 : chrome.muted,
+          color: selected ? chrome.emphasis : chrome.muted,
         );
       }),
       iconTheme: WidgetStateProperty.resolveWith((states) {
         final selected = states.contains(WidgetState.selected);
         return IconThemeData(
-          color: selected ? chrome.green900 : chrome.muted,
+          color: selected ? chrome.emphasis : chrome.muted,
           size: 22,
         );
       }),
@@ -89,12 +89,12 @@ ThemeData buildIshamelaTheme(ReadingAtmosphere atmosphere) {
     navigationRailTheme: NavigationRailThemeData(
       backgroundColor: chrome.card,
       indicatorColor: chrome.green100,
-      selectedIconTheme: IconThemeData(color: chrome.green900),
+      selectedIconTheme: IconThemeData(color: chrome.emphasis),
       unselectedIconTheme: IconThemeData(color: chrome.muted),
       selectedLabelTextStyle: TextStyle(
         fontFamily: kFontUi,
         fontWeight: FontWeight.w700,
-        color: chrome.green900,
+        color: chrome.emphasis,
       ),
       unselectedLabelTextStyle: TextStyle(
         fontFamily: kFontUi,
@@ -179,6 +179,8 @@ IshamelaTokens _chromeFor(ReadingAtmosphere atmosphere) {
         segmentTrack: const Color(0xFFE0D2AF),
       );
     case ReadingAtmosphere.night:
+      // green900 stays brand-deep (hero fill). emphasis = night titles mint
+      // for selected chrome text (DESIGN-001 §2.1 fill vs §2.2 titles).
       return IshamelaTokens.paperLight.copyWith(
         paper: const Color(0xFF101B17),
         readerPaper: const Color(0xFF101B17),
@@ -186,9 +188,10 @@ IshamelaTokens _chromeFor(ReadingAtmosphere atmosphere) {
         hairline: const Color(0xFF223229),
         ink: const Color(0xFFE7E1D2),
         muted: const Color(0xFF7E9187),
-        green900: const Color(0xFF8FC7AC),
-        green700: const Color(0xFF79B893),
-        green100: const Color(0xFF223229),
+        green900: const Color(0xFF0E3B30),
+        green700: const Color(0xFF2A6B56),
+        green100: const Color(0xFF1E3A30),
+        emphasis: const Color(0xFF8FC7AC),
         gold: const Color(0xFFD8B36A),
         goldSoft: const Color(0xFFD8B36A),
         goldPale: const Color(0xFF3D3421),

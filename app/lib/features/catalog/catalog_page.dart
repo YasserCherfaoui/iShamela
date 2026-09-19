@@ -97,7 +97,7 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
                                 fontWeight: FontWeight.w700,
                                 fontSize: 10.5,
                                 letterSpacing: 2.5,
-                                color: t.green900,
+                                color: t.emphasis,
                               ),
                             ),
                             const Spacer(),
@@ -317,7 +317,7 @@ class _BrowseEntityCard extends StatelessWidget {
               CircleAvatar(
                 radius: 20,
                 backgroundColor: t.green100,
-                child: Icon(icon, color: t.green900, size: 20),
+                child: Icon(icon, color: t.emphasis, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -688,7 +688,7 @@ class _BookListPageState extends ConsumerState<BookListPage> {
                         onPressed: () => _confirmAndEnqueue(widget.books),
                         style: FilledButton.styleFrom(
                           backgroundColor: t.green100,
-                          foregroundColor: t.green900,
+                          foregroundColor: t.emphasis,
                         ),
                         child: Text(l10n.downloadAll),
                       ),
@@ -918,7 +918,7 @@ class MetaChipInstalled extends StatelessWidget {
           fontFamily: kFontUi,
           fontWeight: FontWeight.w600,
           fontSize: 11,
-          color: t.green900,
+          color: t.emphasis,
         ),
       ),
     );

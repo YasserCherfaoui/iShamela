@@ -809,7 +809,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
             child: ListTile(
               leading: CircleAvatar(
                 backgroundColor: t.green100,
-                child: Icon(Icons.folder_outlined, color: t.green900),
+                child: Icon(Icons.folder_outlined, color: t.emphasis),
               ),
               title: Text(
                 e.category.name,
@@ -873,7 +873,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
             child: ListTile(
               leading: CircleAvatar(
                 backgroundColor: t.green100,
-                child: Icon(Icons.person_outline, color: t.green900),
+                child: Icon(Icons.person_outline, color: t.emphasis),
               ),
               title: Text(
                 e.author.name,

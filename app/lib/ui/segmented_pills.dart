@@ -74,7 +74,7 @@ class _Segment extends StatelessWidget {
               fontFamily: kFontUi,
               fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
               fontSize: 13,
-              color: selected ? t.green900 : t.muted,
+              color: selected ? t.emphasis : t.muted,
             ),
           ),
         ),
