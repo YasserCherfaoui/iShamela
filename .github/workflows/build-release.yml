@@ -1,0 +1,311 @@
+# Build Flutter app artifacts and publish a GitHub Release patch on every push to main.
+# Version: bumps the patch of the latest `vX.Y.Z` tag (or pubspec version if none).
+# Build number: GitHub run_number (monotonic).
+#
+# PRs: analyze + test only (no release).
+# iOS App Store / signed IPA is out of scope here (needs Apple cert secrets).
+
+name: Build & Release
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: "3.32.5"
+
+jobs:
+  test:
+    name: Analyze & test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Pub get
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze --fatal-infos
+
+      - name: Test
+        run: flutter test
+
+  version:
+    name: Next patch version
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      tag: ${{ steps.ver.outputs.tag }}
+      build: ${{ steps.ver.outputs.build }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute next patch
+        id: ver
+        run: |
+          set -euo pipefail
+          git fetch --tags --force
+          LATEST="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1 || true)"
+          if [[ -z "${LATEST}" ]]; then
+            BASE="$(grep '^version:' app/pubspec.yaml | head -n1 | sed -E 's/^version:[[:space:]]*//;s/\+.*//')"
+            IFS=. read -r MAJOR MINOR PATCH <<< "${BASE}"
+            PATCH=$((PATCH + 1))
+          else
+            VER="${LATEST#v}"
+            IFS=. read -r MAJOR MINOR PATCH <<< "${VER}"
+            PATCH=$((PATCH + 1))
+          fi
+          VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          BUILD="${{ github.run_number }}"
+          # Skip if this tag somehow already exists (re-run / race).
+          if git rev-parse "v${VERSION}" >/dev/null 2>&1; then
+            PATCH=$((PATCH + 1))
+            VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          fi
+          {
+            echo "version=${VERSION}"
+            echo "tag=v${VERSION}"
+            echo "build=${BUILD}"
+          } >> "${GITHUB_OUTPUT}"
+          echo "Next release: v${VERSION}+${BUILD}"
+
+  build-android:
+    name: Android APK
+    needs: [test, version]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Build release APK
+        run: |
+          flutter build apk --release \
+            --build-name="${{ needs.version.outputs.version }}" \
+            --build-number="${{ needs.version.outputs.build }}"
+
+      - name: Rename artifact
+        run: |
+          cp build/app/outputs/flutter-apk/app-release.apk \
+            "build/app/outputs/flutter-apk/ishamela-${{ needs.version.outputs.tag }}.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: app/build/app/outputs/flutter-apk/ishamela-*.apk
+          if-no-files-found: error
+
+  build-web:
+    name: Web
+    needs: [test, version]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Build web
+        run: flutter build web --release --base-href ./
+
+      - name: Zip web
+        working-directory: app/build
+        run: |
+          zip -r "ishamela-${{ needs.version.outputs.tag }}-web.zip" web
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web
+          path: app/build/ishamela-*-web.zip
+          if-no-files-found: error
+
+  build-macos:
+    name: macOS
+    needs: [test, version]
+    if: github.event_name != 'pull_request'
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: CocoaPods
+        working-directory: app/macos
+        run: pod install
+
+      - name: Build macOS
+        run: |
+          flutter build macos --release \
+            --build-name="${{ needs.version.outputs.version }}" \
+            --build-number="${{ needs.version.outputs.build }}"
+
+      - name: Zip .app
+        working-directory: app/build/macos/Build/Products/Release
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent ishamela.app \
+            "${{ github.workspace }}/ishamela-${{ needs.version.outputs.tag }}-macos.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: ishamela-*-macos.zip
+          if-no-files-found: error
+
+  build-windows:
+    name: Windows
+    needs: [test, version]
+    if: github.event_name != 'pull_request'
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - run: flutter config --enable-windows-desktop
+
+      - run: flutter pub get
+
+      - name: Build Windows
+        run: |
+          flutter build windows --release `
+            --build-name=${{ needs.version.outputs.version }} `
+            --build-number=${{ needs.version.outputs.build }}
+
+      - name: Zip
+        working-directory: app/build/windows/x64/runner/Release
+        shell: pwsh
+        run: |
+          Compress-Archive -Path * -DestinationPath "$env:GITHUB_WORKSPACE/ishamela-${{ needs.version.outputs.tag }}-windows.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: ishamela-*-windows.zip
+          if-no-files-found: error
+
+  release:
+    name: GitHub Release
+    needs: [version, build-android, build-web, build-macos, build-windows]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Collect artifacts
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          find dist -type f \( -name '*.apk' -o -name '*.zip' \) -exec cp -v {} release-assets/ \;
+          ls -la release-assets
+
+      - name: Release notes
+        id: notes
+        run: |
+          set -euo pipefail
+          TAG="${{ needs.version.outputs.tag }}"
+          PREV="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1 || true)"
+          {
+            echo "## iShamela ${TAG}"
+            echo
+            echo "Automated patch release from \`${GITHUB_SHA::7}\` on \`main\`."
+            echo
+            echo "### Artifacts"
+            echo
+            echo "- **Android** APK (release; debug-signed until store keystore is configured)"
+            echo "- **Web** zip (best-effort stub — see ADR-001 / docs/ZSTD.md)"
+            echo "- **macOS** \`.app\` zip (unsigned)"
+            echo "- **Windows** runner zip (unsigned)"
+            echo
+            echo "iOS IPA is not produced here (Apple signing secrets required)."
+            echo
+            if [[ -n "${PREV}" && "${PREV}" != "${TAG}" ]]; then
+              echo "### Commits since ${PREV}"
+              echo
+              git log --pretty=format:'- %s (%h)' "${PREV}..HEAD" | head -n 40
+            else
+              echo "### Commits"
+              echo
+              git log --pretty=format:'- %s (%h)' -n 20
+            fi
+          } > RELEASE_NOTES.md
+          cat RELEASE_NOTES.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.version.outputs.tag }}
+          name: iShamela ${{ needs.version.outputs.tag }}
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: true
+          files: release-assets/*
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -22,3 +22,7 @@ Unit tests run in the Dart VM **without** the Flutter plugin’s native framewor
 ## Escalation
 
 No gzip fallback needed. If a target fails to link `zstandard` in CI, escalate before changing SPEC-002 compression.
+
+## iOS / macOS incremental-build note
+
+`zstandard_ios` / `zstandard_macos` podspecs register a CocoaPods script phase **Remove synced zstd** that deletes `Classes/zstd` after compile. The next Xcode build then fails with `Build input file cannot be found: …/zstd_v0N.c`. Our `ios/Podfile` and `macos/Podfile` `post_install` hooks strip that phase (keep **Sync zstd**). After `pod install`, do not re-add it.

@@ -1,11 +1,3 @@
-import 'package:flutter/widgets.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sqlite3_flutter_libs/sqlite3_flutter_libs.dart';
+import 'main_io.dart' if (dart.library.html) 'main_web.dart' as entry;
 
-import 'package:ishamela/app.dart';
-
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await applyWorkaroundToOpenSqlite3OnOldAndroidVersions();
-  runApp(const ProviderScope(child: IshamelaApp()));
-}
+Future<void> main() => entry.main();

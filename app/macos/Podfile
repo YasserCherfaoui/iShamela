@@ -38,5 +38,14 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_macos_build_settings(target)
+    # Same zstandard cleanup bug as iOS — keep synced C sources for incremental builds.
+    if target.name == 'zstandard_macos'
+      target.shell_script_build_phases.each do |phase|
+        if phase.name == '[CP-User] Remove synced zstd' ||
+           (phase.shell_script && phase.shell_script.include?('rm -rf "${PODS_TARGET_SRCROOT}/Classes/zstd"'))
+          target.build_phases.delete(phase)
+        end
+      end
+    end
   end
 end

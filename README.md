@@ -93,6 +93,10 @@ See [docs/VISION.md](docs/VISION.md) for the full product vision.
 
 The **code** in this repository is MIT-licensed. The **book content** is *not* distributed with this repository: it remains on Hugging Face under the terms of each dataset. The classical texts are in the public domain; rights to critical editions belong to their editors (muhaqqiqīn) and publishers, and the Shamela4 dataset is published for research and personal use. iShamela respects these terms — see `docs/LICENSING.md` (forthcoming).
 
+## CI / releases
+
+Pushes to `main` run [`.github/workflows/build-release.yml`](.github/workflows/build-release.yml): Flutter analyze + tests, then a **patch** GitHub prerelease (`vX.Y.Z`) with Android APK, macOS/Windows zips, and web zip. Pull requests get analyze + tests only. iOS IPA is omitted (Apple signing). Bundle publishing to Hugging Face remains the separate [`publish-bundles`](.github/workflows/publish-bundles.yml) workflow.
+
 ## Contributing
 
 iShamela is at the very beginning. If you care about making the Islamic library accessible to everyone, you're welcome:

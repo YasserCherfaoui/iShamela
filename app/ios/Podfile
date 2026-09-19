@@ -1,5 +1,5 @@
 # Uncomment this line to define a global platform for your project
-# platform :ios, '12.0'
+platform :ios, '13.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -39,5 +39,16 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+    # zstandard_ios ships a build-phase that `rm -rf Classes/zstd` after compile.
+    # Incremental Xcode builds then fail with "Build input file cannot be found".
+    # Keep the Sync phase; drop only the destructive cleanup (docs/ZSTD.md).
+    if target.name == 'zstandard_ios'
+      target.shell_script_build_phases.each do |phase|
+        if phase.name == '[CP-User] Remove synced zstd' ||
+           (phase.shell_script && phase.shell_script.include?('rm -rf "${PODS_TARGET_SRCROOT}/Classes/zstd"'))
+          target.build_phases.delete(phase)
+        end
+      end
+    end
   end
 end
