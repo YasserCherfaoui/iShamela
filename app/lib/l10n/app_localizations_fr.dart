@@ -656,4 +656,7 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get appTagline =>
       'Votre bibliothèque des sciences islamiques — hors ligne';
+
+  @override
+  String get startReading => 'Commencer la lecture';
 }

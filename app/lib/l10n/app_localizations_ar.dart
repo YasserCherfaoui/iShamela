@@ -650,4 +650,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get appTagline => 'مكتبتك في العلوم الشرعية — دون اتصال';
+
+  @override
+  String get startReading => 'ابدأ القراءة';
 }

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1024" height="1024">
+  <rect width="24" height="24" fill="#0E3B30"/>
+  <g fill="#C6A15B" transform="translate(12 6.2)">
+    <path d="M0,-2.4 L0.55,-0.55 L2.4,0 L0.55,0.55 L0,2.4 L-0.55,0.55 L-2.4,0 L-0.55,-0.55 Z"/>
+    <circle r="0.45"/>
+  </g>
+  <g fill="none" stroke="#F2E8CF" stroke-width="0.55" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 10.2 V18.6"/>
+    <path d="M12 10.2 C10.2 9.6, 7.4 9.5, 5.6 10.3 C5.2 10.5, 5 10.8, 5 11.2 V17.6 C5 18.1, 5.3 18.4, 5.8 18.2 C7.6 17.5, 10.2 17.5, 12 18.1"/>
+    <path d="M12 10.2 C13.8 9.6, 16.6 9.5, 18.4 10.3 C18.8 10.5, 19 10.8, 19 11.2 V17.6 C19 18.1, 18.7 18.4, 18.2 18.2 C16.4 17.5, 13.8 17.5, 12 18.1"/>
+    <path d="M7.2 12.4 C8.6 12.0, 10.4 12.0, 11.4 12.3" stroke-opacity="0.55" stroke-width="0.35"/>
+    <path d="M7.2 14.0 C8.6 13.6, 10.4 13.6, 11.4 13.9" stroke-opacity="0.55" stroke-width="0.35"/>
+    <path d="M12.6 12.3 C13.6 12.0, 15.4 12.0, 16.8 12.4" stroke-opacity="0.55" stroke-width="0.35"/>
+    <path d="M12.6 13.9 C13.6 13.6, 15.4 13.6, 16.8 14.0" stroke-opacity="0.55" stroke-width="0.35"/>
+  </g>
+</svg>

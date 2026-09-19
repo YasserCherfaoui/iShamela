@@ -365,5 +365,6 @@
     }
   },
   "preparingLibrary": "Préparation de votre bibliothèque…",
-  "appTagline": "Votre bibliothèque des sciences islamiques — hors ligne"
+  "appTagline": "Votre bibliothèque des sciences islamiques — hors ligne",
+  "startReading": "Commencer la lecture"
 }

@@ -653,4 +653,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get appTagline => 'Your library of Islamic sciences — offline';
+
+  @override
+  String get startReading => 'Start reading';
 }

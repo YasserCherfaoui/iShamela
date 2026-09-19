@@ -7,7 +7,7 @@
 
 ## Part A — App icon (brand mark)
 
-- **BR-01** Mark geometry (per Brand board): gold 4-point rosette centered above the open-book glyph on a 24-unit grid; deep-green field `#0E3B30`; glyph strokes paper `#F2E8CF` 1.4–1.7u; rosette `#C6A15B`; inset double gold rule (outer 1.5px @ 85% opacity, inner 1px @ 45%) on the master only — rules drop below 64px renders.
+- **BR-01** Mark geometry (per Brand board): gold 4-point rosette centered above the open-book glyph on a 24-unit grid; deep-green field `#0E3B30`; glyph strokes paper `#F2E8CF` 1.4–1.7u; rosette `#C6A15B`; inset double gold rule (outer 1.5px @ 85% opacity, inner 1px @ 45%) on the **master / store icon only** — omit for splash rasters and for renders &lt; 64px.
 - **BR-02** **No text inside the icon** (no wordmark, no Arabic letters); the lockup (rosette + الشاملة + iSHAMELA) is for splash, About, and store listings only.
 - **BR-03** Master is a single SVG (`assets/brand/icon-master.svg`); all rasters are generated from it in CI/script — never hand-edited PNGs.
 - **BR-04** Android adaptive icon: background layer = flat `#0E3B30`; foreground layer = rosette+book glyph scaled so it fits the **66% safe zone** (survives circle/squircle masks — see Brand board circle demo). Android 13+ **monochrome/themed** layer = ink single-color glyph (Brand board "Monochrome" tile).
@@ -18,9 +18,9 @@
 ## Part B — Splash screen
 
 - **SP-01** Native splash via `flutter_native_splash` (incl. the `android_12:` section): full `#0E3B30` background, centered mark only (no wordmark on the native layer — Android 12 clips to a circle). iOS launch storyboard: same color + centered mark.
-- **SP-02** First Flutter frame renders the full splash layout from the Splash board — gold hairline, mark, **الشاملة** (Amiri 40/700 paper), **iSHAMELA** (letter-spaced gold), tagline `مكتبتك في العلوم الشرعية — دون اتصال`, and a 132×3 indeterminate gold bar with caption `يجري تجهيز المكتبة…` — shown **only while** startup work (DB open, catalog check, settings load) is pending.
+- **SP-02** First Flutter frame renders the full splash layout from the Splash board — gold hairline, mark, **الشاملة** (Amiri 40/700 paper), **iSHAMELA** (letter-spaced gold), tagline `مكتبتك في العلوم الشرعية — دون اتصال`. While startup work (DB open, settings load) is pending: a 132×3 indeterminate gold bar + caption `يجري تجهيز المكتبة…`. When ready: replace the bar/caption with a primary CTA **ابدأ القراءة** / `startReading` (gold fill, paper label).
 - **SP-03** Native→Flutter handoff is seamless: identical background color and mark position, so the wordmark/tagline appear to fade in around a stationary mark (250 ms fade; respect `disableAnimations`). No double-splash flash.
-- **SP-04** Splash → Catalog transition: 200 ms fade-through once startup completes; hard budget — if startup finishes < 400 ms, still hold the full splash to 400 ms total to avoid a flash-frame, never longer than the work itself + 400 ms.
+- **SP-04** Splash does **not** auto-dismiss. On CTA tap → select Catalog tab (index) and 200 ms fade-through to the shell. Min hold of 400 ms still applies before the CTA is enabled (avoid a flash-frame if work finishes instantly).
 - **SP-05** No dark-mode variant needed for the splash itself (`#0E3B30` works for both); status/navigation bar colors set to match during splash on Android.
 - **SP-06** The splash performs **no network work** and never blocks on catalog sync (sync stays a background tick per current behavior).
 
@@ -57,7 +57,7 @@ Replaces the stock Material snackbar for download events; visual per the Downloa
 ## Acceptance criteria
 
 1. Icon renders crisply at 48–512 on Android (circle + squircle masks keep the glyph whole), iOS, web favicon, and Android 13 themed mode; all produced by the generation script from one SVG.
-2. Cold start: no white flash, no double splash; mark stays fixed through native→Flutter handoff; app is interactive ≤ startup work + 400 ms.
+2. Cold start: no white flash, no double splash; mark stays fixed through native→Flutter handoff; after ready, user taps **ابدأ القراءة** to enter Catalog (index).
 3. Tapping download on صحيح مسلم: button becomes an indeterminate ring within one frame, snackbar appears with title, ring and snackbar both show live ٪ once size is known; double-tapping produced exactly one queue task.
 4. An installed book shows no download affordance in Catalog browse, Catalog search, BookListPage, author page, or select mode; تنزيل الكل over a category with 3 installed of 10 confirms "٧ كتب".
 5. Forced enqueue of an installed book (test hook) → rejected + "مثبّت بالفعل" snackbar with working افتح.
@@ -69,7 +69,7 @@ Unit: derived-state mapper (all queue statuses), idempotent enqueue (installed/q
 
 ## l10n keys
 
-`downloadingBook, downloadingNBooks, viewDownloads, downloadCompleteSnack, open, downloadFailedSnack, retry, alreadyInstalled, preparingLibrary, appTagline`
+`downloadingBook, downloadingNBooks, viewDownloads, downloadCompleteSnack, open, downloadFailedSnack, retry, alreadyInstalled, preparingLibrary, appTagline, startReading`
 
 ## Open questions
 

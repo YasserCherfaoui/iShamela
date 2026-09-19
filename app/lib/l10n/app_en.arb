@@ -365,5 +365,6 @@
     }
   },
   "preparingLibrary": "Preparing your library…",
-  "appTagline": "Your library of Islamic sciences — offline"
+  "appTagline": "Your library of Islamic sciences — offline",
+  "startReading": "Start reading"
 }

@@ -1,6 +1,8 @@
 <div align="center">
 
-# 📚 iShamela
+<img src="app/assets/brand/generated/master-256.png" alt="iShamela logo" width="128" height="128" />
+
+# iShamela
 
 **A modern, open-source, cross-platform library for the Islamic Sciences.**
 

@@ -1243,6 +1243,12 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'مكتبتك في العلوم الشرعية — دون اتصال'**
   String get appTagline;
+
+  /// No description provided for @startReading.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابدأ القراءة'**
+  String get startReading;
 }
 
 class _AppLocalizationsDelegate
