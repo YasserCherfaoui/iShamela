@@ -134,7 +134,6 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
                         ),
                         const SizedBox(height: 16),
                         CatalogSearchField(
-                          key: ValueKey('cat-search-$_query'),
                           hintText: l10n.searchHint,
                           initialQuery: _query,
                           onChanged: (v) => setState(() => _query = v),

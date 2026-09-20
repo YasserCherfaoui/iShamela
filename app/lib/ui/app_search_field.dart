@@ -36,6 +36,20 @@ class _AppSearchFieldState extends State<AppSearchField> {
   }
 
   @override
+  void didUpdateWidget(covariant AppSearchField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Sync external query updates (e.g. catalog pending jump) without
+    // remounting — remounting via ValueKey(query) steals focus on each key.
+    if (widget.initialQuery != oldWidget.initialQuery &&
+        widget.initialQuery != _ctrl.text) {
+      _ctrl.value = TextEditingValue(
+        text: widget.initialQuery,
+        selection: TextSelection.collapsed(offset: widget.initialQuery.length),
+      );
+    }
+  }
+
+  @override
   void dispose() {
     _ctrl.dispose();
     _focus.dispose();
