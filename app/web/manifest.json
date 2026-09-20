@@ -1,13 +1,15 @@
 {
-    "name": "ishamela",
-    "short_name": "ishamela",
+    "name": "الشاملة · iShamela",
+    "short_name": "الشاملة",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0E3B30",
     "theme_color": "#0E3B30",
-    "description": "A new Flutter project.",
+    "description": "مكتبتك في العلوم الشرعية — دون اتصال. تصفّح الفهرس، نزّل الكتب، واقرأ مع البحث الكامل. Your offline library of Islamic sciences.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
+    "lang": "ar",
+    "dir": "rtl",
     "icons": [
         {
             "src": "icons/Icon-192.png",
