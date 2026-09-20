@@ -52,6 +52,7 @@ class _AuthorPageState extends ConsumerState<AuthorPage> {
     final t = IshamelaTokens.of(context);
     final catalogAsync = ref.watch(catalogRepositoryProvider);
     final stateAsync = ref.watch(stateDatabaseProvider);
+    ref.watch(downloadRevisionProvider);
     ref.watch(downloadServiceProvider);
 
     return catalogAsync.when(

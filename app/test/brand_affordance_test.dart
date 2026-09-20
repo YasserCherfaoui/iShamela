@@ -77,6 +77,15 @@ void main() {
       );
       expect(a.kind, BookAffordanceKind.download);
     });
+
+    test('done status shows as installed', () {
+      final a = mapBookAffordance(
+        installed: false,
+        canInstallOnDevice: true,
+        status: DownloadStatus.done,
+      );
+      expect(a.kind, BookAffordanceKind.installed);
+    });
   });
 
   group('downloadableNotInstalledNotQueued', () {

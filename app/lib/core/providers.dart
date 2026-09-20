@@ -12,6 +12,23 @@ import 'package:ishamela/features/downloads/download_service.dart';
 import 'package:ishamela/features/reader/reader_styles.dart';
 import 'package:ishamela/ui/theme/reader_theme_tokens.dart';
 
+/// Root navigator — snack overlays sit outside the route tree (SPEC-020).
+final appNavigatorKey = GlobalKey<NavigatorState>();
+
+/// Bumped whenever the download queue / install registry changes so catalog
+/// and library rows rebuild (FutureProviders alone do not).
+final downloadRevisionProvider =
+    NotifierProvider<DownloadRevisionNotifier, int>(
+  DownloadRevisionNotifier.new,
+);
+
+class DownloadRevisionNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void bump() => state++;
+}
+
 final appPathsProvider = FutureProvider<AppPaths>((ref) => AppPaths.resolve());
 
 final dioProvider = Provider<Dio>((ref) => createAppDio());
@@ -65,6 +82,13 @@ final downloadServiceProvider = FutureProvider<DownloadService>((ref) async {
     catalog: catalog,
     pagesBaseUrl: pagesBaseUrl,
   );
+  void onQueueChanged() {
+    if (!ref.mounted) return;
+    ref.read(downloadRevisionProvider.notifier).bump();
+  }
+
+  service.addListener(onQueueChanged);
+  ref.onDispose(() => service.removeListener(onQueueChanged));
   service.recoverQueue();
   return service;
 });

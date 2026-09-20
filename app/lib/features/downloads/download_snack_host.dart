@@ -49,11 +49,12 @@ class DownloadSnackController extends Notifier<DownloadSnackState?> {
           bookId: bookId,
           title: title,
         );
-        _armHide(const Duration(seconds: 4));
+        // Stay visible for the whole download so we can morph to «افتح».
+        _cancelHide();
         _watchProgress(bookId);
       case EnqueueResult.alreadyInstalled:
         state = alreadyInstalledSnack(bookId: bookId, title: title);
-        _armHide(const Duration(seconds: 4));
+        _armHide(const Duration(seconds: 8));
       case EnqueueResult.alreadyQueued:
       case EnqueueResult.rejected:
         break;
@@ -79,7 +80,8 @@ class DownloadSnackController extends Notifier<DownloadSnackState?> {
           final title =
               catalog?.bookById(bookId)?.title ?? cur.primaryTitle;
           state = completeSnack(bookId: bookId, title: title);
-          _armHide(const Duration(seconds: 3));
+          // Give time to tap «افتح» (action only exists in complete phase).
+          _armHide(const Duration(seconds: 10));
           return;
         }
         if (t.status == DownloadStatus.error) {
@@ -90,9 +92,11 @@ class DownloadSnackController extends Notifier<DownloadSnackState?> {
           final title =
               catalog?.bookById(bookId)?.title ?? cur.primaryTitle;
           state = failedSnack(bookId: bookId, title: title);
-          _armHide(const Duration(seconds: 4));
+          _armHide(const Duration(seconds: 8));
           return;
         }
+        // Still downloading — keep snack alive (no auto-hide).
+        _cancelHide();
         state = withLiveProgress(
           cur,
           bytesDone: t.bytesDone,
@@ -105,15 +109,20 @@ class DownloadSnackController extends Notifier<DownloadSnackState?> {
     });
   }
 
-  void _armHide(Duration d) {
+  void _cancelHide() {
     _hide?.cancel();
+    _hide = null;
+  }
+
+  void _armHide(Duration d) {
+    _cancelHide();
     _hide = Timer(d, () {
       state = null;
     });
   }
 
   void dismiss() {
-    _hide?.cancel();
+    _cancelHide();
     state = null;
   }
 
@@ -167,7 +176,8 @@ class _DownloadSnackBar extends ConsumerWidget {
     final t = IshamelaTokens.of(context);
     final night =
         ReaderThemeTokens.of(context).atmosphere == ReadingAtmosphere.night;
-    final bg = night ? const Color(0xFF1B2A24) : t.green900;
+    // A step above chrome green900 / night raised so the bar reads as a surface.
+    final bg = night ? const Color(0xFF2A3D35) : t.green700;
     final paper = const Color(0xFFF2E8CF);
     final errorTint = const Color(0xFFE08A76);
     final reduce = MediaQuery.disableAnimationsOf(context);
@@ -192,9 +202,11 @@ class _DownloadSnackBar extends ConsumerWidget {
           () {
             final id = state.bookIds.first;
             final title = state.primaryTitle;
-            // Capture navigator before dismiss — snackbar unmounts this context.
-            final nav = Navigator.of(context, rootNavigator: true);
+            // Snack sits beside the Navigator in [MaterialApp.builder], so
+            // this context has no Navigator ancestor — use the app key.
+            final nav = appNavigatorKey.currentState;
             ref.read(downloadSnackProvider.notifier).dismiss();
+            if (nav == null) return;
             nav.push(
               MaterialPageRoute<void>(
                 builder: (_) => ReaderPage(
@@ -222,8 +234,9 @@ class _DownloadSnackBar extends ConsumerWidget {
           () {
             final id = state.bookIds.first;
             final title = state.primaryTitle;
-            final nav = Navigator.of(context, rootNavigator: true);
+            final nav = appNavigatorKey.currentState;
             ref.read(downloadSnackProvider.notifier).dismiss();
+            if (nav == null) return;
             nav.push(
               MaterialPageRoute<void>(
                 builder: (_) => ReaderPage(

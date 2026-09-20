@@ -7,6 +7,8 @@ All notable changes to this project are documented in this file.
 ### Changed
 
 - Web reader: disable the browser context menu and show the highlight/note/cite toolbar when a text selection finishes (right-click still works too).
+- Fix catalog/index row state after download (revision tick + treat `done` as installed); snackbar **افتح** uses the app navigator key so it can push the Reader.
+- Download snackbar stays visible for the whole download (progress action = **عرض** only); after completion it morphs to **افتح** and remains ~10 s.
 - Web (GitHub Pages / Vercel): launch the real app via WASM sqlite3 + IndexedDB VFS; **SPEC-021** enables the same Download → install → Reader path in the browser (origin storage), with optional `navigator.storage.persist()`.
 
 ### Added

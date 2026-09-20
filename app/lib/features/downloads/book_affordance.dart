@@ -31,7 +31,9 @@ BookAffordance mapBookAffordance({
   int bytesDone = 0,
   int? bytesTotal,
 }) {
-  if (installed) {
+  // `done` means install finished; treat as installed even if a stale
+  // rebuild races the registry read.
+  if (installed || status == DownloadStatus.done) {
     return const BookAffordance(kind: BookAffordanceKind.installed);
   }
   if (!canInstallOnDevice) {

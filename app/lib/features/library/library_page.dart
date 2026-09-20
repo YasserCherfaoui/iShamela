@@ -323,6 +323,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
     final stateAsync = ref.watch(stateDatabaseProvider);
     final catalogAsync = ref.watch(catalogRepositoryProvider);
     final downloadsAsync = ref.watch(downloadServiceProvider);
+    ref.watch(downloadRevisionProvider);
 
     ref.listen(downloadServiceProvider, (prev, next) {
       next.whenData((svc) {
@@ -1150,9 +1151,8 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: () {
-                  final nav = Navigator.of(context, rootNavigator: true);
                   Navigator.pop(ctx);
-                  nav.push(
+                  appNavigatorKey.currentState?.push(
                     MaterialPageRoute<void>(
                       builder: (_) => ReaderPage(
                         bookId: book.bookId,

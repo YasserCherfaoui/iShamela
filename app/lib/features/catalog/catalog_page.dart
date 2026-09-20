@@ -786,6 +786,8 @@ class BookListView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    // Rebuild when queue/install registry changes (SPEC-020 DL-05).
+    ref.watch(downloadRevisionProvider);
     final stateAsync = ref.watch(stateDatabaseProvider);
     final downloadsAsync = ref.watch(downloadServiceProvider);
     final width = MediaQuery.sizeOf(context).width;
