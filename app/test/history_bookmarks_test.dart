@@ -8,7 +8,7 @@ import 'package:ishamela/core/db/state_database.dart';
 
 Future<StateDatabase> _openTemp() async {
   final dir = await Directory.systemTemp.createTemp('ishamela-hist-');
-  final paths = AppPaths(Directory(p.join(dir.path, 'ishamela')));
+  final paths = AppPaths(p.join(dir.path, 'ishamela'));
   await paths.ensureLayout();
   return StateDatabase.open(paths);
 }

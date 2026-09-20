@@ -4,7 +4,10 @@ import 'dart:developer' as developer;
 import 'package:dio/dio.dart';
 
 import 'package:ishamela/core/config.dart';
+import 'package:ishamela/core/db/app_fs.dart';
 import 'package:ishamela/core/db/open_readonly.dart';
+import 'package:ishamela/core/platform.dart';
+import 'package:ishamela/core/storage_persist.dart';
 import 'package:ishamela/core/db/paths.dart';
 import 'package:ishamela/core/db/state_database.dart';
 import 'package:ishamela/core/models/models.dart';
@@ -19,7 +22,7 @@ export 'package:ishamela/features/downloads/enqueue_result.dart';
 
 typedef NowMs = int Function();
 
-/// Download queue: max 2 concurrent, pages.jsonl → on-device SQLite (SPEC-008).
+/// Download queue: max 2 concurrent, pages.jsonl → on-device SQLite (SPEC-008 / SPEC-021).
 class DownloadService {
   DownloadService({
     required BundleDownloader downloader,
@@ -191,8 +194,7 @@ class DownloadService {
   Future<void> deleteInstalled(int bookId) async {
     await cancel(bookId);
     state.deleteInstalled(bookId);
-    final file = paths.bookSqlite(bookId);
-    if (file.existsSync()) await file.delete();
+    await deleteAppFile(paths.bookSqlite(bookId));
     _notify();
   }
 
@@ -250,13 +252,13 @@ class DownloadService {
   }
 
   Future<void> _deletePartials(int bookId) async {
-    for (final f in [
+    for (final p in [
       paths.tmpPagesJsonl(bookId),
       paths.tmpTocJsonl(bookId),
       paths.tmpIsb(bookId),
       paths.bookSqlitePart(bookId),
     ]) {
-      if (f.existsSync()) await f.delete();
+      await deleteAppFile(p);
     }
   }
 
@@ -297,16 +299,17 @@ class DownloadService {
       developer.log('install start book=$bookId', name: 'DownloadService');
       await _install(book, token);
       if (token.isCancelled) return;
-      final dest = paths.bookSqlite(bookId);
+      final destPath = paths.bookSqlite(bookId);
+      final destLen = appFileExistsSync(destPath) ? appFileLengthSync(destPath) : 0;
       state.upsertDownload(
         bookId: bookId,
         status: DownloadStatus.done.name,
-        bytesDone: dest.existsSync() ? dest.lengthSync() : 0,
-        bytesTotal: dest.existsSync() ? dest.lengthSync() : null,
+        bytesDone: destLen,
+        bytesTotal: destLen == 0 ? null : destLen,
         updatedAt: nowMs(),
       );
       developer.log(
-        'download done book=$bookId bytes=${dest.lengthSync()}',
+        'download done book=$bookId bytes=$destLen',
         name: 'DownloadService',
       );
     } on BundleInstallCancelled {
@@ -356,8 +359,7 @@ class DownloadService {
 
   void _fail(int bookId, String message) {
     unawaited(_deletePartials(bookId));
-    final dest = paths.bookSqlite(bookId);
-    if (dest.existsSync()) dest.deleteSync();
+    unawaited(deleteAppFile(paths.bookSqlite(bookId)));
     state.upsertDownload(
       bookId: bookId,
       status: DownloadStatus.error.name,
@@ -368,10 +370,10 @@ class DownloadService {
   }
 
   Future<void> _downloadPages(Book book, CancelToken token) async {
-    final dest = paths.tmpPagesJsonl(book.bookId);
+    final destPath = paths.tmpPagesJsonl(book.bookId);
     var existing = 0;
-    if (dest.existsSync()) {
-      existing = dest.lengthSync();
+    if (appFileExistsSync(destPath)) {
+      existing = appFileLengthSync(destPath);
     }
     state.upsertDownload(
       bookId: book.bookId,
@@ -385,7 +387,7 @@ class DownloadService {
     final url = catalogUrl(pagesBaseUrl, book.sourcePagesPath!);
     await _downloader.downloadToFile(
       url: url,
-      dest: dest,
+      destPath: destPath,
       existingBytes: existing,
       cancelToken: token,
       onProgress: (done) {
@@ -410,13 +412,13 @@ class DownloadService {
       try {
         await _downloader.downloadToFile(
           url: catalogUrl(pagesBaseUrl, tocRel),
-          dest: tocDest,
+          destPath: tocDest,
           existingBytes: 0,
           cancelToken: token,
         );
       } on DioException catch (e) {
         if (e.response?.statusCode == 404) {
-          if (tocDest.existsSync()) tocDest.deleteSync();
+          await deleteAppFile(tocDest);
         } else if (!CancelToken.isCancel(e)) {
           rethrow;
         }
@@ -434,19 +436,19 @@ class DownloadService {
     );
     _notify();
 
-    final pages = paths.tmpPagesJsonl(book.bookId);
-    if (!pages.existsSync()) {
+    final pagesPath = paths.tmpPagesJsonl(book.bookId);
+    if (!appFileExistsSync(pagesPath)) {
       throw StateError('missing pages.jsonl for book ${book.bookId}');
     }
 
     final result = await installer.installFromPagesJsonl(
-      pagesJsonl: pages,
-      partFile: paths.bookSqlitePart(book.bookId),
-      destFile: paths.bookSqlite(book.bookId),
+      pagesJsonlPath: pagesPath,
+      partPath: paths.bookSqlitePart(book.bookId),
+      destPath: paths.bookSqlite(book.bookId),
       book: book,
       sourceRevision: sourceRevision,
       builtBy: builtBy,
-      tocJsonl: paths.tmpTocJsonl(book.bookId),
+      tocJsonlPath: paths.tmpTocJsonl(book.bookId),
       isCancelled: () => token.isCancelled,
       onProgress: (pagesDone) {
         state.upsertDownload(
@@ -462,23 +464,21 @@ class DownloadService {
 
     final catalogNorm = catalog.normVersion;
     if (catalogNorm != null && result.normVersion != catalogNorm) {
-      final dest = paths.bookSqlite(book.bookId);
-      if (dest.existsSync()) dest.deleteSync();
-      await pages.delete();
+      await deleteAppFile(paths.bookSqlite(book.bookId));
+      await deleteAppFile(pagesPath);
       throw StateError(
         'norm_version mismatch: bundle=${result.normVersion} catalog=$catalogNorm',
       );
     }
     if (!supportedBookSchemaVersions.contains(result.schemaVersion)) {
-      final dest = paths.bookSqlite(book.bookId);
-      if (dest.existsSync()) dest.deleteSync();
-      await pages.delete();
+      await deleteAppFile(paths.bookSqlite(book.bookId));
+      await deleteAppFile(pagesPath);
       throw StateError('unsupported schema_version ${result.schemaVersion}');
     }
 
     // Smoke-open read-only to ensure the file is a valid SQLite DB.
-    final dest = paths.bookSqlite(book.bookId);
-    final db = openReadonlySqlite(dest);
+    final destPath = paths.bookSqlite(book.bookId);
+    final db = openReadonlySqlite(destPath);
     try {
       final rows = db.select(
         "SELECT value FROM meta WHERE key = 'page_count' LIMIT 1",
@@ -490,11 +490,10 @@ class DownloadService {
       db.dispose();
     }
 
-    await pages.delete();
-    final toc = paths.tmpTocJsonl(book.bookId);
-    if (toc.existsSync()) await toc.delete();
+    await deleteAppFile(pagesPath);
+    await deleteAppFile(paths.tmpTocJsonl(book.bookId));
 
-    final sizeBytes = dest.lengthSync();
+    final sizeBytes = appFileLengthSync(destPath);
     state.upsertInstalled(
       bookId: book.bookId,
       schemaVersion: int.parse(result.schemaVersion),
@@ -504,5 +503,8 @@ class DownloadService {
       pageCount: result.pageCount,
       installedSizeBytes: sizeBytes,
     );
+    if (isWebPlatform) {
+      unawaited(requestPersistentStorage());
+    }
   }
 }

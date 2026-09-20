@@ -1,16 +1,17 @@
 import 'dart:convert';
 import 'dart:developer' as developer;
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:sqlite3/sqlite3.dart' show SqliteException;
 
 import 'package:ishamela/core/compress/zstd.dart';
 import 'package:ishamela/core/config.dart';
+import 'package:ishamela/core/db/app_fs.dart';
 import 'package:ishamela/core/db/open_readonly.dart';
 import 'package:ishamela/core/db/paths.dart';
+import 'package:ishamela/core/db/sqlite_api.dart';
 import 'package:ishamela/core/models/models.dart';
 import 'package:ishamela/core/net/catalog_client.dart';
 import 'package:ishamela/core/search/normalizer.dart';
@@ -33,9 +34,8 @@ class CatalogSync {
   String get baseUrl => _client.baseUrl;
 
   int? localCatalogVersion() {
-    final file = paths.catalogSqlite;
-    if (!file.existsSync()) return null;
-    final db = openReadonlySqlite(file);
+    if (!appFileExistsSync(paths.catalogSqlite)) return null;
+    final db = openReadonlySqlite(paths.catalogSqlite);
     try {
       final rows = db.select(
         "SELECT value FROM meta WHERE key = 'catalog_version' LIMIT 1",
@@ -60,6 +60,10 @@ class CatalogSync {
       final local = localCatalogVersion() ?? 0;
       if (manifest.catalogVersion <= local) {
         return manifest;
+      }
+      // Web cannot decompress zstd CDN payloads yet — use bundled plain DB.
+      if (kIsWeb) {
+        return await _installBundledAssetCatalog();
       }
       await _installCatalogDb(manifest);
       return manifest;
@@ -92,7 +96,15 @@ class CatalogSync {
       jsonDecode(manifestRaw) as Map<String, dynamic>,
     );
     final local = localCatalogVersion() ?? 0;
-    if (manifest.catalogVersion <= local && paths.catalogSqlite.existsSync()) {
+    if (manifest.catalogVersion <= local &&
+        appFileExistsSync(paths.catalogSqlite)) {
+      return manifest;
+    }
+    if (kIsWeb) {
+      // Plain sqlite asset (no zstd FFI on web).
+      final data = await rootBundle.load('assets/catalog/catalog.sqlite');
+      final plain = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+      await _swapPlainCatalog(plain);
       return manifest;
     }
     final zst = await rootBundle.load('assets/catalog/catalog.sqlite.zst');
@@ -120,8 +132,12 @@ class CatalogSync {
 
   Future<void> _swapDecompressedCatalog(Uint8List zstBytes) async {
     final plain = await zstd.decompress(zstBytes);
+    await _swapPlainCatalog(plain);
+  }
+
+  Future<void> _swapPlainCatalog(Uint8List plain) async {
     final part = paths.catalogSqlitePart;
-    await part.writeAsBytes(plain, flush: true);
+    await writeAppFile(part, plain);
     final db = openReadonlySqlite(part);
     try {
       final schema = db.select(
@@ -134,11 +150,7 @@ class CatalogSync {
     } finally {
       db.dispose();
     }
-    final dest = paths.catalogSqlite;
-    if (dest.existsSync()) {
-      await dest.delete();
-    }
-    await part.rename(dest.path);
+    await renameAppFile(part, paths.catalogSqlite);
   }
 }
 
@@ -148,7 +160,7 @@ class CatalogRepository {
 
   final AppPaths paths;
 
-  bool get hasCatalog => paths.catalogSqlite.existsSync();
+  bool get hasCatalog => appFileExistsSync(paths.catalogSqlite);
 
   String? get normVersion {
     if (!hasCatalog) return null;
@@ -187,15 +199,11 @@ class CatalogRepository {
     }
   }
 
-  /// Age of catalog `generated_at` (or file mtime) in whole days; null if unknown.
+  /// Age of catalog `generated_at` in whole days; null if unknown.
   int? catalogAgeDays() {
     final raw = generatedAt;
-    DateTime? when;
-    if (raw != null) {
-      when = DateTime.tryParse(raw);
-    } else if (hasCatalog) {
-      when = paths.catalogSqlite.statSync().modified;
-    }
+    if (raw == null) return null;
+    final when = DateTime.tryParse(raw);
     if (when == null) return null;
     return DateTime.now().toUtc().difference(when.toUtc()).inDays;
   }
@@ -730,11 +738,6 @@ class CatalogSearchResults {
     }
   }
   return (scope: chipScope, query: trimmed);
-}
-
-String sha256File(File file) {
-  final digest = sha256.convert(file.readAsBytesSync());
-  return digest.toString();
 }
 
 String sha256Bytes(Uint8List bytes) => sha256.convert(bytes).toString();

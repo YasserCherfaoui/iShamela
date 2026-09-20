@@ -95,6 +95,7 @@ class Book {
   /// Book card text from catalog (SPEC-009 `betaka_text`).
   final String? betakaText;
 
+  /// Installable when Hub `source_pages_path` is known (SPEC-008 / SPEC-021).
   bool get canInstallOnDevice =>
       sourcePagesPath != null && sourcePagesPath!.isNotEmpty;
 }

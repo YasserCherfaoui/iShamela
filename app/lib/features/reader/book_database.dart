@@ -1,8 +1,9 @@
+import 'package:ishamela/core/db/app_fs.dart';
 import 'package:ishamela/core/db/open_readonly.dart';
 import 'package:ishamela/core/db/paths.dart';
+import 'package:ishamela/core/db/sqlite_api.dart';
 import 'package:ishamela/core/search/normalizer.dart';
 import 'package:ishamela/core/search/normalizer_map.dart';
-import 'package:sqlite3/sqlite3.dart';
 
 /// One page from an installed book bundle (SPEC-002 / SPEC-005).
 class BookPage {
@@ -151,15 +152,15 @@ bool _isSpace(int c) =>
 class BookDatabase {
   BookDatabase._(this._db, this.bookId);
 
-  final Database _db;
+  final AppDatabase _db;
   final int bookId;
 
   static BookDatabase open(AppPaths paths, int bookId) {
-    final file = paths.bookSqlite(bookId);
-    if (!file.existsSync()) {
+    final path = paths.bookSqlite(bookId);
+    if (!appFileExistsSync(path)) {
       throw StateError('book $bookId is not installed');
     }
-    return BookDatabase._(openReadonlySqlite(file), bookId);
+    return BookDatabase._(openReadonlySqlite(path), bookId);
   }
 
   void close() => _db.dispose();

@@ -16,7 +16,7 @@ Future<void> main() async {
     defaultValue: 'http://127.0.0.1:8000/',
   );
   final root = Directory.systemTemp.createTempSync('sync_smoke');
-  final paths = AppPaths(Directory(p.join(root.path, 'ishamela')));
+  final paths = AppPaths(p.join(root.path, 'ishamela'));
   await paths.ensureLayout();
   stdout.writeln('baseUrl=$base');
   try {
@@ -27,10 +27,10 @@ Future<void> main() async {
     );
     final m = await sync.sync();
     stdout.writeln(
-      'sync manifest=${m?.catalogVersion} has=${paths.catalogSqlite.existsSync()} '
-      'bytes=${paths.catalogSqlite.existsSync() ? paths.catalogSqlite.lengthSync() : 0}',
+      'sync manifest=${m?.catalogVersion} has=${File(paths.catalogSqlite).existsSync()} '
+      'bytes=${File(paths.catalogSqlite).existsSync() ? File(paths.catalogSqlite).lengthSync() : 0}',
     );
-    exit(m != null && paths.catalogSqlite.existsSync() ? 0 : 1);
+    exit(m != null && File(paths.catalogSqlite).existsSync() ? 0 : 1);
   } catch (e, st) {
     stdout.writeln('FAIL $e\n$st');
     exit(1);

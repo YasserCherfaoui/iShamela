@@ -1,12 +1,12 @@
 import 'dart:convert';
-import 'dart:io';
 
-import 'package:sqlite3/sqlite3.dart';
-
+import 'package:ishamela/core/db/app_fs.dart';
+import 'package:ishamela/core/db/sqlite_api.dart';
 import 'package:ishamela/core/models/models.dart';
 import 'package:ishamela/core/search/normalizer.dart';
 
 /// Builds a SPEC-002/009 book SQLite+FTS5 database from `pages.jsonl` (+ TOC).
+/// Paths are plain strings (native FS or IndexedDB VFS) — SPEC-008 / SPEC-021.
 class BundleInstaller {
   const BundleInstaller();
 
@@ -14,20 +14,20 @@ class BundleInstaller {
   static const String sourceDataset = 'AuthenticIlm/Shamela4_Full_DB';
 
   Future<BundleInstallResult> installFromPagesJsonl({
-    required File pagesJsonl,
-    required File partFile,
-    required File destFile,
+    required String pagesJsonlPath,
+    required String partPath,
+    required String destPath,
     required Book book,
     required String sourceRevision,
     required String builtBy,
-    File? tocJsonl,
+    String? tocJsonlPath,
     void Function(int pagesDone)? onProgress,
     bool Function()? isCancelled,
   }) async {
-    if (partFile.existsSync()) partFile.deleteSync();
-    if (destFile.existsSync()) destFile.deleteSync();
+    await deleteAppFile(partPath);
+    await deleteAppFile(destPath);
 
-    final db = sqlite3.open(partFile.path);
+    final db = openAppDatabase(partPath);
     var pageCount = 0;
     final sourceToId = <int, int>{};
     try {
@@ -80,11 +80,7 @@ class BundleInstaller {
       final usedIds = <int>{};
       var nextFreeId = 1;
       try {
-        final lines = pagesJsonl
-            .openRead()
-            .transform(utf8.decoder)
-            .transform(const LineSplitter());
-        await for (final line in lines) {
+        await for (final line in appFileLines(pagesJsonlPath)) {
           if (isCancelled?.call() == true) {
             throw const BundleInstallCancelled();
           }
@@ -151,8 +147,8 @@ class BundleInstaller {
       }
       onProgress?.call(pageCount);
 
-      if (tocJsonl != null && tocJsonl.existsSync()) {
-        await _insertToc(db, tocJsonl, sourceToId, isCancelled);
+      if (tocJsonlPath != null && appFileExistsSync(tocJsonlPath)) {
+        await _insertToc(db, tocJsonlPath, sourceToId, isCancelled);
       }
 
       final author = book.authorName ?? '';
@@ -189,12 +185,12 @@ class BundleInstaller {
       db.execute('VACUUM');
     } catch (e) {
       db.dispose();
-      if (partFile.existsSync()) partFile.deleteSync();
+      await deleteAppFile(partPath);
       rethrow;
     }
     db.dispose();
 
-    partFile.renameSync(destFile.path);
+    await renameAppFile(partPath, destPath);
     return BundleInstallResult(
       pageCount: pageCount,
       schemaVersion: bookSchemaVersion,
@@ -203,8 +199,8 @@ class BundleInstaller {
   }
 
   Future<void> _insertToc(
-    Database db,
-    File tocJsonl,
+    AppDatabase db,
+    String tocJsonlPath,
     Map<int, int> sourceToId,
     bool Function()? isCancelled,
   ) async {
@@ -213,11 +209,7 @@ class BundleInstaller {
       'VALUES (?, ?, ?, ?, ?)',
     );
     try {
-      final lines = tocJsonl
-          .openRead()
-          .transform(utf8.decoder)
-          .transform(const LineSplitter());
-      await for (final line in lines) {
+      await for (final line in appFileLines(tocJsonlPath)) {
         if (isCancelled?.call() == true) {
           throw const BundleInstallCancelled();
         }

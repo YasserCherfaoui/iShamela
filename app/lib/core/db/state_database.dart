@@ -1,4 +1,5 @@
-import 'package:sqlite3/sqlite3.dart';
+import 'package:ishamela/core/db/app_fs.dart';
+import 'package:ishamela/core/db/sqlite_api.dart';
 
 import 'package:ishamela/core/db/paths.dart';
 import 'package:ishamela/core/models/models.dart';
@@ -7,10 +8,10 @@ import 'package:ishamela/core/models/models.dart';
 class StateDatabase {
   StateDatabase(this._db);
 
-  final Database _db;
+  final AppDatabase _db;
 
   static Future<StateDatabase> open(AppPaths paths) async {
-    final db = sqlite3.open(paths.stateSqlite.path);
+    final db = openAppDatabase(paths.stateSqlite);
     db.execute('PRAGMA foreign_keys = ON');
     final version =
         db.select('PRAGMA user_version').first.columnAt(0) as int;

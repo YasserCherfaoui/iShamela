@@ -1,43 +1,33 @@
-import 'dart:io';
-
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
+import 'package:ishamela/core/db/app_fs.dart';
+import 'package:ishamela/core/db/paths_resolve.dart';
 
 /// Filesystem layout under the app support directory (SPEC-004).
+///
+/// Paths are plain strings so the same API works on IO and web (WASM VFS).
 class AppPaths {
   AppPaths(this.root);
 
-  final Directory root;
+  /// Root directory path (`…/ishamela` or `/ishamela` on web).
+  final String root;
 
-  Directory get catalogDir => Directory(p.join(root.path, 'catalog'));
-  File get catalogSqlite => File(p.join(catalogDir.path, 'catalog.sqlite'));
-  File get catalogSqlitePart =>
-      File(p.join(catalogDir.path, 'catalog.sqlite.part'));
-  File get stateSqlite => File(p.join(root.path, 'state.sqlite'));
-  Directory get tmpDir => Directory(p.join(root.path, 'tmp'));
-  Directory get booksDir => Directory(p.join(root.path, 'books'));
+  String get catalogDir => '$root/catalog';
+  String get catalogSqlite => '$catalogDir/catalog.sqlite';
+  String get catalogSqlitePart => '$catalogDir/catalog.sqlite.part';
+  String get stateSqlite => '$root/state.sqlite';
+  String get tmpDir => '$root/tmp';
+  String get booksDir => '$root/books';
 
-  File tmpIsb(int bookId) => File(p.join(tmpDir.path, 'book_$bookId.isb'));
-  File tmpPagesJsonl(int bookId) =>
-      File(p.join(tmpDir.path, 'book_$bookId.pages.jsonl'));
-  File tmpTocJsonl(int bookId) =>
-      File(p.join(tmpDir.path, 'book_$bookId.toc.jsonl'));
-  File bookSqlite(int bookId) =>
-      File(p.join(booksDir.path, 'book_$bookId.sqlite'));
-  File bookSqlitePart(int bookId) =>
-      File(p.join(booksDir.path, 'book_$bookId.sqlite.part'));
+  String tmpIsb(int bookId) => '$tmpDir/book_$bookId.isb';
+  String tmpPagesJsonl(int bookId) => '$tmpDir/book_$bookId.pages.jsonl';
+  String tmpTocJsonl(int bookId) => '$tmpDir/book_$bookId.toc.jsonl';
+  String bookSqlite(int bookId) => '$booksDir/book_$bookId.sqlite';
+  String bookSqlitePart(int bookId) => '$booksDir/book_$bookId.sqlite.part';
 
   Future<void> ensureLayout() async {
-    await catalogDir.create(recursive: true);
-    await tmpDir.create(recursive: true);
-    await booksDir.create(recursive: true);
+    await ensureAppDir(catalogDir);
+    await ensureAppDir(tmpDir);
+    await ensureAppDir(booksDir);
   }
 
-  static Future<AppPaths> resolve() async {
-    final support = await getApplicationSupportDirectory();
-    final root = Directory(p.join(support.path, 'ishamela'));
-    final paths = AppPaths(root);
-    await paths.ensureLayout();
-    return paths;
-  }
+  static Future<AppPaths> resolve() => resolveAppPaths();
 }

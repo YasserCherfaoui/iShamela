@@ -1,10 +1,8 @@
-import 'dart:io';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ishamela/l10n/app_localizations.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import 'package:ishamela/core/providers.dart';
@@ -279,17 +277,21 @@ class _ExportSheetState extends ConsumerState<_ExportSheet> {
         edition: edition,
       );
 
-      final dir = await getTemporaryDirectory();
       final name = exportFilename(
         bookId: widget.bookId,
         date: now,
         format: format,
       );
-      final file = File(p.join(dir.path, name));
-      await file.writeAsString(text, flush: true);
+      final bytes = utf8.encode(text);
       await SharePlus.instance.share(
         ShareParams(
-          files: [XFile(file.path)],
+          files: [
+            XFile.fromData(
+              bytes,
+              mimeType: 'text/plain',
+              name: name,
+            ),
+          ],
           subject: l10n.notesFileHeading(widget.title),
         ),
       );

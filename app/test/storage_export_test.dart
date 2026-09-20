@@ -10,7 +10,7 @@ import 'package:ishamela/features/reader/annotations_export.dart';
 
 Future<StateDatabase> _openTemp() async {
   final dir = await Directory.systemTemp.createTemp('ishamela-st-');
-  final paths = AppPaths(Directory(p.join(dir.path, 'ishamela')));
+  final paths = AppPaths(p.join(dir.path, 'ishamela'));
   await paths.ensureLayout();
   return StateDatabase.open(paths);
 }
@@ -43,7 +43,7 @@ void main() {
 
   test('backfill fills missing sizes from disk', () async {
     final dir = await Directory.systemTemp.createTemp('ishamela-bf-');
-    final paths = AppPaths(Directory(p.join(dir.path, 'ishamela')));
+    final paths = AppPaths(p.join(dir.path, 'ishamela'));
     await paths.ensureLayout();
     final state = await StateDatabase.open(paths);
     // Insert with null size by raw SQL after upsert then clear
@@ -58,7 +58,7 @@ void main() {
     state.setInstalledSizeBytes(9, 10);
     // Force null
     // ignore: invalid_use_of_visible_for_testing_member
-    final bookFile = paths.bookSqlite(9);
+    final bookFile = File(paths.bookSqlite(9));
     await bookFile.parent.create(recursive: true);
     await bookFile.writeAsBytes(List.filled(42, 1));
     // Clear size to simulate pre-migration row

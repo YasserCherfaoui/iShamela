@@ -66,7 +66,7 @@ void main() {
 
   test('highlights and notes persist in state.sqlite', () async {
     final dir = await Directory.systemTemp.createTemp('ishamela-ann-');
-    final paths = AppPaths(Directory(p.join(dir.path, 'ishamela')));
+    final paths = AppPaths(p.join(dir.path, 'ishamela'));
     await paths.ensureLayout();
     final state = await StateDatabase.open(paths);
 

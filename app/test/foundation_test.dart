@@ -78,7 +78,7 @@ class _MemoryAdapter implements HttpClientAdapter {
 
 Future<AppPaths> _tempPaths() async {
   final dir = await Directory.systemTemp.createTemp('ishamela-test-');
-  final paths = AppPaths(Directory(p.join(dir.path, 'ishamela')));
+  final paths = AppPaths(p.join(dir.path, 'ishamela'));
   await paths.ensureLayout();
   return paths;
 }
@@ -106,7 +106,7 @@ void main() {
   test('catalog search with and without diacritics', () async {
     final paths = await _tempPaths();
     await File(p.join(_fixtures.path, 'catalog.sqlite'))
-        .copy(paths.catalogSqlite.path);
+        .copy(paths.catalogSqlite);
     final repo = CatalogRepository(paths);
     final withMarks = repo.search('الْكِتَابُ الْمُبِينُ');
     final plain = repo.search(normalize('الْكِتَابُ الْمُبِينُ'));
@@ -120,7 +120,7 @@ void main() {
 
   test('BundleInstaller tolerates duplicate sequence_num', () async {
     final paths = await _tempPaths();
-    final pages = File(p.join(paths.tmpDir.path, 'dup.pages.jsonl'));
+    final pages = File(p.join(paths.tmpDir, 'dup.pages.jsonl'));
     await pages.writeAsString(
       '{"sequence_num":1,"page_num":1,"part":null,"body":"أول"}\n'
       '{"sequence_num":1,"page_num":2,"part":"1","body":"مكرر"}\n'
@@ -138,9 +138,9 @@ void main() {
       sourcePagesPath: 'x/pages.jsonl',
     );
     final result = await const BundleInstaller().installFromPagesJsonl(
-      pagesJsonl: pages,
-      partFile: paths.bookSqlitePart(42),
-      destFile: paths.bookSqlite(42),
+      pagesJsonlPath: pages.path,
+      partPath: paths.bookSqlitePart(42),
+      destPath: paths.bookSqlite(42),
       book: book,
       sourceRevision: 'test',
       builtBy: 'test',
@@ -177,7 +177,7 @@ void main() {
     );
     final result = await sync.sync();
     expect(result, isNotNull);
-    expect(paths.catalogSqlite.existsSync(), isTrue);
+    expect(File(paths.catalogSqlite).existsSync(), isTrue);
     expect(sync.localCatalogVersion(), 1);
   });
 
@@ -204,7 +204,7 @@ void main() {
     );
     final result = await sync.sync();
     expect(result, isNull);
-    expect(paths.catalogSqlite.existsSync(), isFalse);
+    expect(File(paths.catalogSqlite).existsSync(), isFalse);
   });
 
   test('BundleInstaller builds SPEC-002 sqlite with FTS', () async {
@@ -224,9 +224,9 @@ void main() {
       sourcePagesPath: 'book_900001/pages.jsonl',
     );
     final result = await const BundleInstaller().installFromPagesJsonl(
-      pagesJsonl: pages,
-      partFile: paths.bookSqlitePart(900001),
-      destFile: paths.bookSqlite(900001),
+      pagesJsonlPath: pages.path,
+      partPath: paths.bookSqlitePart(900001),
+      destPath: paths.bookSqlite(900001),
       book: book,
       sourceRevision: 'test-rev',
       builtBy: 'ishamela/test',
@@ -266,7 +266,7 @@ void main() {
   test('download happy path installs from pages.jsonl', () async {
     final paths = await _tempPaths();
     await File(p.join(_fixtures.path, 'catalog.sqlite'))
-        .copy(paths.catalogSqlite.path);
+        .copy(paths.catalogSqlite);
     final state = await StateDatabase.open(paths);
     final catalog = CatalogRepository(paths);
     final pages = _read('book_900001.pages.jsonl');
@@ -282,8 +282,8 @@ void main() {
     );
     await svc.enqueue(900001);
     await _waitUntil(() => state.isInstalled(900001));
-    expect(paths.bookSqlite(900001).existsSync(), isTrue);
-    expect(paths.tmpPagesJsonl(900001).existsSync(), isFalse);
+    expect(File(paths.bookSqlite(900001)).existsSync(), isTrue);
+    expect(File(paths.tmpPagesJsonl(900001)).existsSync(), isFalse);
 
     final db = openReadonlySqlite(paths.bookSqlite(900001));
     try {
@@ -302,7 +302,7 @@ void main() {
   test('cancel mid-download leaves no installed row or sqlite', () async {
     final paths = await _tempPaths();
     await File(p.join(_fixtures.path, 'catalog.sqlite'))
-        .copy(paths.catalogSqlite.path);
+        .copy(paths.catalogSqlite);
     final state = await StateDatabase.open(paths);
     final catalog = CatalogRepository(paths);
     final pages = _read('book_900001.pages.jsonl');
@@ -330,15 +330,15 @@ void main() {
     release.complete();
     await Future<void>.delayed(const Duration(milliseconds: 50));
     expect(state.isInstalled(900001), isFalse);
-    expect(paths.bookSqlite(900001).existsSync(), isFalse);
-    expect(paths.tmpPagesJsonl(900001).existsSync(), isFalse);
+    expect(File(paths.bookSqlite(900001)).existsSync(), isFalse);
+    expect(File(paths.tmpPagesJsonl(900001)).existsSync(), isFalse);
     expect(svc.listTasks().where((t) => t.bookId == 900001), isEmpty);
   });
 
   test('airplane mode after install: book DB opens read-only', () async {
     final paths = await _tempPaths();
     await File(p.join(_fixtures.path, 'catalog.sqlite'))
-        .copy(paths.catalogSqlite.path);
+        .copy(paths.catalogSqlite);
     final state = await StateDatabase.open(paths);
     final catalog = CatalogRepository(paths);
     final pages = _read('book_900001.pages.jsonl');
@@ -370,12 +370,12 @@ void main() {
   test('resume issues Range request for pages.jsonl', () async {
     final paths = await _tempPaths();
     await File(p.join(_fixtures.path, 'catalog.sqlite'))
-        .copy(paths.catalogSqlite.path);
+        .copy(paths.catalogSqlite);
     final state = await StateDatabase.open(paths);
     final catalog = CatalogRepository(paths);
     final pages = _read('book_900001.pages.jsonl');
     final partial = pages.sublist(0, pages.length ~/ 2);
-    await paths.tmpPagesJsonl(900001).writeAsBytes(partial);
+    await File(paths.tmpPagesJsonl(900001)).writeAsBytes(partial);
     state.upsertDownload(
       bookId: 900001,
       status: DownloadStatus.queued.name,
@@ -419,7 +419,7 @@ void main() {
   test('enqueueMany queues missing books and skips installed', () async {
     final paths = await _tempPaths();
     await File(p.join(_fixtures.path, 'catalog.sqlite'))
-        .copy(paths.catalogSqlite.path);
+        .copy(paths.catalogSqlite);
     final state = await StateDatabase.open(paths);
     final catalog = CatalogRepository(paths);
     state.upsertInstalled(
@@ -472,7 +472,7 @@ void main() {
   test('enqueue is idempotent for installed and already-queued', () async {
     final paths = await _tempPaths();
     await File(p.join(_fixtures.path, 'catalog.sqlite'))
-        .copy(paths.catalogSqlite.path);
+        .copy(paths.catalogSqlite);
     final state = await StateDatabase.open(paths);
     final catalog = CatalogRepository(paths);
     state.upsertInstalled(

@@ -12,7 +12,7 @@ import 'package:ishamela/features/catalog/catalog_service.dart';
 Future<void> main(List<String> args) async {
   final base = args.isNotEmpty ? args.first : 'http://127.0.0.1:8000/';
   final root = Directory.systemTemp.createTempSync('ishamela_sync_smoke_');
-  final paths = AppPaths(Directory(p.join(root.path, 'ishamela')));
+  final paths = AppPaths(p.join(root.path, 'ishamela'));
   await paths.ensureLayout();
   print('baseUrl=$base');
   print('root=${root.path}');
@@ -25,9 +25,9 @@ Future<void> main(List<String> args) async {
     );
     final manifest = await sync.sync();
     print('manifest=${manifest?.catalogVersion}');
-    print('hasCatalog=${paths.catalogSqlite.existsSync()}');
-    if (paths.catalogSqlite.existsSync()) {
-      print('catalogBytes=${paths.catalogSqlite.lengthSync()}');
+    print('hasCatalog=${File(paths.catalogSqlite).existsSync()}');
+    if (File(paths.catalogSqlite).existsSync()) {
+      print('catalogBytes=${File(paths.catalogSqlite).lengthSync()}');
     }
   } catch (e, st) {
     print('ERROR $e');

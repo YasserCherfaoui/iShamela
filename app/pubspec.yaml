@@ -37,6 +37,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/catalog/catalog.sqlite.zst
+    - assets/catalog/catalog.sqlite
     - assets/catalog/catalog.json
     - assets/brand/generated/splash/splash.png
     - assets/brand/generated/splash/splash-android12.png

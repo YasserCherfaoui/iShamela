@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 
+import 'package:ishamela/core/db/app_fs.dart';
 import 'package:ishamela/core/db/paths.dart';
 import 'package:ishamela/core/db/state_database.dart';
 import 'package:ishamela/core/search/normalizer.dart';
@@ -154,8 +155,8 @@ class LibrarySearchService {
     String normalizedQuery,
     bool exactPhrase,
   ) {
-    final file = paths.bookSqlite(bookId);
-    if (!file.existsSync()) return null;
+    final path = paths.bookSqlite(bookId);
+    if (!appFileExistsSync(path)) return null;
     BookDatabase? db;
     try {
       db = BookDatabase.open(paths, bookId);
