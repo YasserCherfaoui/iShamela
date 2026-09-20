@@ -128,6 +128,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   StateDatabase? _state;
   int _paneTab = 0;
 
+  /// Prevents multi-page jumps from a single overscroll gesture.
+  bool _edgePageLock = false;
+
   @override
   void initState() {
     super.initState();
@@ -1155,14 +1158,40 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
       );
     }
     final vertical = _mode == ReadingMode.pagedV;
+    // Reader [Directionality] is RTL. Horizontal PageView already maps
+    // forward = right→left (SPEC-005/009). Setting reverse:true would
+    // undo that and feel like a Western book.
     return PageView.builder(
       controller: _pageController,
       scrollDirection: vertical ? Axis.vertical : Axis.horizontal,
-      reverse: !vertical,
+      reverse: false,
       itemCount: _ids.length,
       onPageChanged: _onPage,
       itemBuilder: (context, i) => _pageContent(title, i),
     );
+  }
+
+  /// Inner body scroll: at top/bottom overscroll, advance the page (paged modes).
+  bool _onPageBodyScroll(ScrollNotification notification) {
+    if (_mode == ReadingMode.continuousV) return false;
+    if (notification.depth != 0) return false;
+    if (notification is! OverscrollNotification) return false;
+    if (_edgePageLock) return false;
+
+    final over = notification.overscroll;
+    // Ignore tiny rubber-band noise.
+    if (over.abs() < 12) return false;
+
+    _edgePageLock = true;
+    if (over > 0) {
+      _goRelative(1); // past bottom → next page
+    } else {
+      _goRelative(-1); // past top → previous page
+    }
+    Future<void>.delayed(const Duration(milliseconds: 450), () {
+      _edgePageLock = false;
+    });
+    return false;
   }
 
   Widget _pageContent(String title, int i) {
@@ -1193,53 +1222,62 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
             child: RosetteDivider(size: 14),
           ),
           Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  searchHit
-                      ? _highlightedBody(page.body)
-                      : (_state == null
-                          ? buildBodyDisplay(page.body)
-                          : AnnotatedBody(
-                              body: page.body,
-                              bookId: widget.bookId,
-                              pageId: page.id,
-                              state: _state!,
-                              title: title,
-                              author: author,
-                              part: part,
-                              pageNumber: page.pageNumber,
-                              textStyles: ref.watch(readerTextStylesProvider),
-                              onNotesChanged: () {
-                                WidgetsBinding.instance.addPostFrameCallback((_) {
-                                  if (mounted) {
-                                    setState(() => _notesTick++);
-                                  }
-                                });
-                              },
-                            )),
-                  if (footnotes != null && footnotes.isNotEmpty) ...[
-                    const SizedBox(height: 24),
-                    Divider(color: ReaderThemeTokens.of(context).hairline),
-                    Text(
-                      l10n.footnotes,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            color: IshamelaTokens.of(context).gold,
-                            fontFamily: 'Amiri',
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    _FootnotesBlock(
-                      text: footnotes,
-                      fontSize:
-                          (ref.watch(readerTextStylesProvider).fontSize) * 0.9,
-                      fontFamily:
-                          ref.watch(readerTextStylesProvider).font.familyName,
-                    ),
+            child: NotificationListener<ScrollNotification>(
+              onNotification: _onPageBodyScroll,
+              child: SingleChildScrollView(
+                // Always scrollable so short pages still receive drag/overscroll
+                // (otherwise only the header/footer hit the PageView).
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    searchHit
+                        ? _highlightedBody(page.body)
+                        : (_state == null
+                            ? buildBodyDisplay(page.body)
+                            : AnnotatedBody(
+                                body: page.body,
+                                bookId: widget.bookId,
+                                pageId: page.id,
+                                state: _state!,
+                                title: title,
+                                author: author,
+                                part: part,
+                                pageNumber: page.pageNumber,
+                                textStyles: ref.watch(readerTextStylesProvider),
+                                onNotesChanged: () {
+                                  WidgetsBinding.instance
+                                      .addPostFrameCallback((_) {
+                                    if (mounted) {
+                                      setState(() => _notesTick++);
+                                    }
+                                  });
+                                },
+                              )),
+                    if (footnotes != null && footnotes.isNotEmpty) ...[
+                      const SizedBox(height: 24),
+                      Divider(color: ReaderThemeTokens.of(context).hairline),
+                      Text(
+                        l10n.footnotes,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              color: IshamelaTokens.of(context).gold,
+                              fontFamily: 'Amiri',
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      _FootnotesBlock(
+                        text: footnotes,
+                        fontSize:
+                            (ref.watch(readerTextStylesProvider).fontSize) * 0.9,
+                        fontFamily:
+                            ref.watch(readerTextStylesProvider).font.familyName,
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),
