@@ -95,7 +95,11 @@ The **code** in this repository is MIT-licensed. The **book content** is *not* d
 
 ## CI / releases
 
-Pushes to `main` run [`.github/workflows/build-release.yml`](.github/workflows/build-release.yml): Flutter analyze + tests, then a **patch** GitHub prerelease (`vX.Y.Z`) with Android APK, macOS/Windows zips, and web zip. Pull requests get analyze + tests only. iOS IPA is omitted (Apple signing). Bundle publishing to Hugging Face remains the separate [`publish-bundles`](.github/workflows/publish-bundles.yml) workflow.
+Pushes to `main` run [`.github/workflows/build-release.yml`](.github/workflows/build-release.yml): Flutter analyze + tests, then a **patch** GitHub prerelease (`vX.Y.Z`) with Android APK, macOS/Windows zips, and web zip. The same web build is deployed to **GitHub Pages**:
+
+**https://yassercherfaoui.github.io/iShamela/**
+
+(One-time: repo **Settings → Pages → Source: GitHub Actions**.) Pull requests get analyze + tests only. iOS IPA is omitted (Apple signing). Bundle publishing to Hugging Face remains the separate [`publish-bundles`](.github/workflows/publish-bundles.yml) workflow.
 
 ## Contributing
 

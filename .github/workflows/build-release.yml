@@ -20,6 +20,8 @@ concurrency:
 
 env:
   FLUTTER_VERSION: "3.32.5"
+  # Project Pages URL path: https://<owner>.github.io/<repo>/
+  WEB_BASE_HREF: /iShamela/
 
 jobs:
   test:
@@ -149,7 +151,7 @@ jobs:
       - run: flutter pub get
 
       - name: Build web
-        run: flutter build web --release --base-href /
+        run: flutter build web --release --base-href "${{ env.WEB_BASE_HREF }}"
 
       - name: Zip web
         working-directory: app/build
@@ -161,6 +163,27 @@ jobs:
           name: web
           path: app/build/ishamela-*-web.zip
           if-no-files-found: error
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: app/build/web
+
+  deploy-pages:
+    name: Deploy GitHub Pages
+    needs: build-web
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
 
   build-macos:
     name: macOS
@@ -284,7 +307,7 @@ jobs:
             echo "### Artifacts"
             echo
             echo "- **Android** APK (release; debug-signed until store keystore is configured)"
-            echo "- **Web** zip (best-effort stub — see ADR-001 / docs/ZSTD.md)"
+            echo "- **Web** zip + [GitHub Pages](https://yassercherfaoui.github.io/iShamela/) (best-effort stub — see ADR-001 / docs/ZSTD.md)"
             echo "- **macOS** \`.app\` zip (unsigned)"
             echo "- **Windows** runner zip (unsigned)"
             echo

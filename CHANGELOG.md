@@ -38,6 +38,6 @@ All notable changes to this project are documented in this file.
 - Honorific role coloring now matches Shamela Unicode ligatures (`ﷺ`, `﷿`, `ﷻ`, U+FD40–U+FD4F, …) in addition to expanded Arabic phrases (SPEC-011).
 - Splash waits for an explicit **ابدأ القراءة** / Start reading tap before entering Catalog (SPEC-020 SP-04); no auto-dismiss after load.
 - Android NDK pinned to 27.0.12077973; iOS deployment target raised to 13.0 (zstandard_ios); web entry is a compileable best-effort stub (SQLite FFI / zstd not on WASM yet).
-- GitHub Actions `Build & Release`: on each push to `main`, bump patch tag, build Android/macOS/Windows/web artifacts, publish a prerelease. Web uses `--base-href /`; Windows runs on `windows-2022` (Flutter 3.32.x lacks VS 2026 support on `windows-latest`).
+- GitHub Actions `Build & Release`: on each push to `main`, bump patch tag, build Android/macOS/Windows/web artifacts, publish a prerelease, and deploy web to GitHub Pages (`/iShamela/` base href). Windows runs on `windows-2022` (Flutter 3.32.x lacks VS 2026 support on `windows-latest`).
 - CDN is `AuthenticIlm/Shamela4_Full_DB`; full browse catalog (8,589 books) built from `_meta` and shipped in `app/assets/catalog/`.
 - Document catalog provenance: browse metadata comes from `AuthenticIlm/Shamela4_Full_DB` `_meta` at **build** time; the app syncs `catalog.json` / `catalog.sqlite.zst` and installs books by fetching `pages.jsonl` from the same dataset (SPEC-008). See SPEC-003/007/008, `docs/PUBLISH.md`, `docs/DATA_SOURCES.md`.
