@@ -149,7 +149,7 @@ jobs:
       - run: flutter pub get
 
       - name: Build web
-        run: flutter build web --release --base-href ./
+        run: flutter build web --release --base-href /
 
       - name: Zip web
         working-directory: app/build
@@ -207,7 +207,9 @@ jobs:
     name: Windows
     needs: [test, version]
     if: github.event_name != 'pull_request'
-    runs-on: windows-latest
+    # windows-latest currently ships VS 2026; Flutter 3.32.x still maps to
+    # "Visual Studio 16 2019" when it cannot use VS 2026. Pin to 2022.
+    runs-on: windows-2022
     defaults:
       run:
         working-directory: app
@@ -223,6 +225,9 @@ jobs:
       - run: flutter config --enable-windows-desktop
 
       - run: flutter pub get
+
+      - name: Flutter doctor (Windows toolchain)
+        run: flutter doctor -v
 
       - name: Build Windows
         run: |
