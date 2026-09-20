@@ -57,3 +57,6 @@ Stream<String> appFileLines(String path) {
       .transform(utf8.decoder)
       .transform(const LineSplitter());
 }
+
+/// No-op on native FS.
+Future<void> flushAppFs() async {}

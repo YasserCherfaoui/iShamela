@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ishamela/l10n/app_localizations.dart';
@@ -52,12 +54,31 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
   /// Selectable index → display index; `-1` = note-badge placeholder.
   List<int> _selToDisplay = const [];
 
+  /// Latest body selection (web toolbar + actions).
+  TextSelection _selection = const TextSelection.collapsed(offset: 0);
+  int? _pointerDownButtons;
+  OverlayEntry? _webToolbar;
+  Offset? _webToolbarAnchor;
+
   @override
   void initState() {
     super.initState();
+    // Browser menu otherwise replaces Flutter's highlight/note/cite toolbar.
+    if (kIsWeb) {
+      BrowserContextMenu.disableContextMenu();
+    }
     _remapBody();
     _loadAnnotations();
     _notifyNotesChanged();
+  }
+
+  @override
+  void dispose() {
+    _removeWebToolbar();
+    if (kIsWeb) {
+      BrowserContextMenu.enableContextMenu();
+    }
+    super.dispose();
   }
 
   @override
@@ -66,6 +87,7 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
     if (oldWidget.pageId != widget.pageId ||
         oldWidget.bookId != widget.bookId ||
         oldWidget.body != widget.body) {
+      _removeWebToolbar();
       _remapBody();
       _reload();
     }
@@ -215,6 +237,73 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
     );
   }
 
+  void _removeWebToolbar() {
+    _webToolbar?.remove();
+    _webToolbar = null;
+    _webToolbarAnchor = null;
+  }
+
+  void _showWebToolbar(Offset globalPosition, TextSelection sel) {
+    if (!kIsWeb || !mounted) return;
+    if (!sel.isValid || sel.isCollapsed) {
+      _removeWebToolbar();
+      return;
+    }
+    _webToolbarAnchor = globalPosition;
+    final entry = OverlayEntry(
+      builder: (ctx) {
+        final anchor = _webToolbarAnchor ?? globalPosition;
+        return SelectionToolbar(
+          anchors: TextSelectionToolbarAnchors(primaryAnchor: anchor),
+          onHighlight: (color) {
+            ContextMenuController.removeAny();
+            _removeWebToolbar();
+            _highlight(sel, color);
+          },
+          onNote: () {
+            ContextMenuController.removeAny();
+            _removeWebToolbar();
+            _addNote(sel);
+          },
+          onCite: () {
+            ContextMenuController.removeAny();
+            _removeWebToolbar();
+            _copyCitation(sel);
+          },
+        );
+      },
+    );
+    _webToolbar?.remove();
+    _webToolbar = entry;
+    Overlay.of(context).insert(entry);
+  }
+
+  void _onSelectionChanged(TextSelection selection, SelectionChangedCause? cause) {
+    _selection = selection;
+    if (!selection.isValid || selection.isCollapsed) {
+      _removeWebToolbar();
+    }
+  }
+
+  void _onPointerDown(PointerDownEvent event) {
+    _pointerDownButtons = event.buttons;
+  }
+
+  void _onPointerUp(PointerUpEvent event) {
+    final down = _pointerDownButtons;
+    _pointerDownButtons = null;
+    // Only after a primary-button select/drag — not right-click (that uses
+    // contextMenuBuilder once the browser menu is disabled).
+    final wasPrimary = down == kPrimaryButton;
+    if (!wasPrimary || !kIsWeb) return;
+    final sel = _selection;
+    if (!sel.isValid || sel.isCollapsed) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _showWebToolbar(event.position, sel);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final styles = widget.textStyles ?? ReaderTextStyles.defaults();
@@ -222,7 +311,7 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
     final reader = ReaderThemeTokens.of(context);
     final (spans, selMap) = _buildSpansAndMap(styles, reader);
     _selToDisplay = selMap;
-    return SelectableText.rich(
+    Widget body = SelectableText.rich(
       TextSpan(children: spans),
       textAlign: TextAlign.justify,
       style: TextStyle(
@@ -237,7 +326,10 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
         fontFamily: styles.font.familyName,
         forceStrutHeight: true,
       ),
+      onSelectionChanged: _onSelectionChanged,
       contextMenuBuilder: (context, editableTextState) {
+        // Prefer the system/Flutter menu path (right-click / long-press).
+        _removeWebToolbar();
         final sel = editableTextState.textEditingValue.selection;
         if (!sel.isValid || sel.isCollapsed) {
           return AdaptiveTextSelectionToolbar.buttonItems(
@@ -262,6 +354,14 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
         );
       },
     );
+    if (kIsWeb) {
+      body = Listener(
+        onPointerDown: _onPointerDown,
+        onPointerUp: _onPointerUp,
+        child: body,
+      );
+    }
+    return body;
   }
 
   Color _roleColor(TextRole role, ReaderTextStyles styles, ReaderThemeTokens theme) {

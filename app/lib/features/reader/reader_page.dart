@@ -86,7 +86,9 @@ class ReaderPage extends ConsumerStatefulWidget {
     String? initialSearchQuery,
     bool exactPhrase = false,
   }) {
-    return Navigator.of(context).push(
+    // Prefer the root navigator so tab shells / overlays cannot swallow the push.
+    final nav = Navigator.of(context, rootNavigator: true);
+    return nav.push(
       MaterialPageRoute<void>(
         builder: (_) => ReaderPage(
           bookId: bookId,
@@ -140,10 +142,12 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     try {
       final paths = await ref.read(appPathsProvider.future);
       final state = await ref.read(stateDatabaseProvider.future);
+      if (!mounted) return;
       final db = BookDatabase.open(paths, widget.bookId);
       final ids = db.pageIds();
       if (ids.isEmpty) {
         db.close();
+        if (!mounted) return;
         setState(() => _error = 'empty book');
         return;
       }
@@ -193,6 +197,10 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         sectionTitle: section,
         nowMs: DateTime.now().millisecondsSinceEpoch,
       );
+      if (!mounted) {
+        db.close();
+        return;
+      }
       setState(() {
         _db = db;
         _state = state;
@@ -214,6 +222,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() => _error = e);
     }
   }

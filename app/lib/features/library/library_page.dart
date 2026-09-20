@@ -1150,12 +1150,16 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: () {
+                  final nav = Navigator.of(context, rootNavigator: true);
                   Navigator.pop(ctx);
-                  ReaderPage.open(
-                    context,
-                    bookId: book.bookId,
-                    title: book.title,
-                    authorName: book.authorName,
+                  nav.push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => ReaderPage(
+                        bookId: book.bookId,
+                        title: book.title,
+                        authorName: book.authorName,
+                      ),
+                    ),
                   );
                 },
                 child: Text(l10n.openBook),

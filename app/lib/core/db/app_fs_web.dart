@@ -87,3 +87,7 @@ Stream<String> appFileLines(String path) async* {
       .transform(utf8.decoder)
       .transform(const LineSplitter());
 }
+
+Future<void> flushAppFs() async {
+  await WebSqlite.vfs.flush();
+}

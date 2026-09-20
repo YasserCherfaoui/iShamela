@@ -191,11 +191,17 @@ class _DownloadSnackBar extends ConsumerWidget {
           l10n.open,
           () {
             final id = state.bookIds.first;
+            final title = state.primaryTitle;
+            // Capture navigator before dismiss — snackbar unmounts this context.
+            final nav = Navigator.of(context, rootNavigator: true);
             ref.read(downloadSnackProvider.notifier).dismiss();
-            ReaderPage.open(
-              context,
-              bookId: id,
-              title: state.primaryTitle,
+            nav.push(
+              MaterialPageRoute<void>(
+                builder: (_) => ReaderPage(
+                  bookId: id,
+                  title: title,
+                ),
+              ),
             );
           },
           Icons.check_circle_outline,
@@ -215,11 +221,16 @@ class _DownloadSnackBar extends ConsumerWidget {
           l10n.open,
           () {
             final id = state.bookIds.first;
+            final title = state.primaryTitle;
+            final nav = Navigator.of(context, rootNavigator: true);
             ref.read(downloadSnackProvider.notifier).dismiss();
-            ReaderPage.open(
-              context,
-              bookId: id,
-              title: state.primaryTitle,
+            nav.push(
+              MaterialPageRoute<void>(
+                builder: (_) => ReaderPage(
+                  bookId: id,
+                  title: title,
+                ),
+              ),
             );
           },
           Icons.check,

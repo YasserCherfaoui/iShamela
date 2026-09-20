@@ -189,8 +189,10 @@ class BundleInstaller {
       rethrow;
     }
     db.dispose();
+    await flushAppFs();
 
     await renameAppFile(partPath, destPath);
+    await flushAppFs();
     return BundleInstallResult(
       pageCount: pageCount,
       schemaVersion: bookSchemaVersion,

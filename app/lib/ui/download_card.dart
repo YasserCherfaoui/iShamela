@@ -53,105 +53,115 @@ class DownloadCard extends StatelessWidget {
       DownloadCardTone.completed => null,
     };
 
+    final body = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          title,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontFamily: kFontAmiri,
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+            color: t.ink,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          statusLabel,
+          style: TextStyle(
+            fontFamily: kFontUi,
+            fontWeight: FontWeight.w600,
+            fontSize: 12,
+            color: statusColor,
+          ),
+        ),
+        if (barColor != null && progress != null) ...[
+          const SizedBox(height: 8),
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: progress!.clamp(0.0, 1.0)),
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : const Duration(milliseconds: 200),
+            builder: (context, value, _) => ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                value: value,
+                minHeight: 5,
+                backgroundColor: t.segmentTrack,
+                color: barColor,
+              ),
+            ),
+          ),
+        ],
+        if (caption != null && caption!.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            caption!,
+            style: TextStyle(
+              fontFamily: kFontUi,
+              fontSize: 11,
+              color: t.muted,
+            ),
+          ),
+        ],
+        if (errorText != null && errorText!.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            errorText!,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontFamily: kFontUi,
+              fontSize: 11,
+              color: Color(0xFFA6402E),
+            ),
+          ),
+        ],
+      ],
+    );
+
     return Material(
       color: t.card,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
         side: BorderSide(color: t.hairline),
       ),
-      child: InkWell(
-        onTap: selecting
-            ? () => onSelectedChanged?.call(!(selected ?? false))
-            : onTap,
-        onLongPress: onLongPress,
-        borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              if (selecting) ...[
-                Checkbox(
-                  value: selected,
-                  onChanged: onSelectedChanged,
-                ),
-                const SizedBox(width: 4),
-              ],
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontFamily: kFontAmiri,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                        color: t.ink,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      statusLabel,
-                      style: TextStyle(
-                        fontFamily: kFontUi,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                        color: statusColor,
-                      ),
-                    ),
-                    if (barColor != null && progress != null) ...[
-                      const SizedBox(height: 8),
-                      TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0, end: progress!.clamp(0.0, 1.0)),
-                        duration: MediaQuery.disableAnimationsOf(context)
-                            ? Duration.zero
-                            : const Duration(milliseconds: 200),
-                        builder: (context, value, _) => ClipRRect(
-                          borderRadius: BorderRadius.circular(999),
-                          child: LinearProgressIndicator(
-                            value: value,
-                            minHeight: 5,
-                            backgroundColor: t.segmentTrack,
-                            color: barColor,
-                          ),
-                        ),
-                      ),
-                    ],
-                    if (caption != null && caption!.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        caption!,
-                        style: TextStyle(
-                          fontFamily: kFontUi,
-                          fontSize: 11,
-                          color: t.muted,
-                        ),
-                      ),
-                    ],
-                    if (errorText != null && errorText!.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        errorText!,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontFamily: kFontUi,
-                          fontSize: 11,
-                          color: Color(0xFFA6402E),
-                        ),
-                      ),
-                    ],
-                  ],
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            if (selecting) ...[
+              Checkbox(
+                value: selected,
+                onChanged: onSelectedChanged,
+              ),
+              const SizedBox(width: 4),
+            ],
+            Expanded(
+              // Keep InkWell on the text block only so trailing actions
+              // (e.g. فتح) are not competing for the same hit target.
+              child: Material(
+                type: MaterialType.transparency,
+                child: InkWell(
+                  onTap: selecting
+                      ? () => onSelectedChanged?.call(!(selected ?? false))
+                      : onTap,
+                  onLongPress: onLongPress,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: body,
+                  ),
                 ),
               ),
-              if (!selecting) ...[
-                if (primaryAction != null) primaryAction!,
-                if (secondaryAction != null) secondaryAction!,
-              ],
+            ),
+            if (!selecting) ...[
+              if (primaryAction != null) primaryAction!,
+              if (secondaryAction != null) secondaryAction!,
             ],
-          ),
+          ],
         ),
       ),
     );
