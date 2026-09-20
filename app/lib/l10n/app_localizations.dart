@@ -440,6 +440,12 @@ abstract class AppLocalizations {
   /// **'تمييز'**
   String get highlight;
 
+  /// No description provided for @removeHighlight.
+  ///
+  /// In ar, this message translates to:
+  /// **'إزالة التمييز'**
+  String get removeHighlight;
+
   /// No description provided for @addNote.
   ///
   /// In ar, this message translates to:

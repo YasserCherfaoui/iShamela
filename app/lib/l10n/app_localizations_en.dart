@@ -191,6 +191,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get highlight => 'Highlight';
 
   @override
+  String get removeHighlight => 'Remove highlight';
+
+  @override
   String get addNote => 'Add note';
 
   @override

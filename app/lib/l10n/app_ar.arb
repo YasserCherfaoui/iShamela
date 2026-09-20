@@ -80,6 +80,7 @@
   "selectAll": "تحديد الكل",
   "deselectAll": "إلغاء تحديد الكل",
   "highlight": "تمييز",
+  "removeHighlight": "إزالة التمييز",
   "addNote": "إضافة ملاحظة",
   "copyWithReference": "نسخ مع المرجع",
   "copiedCitation": "تم نسخ الاقتباس",

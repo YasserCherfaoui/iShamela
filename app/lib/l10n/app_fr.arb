@@ -80,6 +80,7 @@
   "selectAll": "Tout sélectionner",
   "deselectAll": "Tout désélectionner",
   "highlight": "Surligner",
+  "removeHighlight": "Retirer le surlignage",
   "addNote": "Ajouter une note",
   "copyWithReference": "Copier avec référence",
   "copiedCitation": "Citation copiée",

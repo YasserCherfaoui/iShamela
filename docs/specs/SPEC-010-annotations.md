@@ -54,7 +54,7 @@ Fixed palette (no arbitrary hex in v1):
 ## UX
 
 1. User selects a range in the reader body.
-2. Context menu / toolbar: **Highlight** (submenu of colors), **Add note**, **Copy with reference**, **Copy**.
+2. Context menu / toolbar: **Highlight** (color dots), **Remove highlight** (when the selection overlaps an existing highlight — deletes all overlapping highlight rows), **Add note**, **Copy with reference**.
 3. Highlight paints background behind the range; overlapping highlights: later `created_at` wins for paint order.
 4. Notes: dialog for note text; indicator (icon/underline) on range; tap opens note for edit/delete.
 5. **Copy with reference** (clipboard), Arabic template (ARB):
@@ -74,6 +74,7 @@ English locale template:
 ## Acceptance criteria
 
 - [x] Select text → highlight in each of the five colors; survives app restart.
+- [x] Select overlapping highlighted text → remove highlight clears overlapping rows.
 - [x] Add note on selection; edit/delete; survives restart.
 - [x] Copy with reference pastes template with title, author, print page (or —).
 - [x] Annotations never modify `pages.body` in the book SQLite file.

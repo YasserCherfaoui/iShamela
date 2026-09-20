@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:ishamela/features/reader/citation.dart';
+import 'package:ishamela/l10n/app_localizations.dart';
 import 'package:ishamela/ui/theme/ishamela_tokens.dart';
 import 'package:ishamela/ui/theme/reader_theme_tokens.dart';
 
@@ -61,6 +62,17 @@ class SelectionToolbar extends StatelessWidget {
                         ),
                       ),
                     ),
+                  if (onClear != null) ...[
+                    const SizedBox(width: 2),
+                    Tooltip(
+                      message: AppLocalizations.of(context).removeHighlight,
+                      child: _ToolBtn(
+                        icon: Icons.format_color_reset_outlined,
+                        color: reader.body,
+                        onTap: onClear!,
+                      ),
+                    ),
+                  ],
                   Container(
                     width: 1,
                     height: 22,

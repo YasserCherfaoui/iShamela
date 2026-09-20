@@ -191,6 +191,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get highlight => 'Surligner';
 
   @override
+  String get removeHighlight => 'Retirer le surlignage';
+
+  @override
   String get addNote => 'Ajouter une note';
 
   @override

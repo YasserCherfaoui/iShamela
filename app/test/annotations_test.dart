@@ -100,6 +100,36 @@ void main() {
     state.deleteHighlight(hid);
     expect(state.highlightsForPage(1, 2), isEmpty);
 
+    // Overlap clear: two highlights, selection covering both deletes both.
+    final a = state.insertHighlight(
+      bookId: 1,
+      pageId: 3,
+      start: 0,
+      end: 5,
+      color: 'yellow',
+      createdAt: 200,
+    );
+    final b = state.insertHighlight(
+      bookId: 1,
+      pageId: 3,
+      start: 4,
+      end: 10,
+      color: 'green',
+      createdAt: 201,
+    );
+    expect(state.highlightsForPage(1, 3), hasLength(2));
+    // Simulate clear of range [2, 8): overlaps both.
+    for (final h in List.of(state.highlightsForPage(1, 3))) {
+      final hs = h['start_offset'] as int;
+      final he = h['end_offset'] as int;
+      if (hs < 8 && 2 < he) {
+        state.deleteHighlight(h['id'] as int);
+      }
+    }
+    expect(state.highlightsForPage(1, 3), isEmpty);
+    expect(a, greaterThan(0));
+    expect(b, greaterThan(0));
+
     state.close();
     await dir.delete(recursive: true);
   });

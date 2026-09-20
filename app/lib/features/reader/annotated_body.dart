@@ -177,6 +177,69 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
     _reload();
   }
 
+  /// Deletes every highlight that overlaps the selection (SPEC-010).
+  void _clearHighlights(TextSelection sel) {
+    final range = _selectionToBody(sel);
+    if (range == null) return;
+    final (start, end) = range;
+    if (end <= start) return;
+    var removed = false;
+    for (final h in List<Map<String, Object?>>.from(_highlights)) {
+      final hs = h['start_offset'] as int;
+      final he = h['end_offset'] as int;
+      if (hs < end && start < he) {
+        widget.state.deleteHighlight(h['id'] as int);
+        removed = true;
+      }
+    }
+    if (removed) _reload();
+  }
+
+  bool _selectionOverlapsHighlight(TextSelection sel) {
+    final range = _selectionToBody(sel);
+    if (range == null) return false;
+    final (start, end) = range;
+    for (final h in _highlights) {
+      final hs = h['start_offset'] as int;
+      final he = h['end_offset'] as int;
+      if (hs < end && start < he) return true;
+    }
+    return false;
+  }
+
+  SelectionToolbar _selectionToolbar({
+    required TextSelectionToolbarAnchors anchors,
+    required TextSelection sel,
+    VoidCallback? beforeAction,
+  }) {
+    final clearable = _selectionOverlapsHighlight(sel);
+    return SelectionToolbar(
+      anchors: anchors,
+      onHighlight: (color) {
+        beforeAction?.call();
+        ContextMenuController.removeAny();
+        _highlight(sel, color);
+      },
+      onClear: clearable
+          ? () {
+              beforeAction?.call();
+              ContextMenuController.removeAny();
+              _clearHighlights(sel);
+            }
+          : null,
+      onNote: () {
+        beforeAction?.call();
+        ContextMenuController.removeAny();
+        _addNote(sel);
+      },
+      onCite: () {
+        beforeAction?.call();
+        ContextMenuController.removeAny();
+        _copyCitation(sel);
+      },
+    );
+  }
+
   Future<void> _addNote(TextSelection sel) async {
     final l10n = AppLocalizations.of(context);
     final ctrl = TextEditingController();
@@ -253,23 +316,10 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
     final entry = OverlayEntry(
       builder: (ctx) {
         final anchor = _webToolbarAnchor ?? globalPosition;
-        return SelectionToolbar(
+        return _selectionToolbar(
           anchors: TextSelectionToolbarAnchors(primaryAnchor: anchor),
-          onHighlight: (color) {
-            ContextMenuController.removeAny();
-            _removeWebToolbar();
-            _highlight(sel, color);
-          },
-          onNote: () {
-            ContextMenuController.removeAny();
-            _removeWebToolbar();
-            _addNote(sel);
-          },
-          onCite: () {
-            ContextMenuController.removeAny();
-            _removeWebToolbar();
-            _copyCitation(sel);
-          },
+          sel: sel,
+          beforeAction: _removeWebToolbar,
         );
       },
     );
@@ -337,20 +387,9 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
             buttonItems: editableTextState.contextMenuButtonItems,
           );
         }
-        return SelectionToolbar(
+        return _selectionToolbar(
           anchors: editableTextState.contextMenuAnchors,
-          onHighlight: (color) {
-            ContextMenuController.removeAny();
-            _highlight(sel, color);
-          },
-          onNote: () {
-            ContextMenuController.removeAny();
-            _addNote(sel);
-          },
-          onCite: () {
-            ContextMenuController.removeAny();
-            _copyCitation(sel);
-          },
+          sel: sel,
         );
       },
     );

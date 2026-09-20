@@ -190,6 +190,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get highlight => 'تمييز';
 
   @override
+  String get removeHighlight => 'إزالة التمييز';
+
+  @override
   String get addNote => 'إضافة ملاحظة';
 
   @override
