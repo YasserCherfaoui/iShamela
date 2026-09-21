@@ -14,6 +14,7 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
+- Vercel deploy config: root `vercel.json` + `scripts/vercel-{install,build}.sh` (Flutter 3.32.5, `app/build/web`, SPA rewrite) so importing the repo builds the web app with no dashboard overrides.
 - Brand assets, splash & download feedback (SPEC-020): Warm Manuscript icon (SVG→rasters script), native+Flutter splash, catalog affordance mapper + idempotent enqueue, themed download snackbar host.
 - Storage manager (SPEC-015): `installed_size_bytes` on `state.sqlite` v7, Settings storage card, manage-storage screen with size-sorted uninstall.
 - App language & About (SPEC-016): persisted `app_locale` (ar/en/fr), Settings language sheet, About with version/licenses/dataset attribution (`package_info_plus`, `url_launcher`).

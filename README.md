@@ -101,6 +101,12 @@ Pushes to `main` run [`.github/workflows/build-release.yml`](.github/workflows/b
 
 (One-time: repo **Settings → Pages → Source: GitHub Actions**.) Pull requests get analyze + tests only. iOS IPA is omitted (Apple signing). Bundle publishing to Hugging Face remains the separate [`publish-bundles`](.github/workflows/publish-bundles.yml) workflow.
 
+### Deploy web on Vercel
+
+Import this GitHub repo in the [Vercel dashboard](https://vercel.com/new). Leave **Root Directory** empty (repo root). `vercel.json` sets Framework to Other, installs Flutter **3.32.5** (same pin as CI), builds `app/` with `--base-href /`, and publishes `app/build/web`.
+
+No dashboard overrides needed unless you change the Flutter pin — then set env `FLUTTER_VERSION` to match.
+
 ## Contributing
 
 iShamela is at the very beginning. If you care about making the Islamic library accessible to everyone, you're welcome:

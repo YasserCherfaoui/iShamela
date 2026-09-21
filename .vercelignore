@@ -1,0 +1,17 @@
+# Keep the upload lean — Vercel only needs app/ + scripts/ for the web build.
+data/
+docs/
+.github/
+.claude/
+.cursor/
+shared/
+**/.dart_tool/
+**/build/
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+**/.ruff_cache/
+**/.mypy_cache/
+*.isb
+data/hf/
+data/dist/
