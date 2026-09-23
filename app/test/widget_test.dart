@@ -15,6 +15,6 @@ void main() {
     await tester.tap(find.text('ابدأ القراءة'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
-    expect(find.text('الفهرس'), findsWidgets);
+    expect(find.text('الرئيسية'), findsWidgets);
   });
 }

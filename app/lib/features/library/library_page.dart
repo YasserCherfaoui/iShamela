@@ -12,6 +12,7 @@ import 'package:ishamela/core/search/normalizer.dart';
 import 'package:ishamela/features/catalog/author_page.dart';
 import 'package:ishamela/features/catalog/catalog_service.dart';
 import 'package:ishamela/features/downloads/download_service.dart';
+import 'package:ishamela/features/downloads/downloads_page.dart';
 import 'package:ishamela/features/library/history_page.dart';
 import 'package:ishamela/features/library/library_search_service.dart';
 import 'package:ishamela/features/reader/export_sheet.dart';
@@ -362,7 +363,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
                 message: l10n.libraryEmptyHint,
                 actionLabel: l10n.browseCatalog,
                 onAction: () =>
-                    ref.read(homeTabIndexProvider.notifier).go(0),
+                    ref.read(homeTabIndexProvider.notifier).go(HomeTabs.catalog),
               );
             }
             return catalogAsync.when(
@@ -399,6 +400,18 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
                                   ),
                                 ),
                               ),
+                              if (!_selecting)
+                                IconButton(
+                                  tooltip: l10n.tabDownloads,
+                                  icon: const Icon(Icons.download_outlined),
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute<void>(
+                                        builder: (_) => const DownloadsPage(),
+                                      ),
+                                    );
+                                  },
+                                ),
                               if (_selecting) ...[
                                 IconButton(
                                   tooltip: l10n.selectAll,
@@ -590,7 +603,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
         actionLabel: l10n.tryCatalogSearch,
         onAction: () {
           ref.read(catalogPendingQueryProvider.notifier).set(_query);
-          ref.read(homeTabIndexProvider.notifier).go(0);
+          ref.read(homeTabIndexProvider.notifier).go(HomeTabs.catalog);
         },
       );
     }

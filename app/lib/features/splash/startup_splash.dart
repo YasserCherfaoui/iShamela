@@ -62,8 +62,8 @@ class _StartupSplashGateState extends ConsumerState<StartupSplashGate> {
 
   void _onStartReading() {
     if (!_ready || _hiding || _gone) return;
-    // Land on Catalog (index).
-    ref.read(homeTabIndexProvider.notifier).go(0);
+    // Land on Home (SPEC-023).
+    ref.read(homeTabIndexProvider.notifier).go(HomeTabs.home);
     _hiding = true;
     final reduce = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final fade = reduce ? Duration.zero : const Duration(milliseconds: 200);

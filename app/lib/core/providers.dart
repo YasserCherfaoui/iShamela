@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:ishamela/core/auth/auth_controller.dart';
+import 'package:ishamela/core/auth/auth_state.dart';
 import 'package:ishamela/core/compress/zstd.dart';
 import 'package:ishamela/core/config.dart';
 import 'package:ishamela/core/db/paths.dart';
@@ -11,6 +13,11 @@ import 'package:ishamela/features/catalog/catalog_service.dart';
 import 'package:ishamela/features/downloads/download_service.dart';
 import 'package:ishamela/features/reader/reader_styles.dart';
 import 'package:ishamela/ui/theme/reader_theme_tokens.dart';
+
+/// SPEC-022 auth session (guest when Firebase is unavailable).
+final authProvider = NotifierProvider<AuthController, AuthStatus>(
+  AuthController.new,
+);
 
 /// Root navigator — snack overlays sit outside the route tree (SPEC-020).
 final appNavigatorKey = GlobalKey<NavigatorState>();
@@ -114,9 +121,23 @@ final catalogPendingQueryProvider =
   CatalogPendingQueryNotifier.new,
 );
 
-/// Shell tab index (0 catalog … 3 settings) — for cross-tab empty CTAs.
+/// Shell tab indices — Home · Library · Catalog · Settings (SPEC-023).
+abstract final class HomeTabs {
+  static const home = 0;
+  static const library = 1;
+  static const catalog = 2;
+  static const settings = 3;
+}
+
+/// Shell tab index (0 home … 3 settings) — for cross-tab empty CTAs.
 final homeTabIndexProvider = NotifierProvider<HomeTabIndexNotifier, int>(
   HomeTabIndexNotifier.new,
+);
+
+/// Bumped when the user re-taps the Home tab so [HomePage] scrolls to top.
+final homeScrollToTopTickProvider =
+    NotifierProvider<HomeScrollToTopNotifier, int>(
+  HomeScrollToTopNotifier.new,
 );
 
 class CatalogPendingQueryNotifier extends Notifier<String?> {
@@ -129,9 +150,16 @@ class CatalogPendingQueryNotifier extends Notifier<String?> {
 
 class HomeTabIndexNotifier extends Notifier<int> {
   @override
+  int build() => HomeTabs.home;
+
+  void go(int index) => state = index.clamp(HomeTabs.home, HomeTabs.settings);
+}
+
+class HomeScrollToTopNotifier extends Notifier<int> {
+  @override
   int build() => 0;
 
-  void go(int index) => state = index.clamp(0, 3);
+  void bump() => state++;
 }
 
 class AppLocaleNotifier extends Notifier<Locale> {

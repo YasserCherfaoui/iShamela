@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "940987204287",
+    "project_id": "shamelaonline",
+    "storage_bucket": "shamelaonline.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:940987204287:android:a9ebff3f923179046ffc0a",
+        "android_client_info": {
+          "package_name": "org.ishamela.ishamela"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC5w5DkPmLYBhxN6VjD74Uqj_USNuljjik"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

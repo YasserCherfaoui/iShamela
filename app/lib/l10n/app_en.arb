@@ -367,5 +367,176 @@
   },
   "preparingLibrary": "Preparing your library…",
   "appTagline": "Your library of Islamic sciences — offline",
-  "startReading": "Start reading"
+  "startReading": "Start reading",
+  "tabHome": "Home",
+  "homeGreeting": "Peace be upon you",
+  "homeGreetingNamed": "Hello, {name}",
+  "@homeGreetingNamed": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "homeHijriApprox": "approx.",
+  "homeContinueReading": "Continue reading",
+  "homeContinueA11y": "Continue reading {title}, volume {part}, page {page}",
+  "@homeContinueA11y": {
+    "placeholders": {
+      "title": {"type": "String"},
+      "part": {"type": "String"},
+      "page": {"type": "String"}
+    }
+  },
+  "homeBookCrumb": "Book {book} · Chapter {section}",
+  "@homeBookCrumb": {
+    "placeholders": {
+      "book": {"type": "String"},
+      "section": {"type": "String"}
+    }
+  },
+  "homeVolPage": "Vol. {vol} · p. {page}",
+  "@homeVolPage": {
+    "placeholders": {
+      "vol": {"type": "String"},
+      "page": {"type": "String"}
+    }
+  },
+  "homePageOnly": "p. {page}",
+  "@homePageOnly": {
+    "placeholders": {
+      "page": {"type": "String"}
+    }
+  },
+  "homePercent": "{pct}%",
+  "@homePercent": {
+    "placeholders": {
+      "pct": {"type": "String"}
+    }
+  },
+  "homeStreakDays": "Day streak",
+  "homeWeeklyMinutes": "Minutes this week",
+  "homeWeeklyPages": "Pages this week",
+  "homeRecentHistory": "Recent reading",
+  "homeViewAll": "View all",
+  "homeQuickBookmarks": "Bookmarks",
+  "homeQuickNotes": "My notes",
+  "homeSyncBanner": "Sign in to sync your reading across devices",
+  "homeSyncBannerCta": "Sign in",
+  "homeEmptyTitle": "Start your journey with the library",
+  "homeEmptyCta": "Browse the catalog",
+  "homeBookNotDownloaded": "Book not downloaded",
+  "profileTitle": "Profile",
+  "profileGuest": "Guest",
+  "profileGuestCopy": "You're using the app without an account — your data stays on this device only",
+  "profileSignInCta": "Sign in or create an account",
+  "profileEditName": "Edit name",
+  "profileEditNameHint": "Name (1–40 characters)",
+  "profileEditNameSave": "Save",
+  "profileEditNameSaved": "Name updated",
+  "profileEditNameInvalid": "Name must be 1–40 characters",
+  "profileLifetimeBooks": "Books started",
+  "profileLifetimePages": "Pages read",
+  "profileLifetimeMinutes": "Reading minutes",
+  "profileLongestStreak": "Longest streak",
+  "profileSync": "Sync",
+  "profileLastSynced": "Last synced: {relative}",
+  "@profileLastSynced": {
+    "placeholders": {
+      "relative": {"type": "String"}
+    }
+  },
+  "profileNeverSynced": "Not synced yet",
+  "profileSyncNow": "Sync now",
+  "profileSyncing": "Syncing your data…",
+  "profileSyncCellular": "Sync over mobile data",
+  "profileSyncError": "Sync failed — try again",
+  "profileShortcutStorage": "Manage storage",
+  "profileShortcutHistory": "Reading history",
+  "profileShortcutBookmarks": "Bookmarks",
+  "profileShortcutNotes": "My notes",
+  "profileShortcutSettings": "Settings",
+  "profileChangePassword": "Change password",
+  "profileCurrentPassword": "Current password",
+  "profileNewPassword": "New password",
+  "profileConfirmPassword": "Confirm password",
+  "profilePasswordChanged": "Password changed",
+  "profilePasswordMismatch": "Passwords do not match",
+  "profileSignOut": "Sign out",
+  "profileSignOutConfirm": "Your history and notes will stay on this device",
+  "profileDeleteAccount": "Delete account",
+  "profileDeleteExplain": "Your cloud account and all synced data will be deleted. Local data on this device is kept unless you check the option below.",
+  "profileDeleteWipeLocal": "Also delete my data from this device",
+  "profileDeleteTypeConfirm": "Type «حذف» to confirm",
+  "profileDeleteConfirmWord": "حذف",
+  "profileDeleteDone": "Account deleted",
+  "profileDeleteFailed": "Could not delete account — try again",
+  "profileAccount": "Account",
+  "bookmarksListTitle": "Bookmarks",
+  "notesListTitle": "My notes",
+  "notesListEmpty": "No notes yet — add one while reading",
+  "authValueCopy": "Sign in to sync your reading and notes across devices",
+  "authContinueApple": "Continue with Apple",
+  "authContinueGoogle": "Continue with Google",
+  "authContinueEmail": "Email",
+  "authContinueGuest": "Continue without an account",
+  "authSignInTitle": "Sign in",
+  "authSignUpTitle": "Create account",
+  "authSignIn": "Sign in",
+  "authSignUp": "Create account",
+  "authCreateAccount": "Create an account",
+  "authForgotPassword": "Forgot password?",
+  "authForgotTitle": "Reset password",
+  "authForgotCopy": "We will send a 6-digit code to your email",
+  "authForgotSuccess": "If that email is registered, you will receive a code",
+  "authSendCode": "Send code",
+  "authEmail": "Email",
+  "authPassword": "Password",
+  "authNewPassword": "New password",
+  "authConfirmPassword": "Confirm password",
+  "authDisplayName": "Name",
+  "authFieldRequired": "Required",
+  "authInvalidEmail": "Invalid email",
+  "authPasswordTooShort": "Password must be at least 8 characters",
+  "authPasswordMismatch": "Passwords do not match",
+  "authPasswordStrengthWeak": "Weak",
+  "authPasswordStrengthOk": "OK",
+  "authPasswordStrengthStrong": "Strong",
+  "authPasswordChanged": "Password changed",
+  "authMustAcceptTerms": "Please accept the privacy policy and terms",
+  "authAcceptPrefix": "I agree to the",
+  "authAcceptAnd": "and",
+  "authPrivacy": "Privacy Policy",
+  "authTerms": "Terms",
+  "authOtpTitle": "Enter the code",
+  "authOtpCopy": "A 6-digit code was sent to {email}",
+  "@authOtpCopy": {
+    "placeholders": {
+      "email": {"type": "String"}
+    }
+  },
+  "authVerifyCode": "Verify",
+  "authOtpResendIn": "Resend in {time}",
+  "@authOtpResendIn": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "authOtpResend": "Resend code",
+  "authOtpResent": "Code sent",
+  "authOtpWrong": "Incorrect code",
+  "authOtpExpired": "Code expired — request a new one",
+  "authOtpLocked": "Too many attempts — request a new code",
+  "authResetTitle": "New password",
+  "authSavePassword": "Save password",
+  "authWelcomeVerified": "Welcome — your account is verified",
+  "authWrongCredentials": "Incorrect email or password",
+  "authEmailAlreadyInUse": "Email already in use",
+  "authWeakPassword": "Password is too weak",
+  "authTooManyRequests": "Too many attempts — try again later",
+  "authNetworkError": "Network error — try again",
+  "authRequiresRecentLogin": "Please sign in again to continue",
+  "authSessionExpired": "Session ended — sign in again to sync",
+  "authUnavailable": "Sign-in is unavailable right now",
+  "authGenericError": "Something went wrong",
+  "authSyncInProgress": "Syncing your data…",
+  "authSyncFailed": "Sync failed — will retry later"
 }

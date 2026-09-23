@@ -367,5 +367,176 @@
   },
   "preparingLibrary": "يجري تجهيز المكتبة…",
   "appTagline": "مكتبتك في العلوم الشرعية — دون اتصال",
-  "startReading": "ابدأ القراءة"
+  "startReading": "ابدأ القراءة",
+  "tabHome": "الرئيسية",
+  "homeGreeting": "السلام عليكم",
+  "homeGreetingNamed": "أهلًا، {name}",
+  "@homeGreetingNamed": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "homeHijriApprox": "تقريبًا",
+  "homeContinueReading": "متابعة القراءة",
+  "homeContinueA11y": "متابعة قراءة {title}، الجزء {part}، الصفحة {page}",
+  "@homeContinueA11y": {
+    "placeholders": {
+      "title": {"type": "String"},
+      "part": {"type": "String"},
+      "page": {"type": "String"}
+    }
+  },
+  "homeBookCrumb": "كتاب {book} · باب {section}",
+  "@homeBookCrumb": {
+    "placeholders": {
+      "book": {"type": "String"},
+      "section": {"type": "String"}
+    }
+  },
+  "homeVolPage": "ج {vol} · ص {page}",
+  "@homeVolPage": {
+    "placeholders": {
+      "vol": {"type": "String"},
+      "page": {"type": "String"}
+    }
+  },
+  "homePageOnly": "ص {page}",
+  "@homePageOnly": {
+    "placeholders": {
+      "page": {"type": "String"}
+    }
+  },
+  "homePercent": "٪{pct}",
+  "@homePercent": {
+    "placeholders": {
+      "pct": {"type": "String"}
+    }
+  },
+  "homeStreakDays": "أيام متتالية",
+  "homeWeeklyMinutes": "دقائق هذا الأسبوع",
+  "homeWeeklyPages": "صفحات هذا الأسبوع",
+  "homeRecentHistory": "آخر القراءات",
+  "homeViewAll": "عرض الكل",
+  "homeQuickBookmarks": "العلامات",
+  "homeQuickNotes": "ملاحظاتي",
+  "homeSyncBanner": "سجّل الدخول لمزامنة قراءاتك عبر أجهزتك",
+  "homeSyncBannerCta": "تسجيل الدخول",
+  "homeEmptyTitle": "ابدأ رحلتك مع المكتبة",
+  "homeEmptyCta": "تصفَّح الفهرس",
+  "homeBookNotDownloaded": "الكتاب غير منزّل",
+  "profileTitle": "الملف الشخصي",
+  "profileGuest": "ضيف",
+  "profileGuestCopy": "أنت تستخدم التطبيق بدون حساب — بياناتك محفوظة على هذا الجهاز فقط",
+  "profileSignInCta": "تسجيل الدخول أو إنشاء حساب",
+  "profileEditName": "تعديل الاسم",
+  "profileEditNameHint": "الاسم (١–٤٠ حرفًا)",
+  "profileEditNameSave": "حفظ",
+  "profileEditNameSaved": "تم تحديث الاسم",
+  "profileEditNameInvalid": "الاسم يجب أن يكون بين ١ و ٤٠ حرفًا",
+  "profileLifetimeBooks": "كتب بدأتها",
+  "profileLifetimePages": "صفحات مقروءة",
+  "profileLifetimeMinutes": "دقائق القراءة",
+  "profileLongestStreak": "أطول سلسلة أيام",
+  "profileSync": "المزامنة",
+  "profileLastSynced": "آخر مزامنة: {relative}",
+  "@profileLastSynced": {
+    "placeholders": {
+      "relative": {"type": "String"}
+    }
+  },
+  "profileNeverSynced": "لم تتم المزامنة بعد",
+  "profileSyncNow": "مزامنة الآن",
+  "profileSyncing": "جارٍ مزامنة بياناتك…",
+  "profileSyncCellular": "المزامنة عبر بيانات الهاتف",
+  "profileSyncError": "تعذّرت المزامنة — أعد المحاولة",
+  "profileShortcutStorage": "إدارة التخزين",
+  "profileShortcutHistory": "سجل القراءة",
+  "profileShortcutBookmarks": "العلامات",
+  "profileShortcutNotes": "ملاحظاتي",
+  "profileShortcutSettings": "الإعدادات",
+  "profileChangePassword": "تغيير كلمة المرور",
+  "profileCurrentPassword": "كلمة المرور الحالية",
+  "profileNewPassword": "كلمة المرور الجديدة",
+  "profileConfirmPassword": "تأكيد كلمة المرور",
+  "profilePasswordChanged": "تم تغيير كلمة المرور",
+  "profilePasswordMismatch": "كلمتا المرور غير متطابقتين",
+  "profileSignOut": "تسجيل الخروج",
+  "profileSignOutConfirm": "سيبقى سجلك وملاحظاتك على هذا الجهاز",
+  "profileDeleteAccount": "حذف الحساب",
+  "profileDeleteExplain": "سيُحذف حسابك السحابي وجميع البيانات المتزامنة. تبقى بياناتك المحلية على هذا الجهاز ما لم تفعّل الخيار أدناه.",
+  "profileDeleteWipeLocal": "احذف بياناتي من هذا الجهاز أيضًا",
+  "profileDeleteTypeConfirm": "اكتب «حذف» للتأكيد",
+  "profileDeleteConfirmWord": "حذف",
+  "profileDeleteDone": "تم حذف الحساب",
+  "profileDeleteFailed": "تعذّر حذف الحساب — أعد المحاولة",
+  "profileAccount": "الحساب",
+  "bookmarksListTitle": "العلامات",
+  "notesListTitle": "ملاحظاتي",
+  "notesListEmpty": "لا ملاحظات بعد — أضف ملاحظة أثناء القراءة",
+  "authValueCopy": "سجّل الدخول لمزامنة قراءاتك وملاحظاتك عبر أجهزتك",
+  "authContinueApple": "متابعة عبر Apple",
+  "authContinueGoogle": "متابعة عبر Google",
+  "authContinueEmail": "البريد الإلكتروني",
+  "authContinueGuest": "متابعة بدون حساب",
+  "authSignInTitle": "تسجيل الدخول",
+  "authSignUpTitle": "إنشاء حساب",
+  "authSignIn": "تسجيل الدخول",
+  "authSignUp": "إنشاء حساب",
+  "authCreateAccount": "إنشاء حساب",
+  "authForgotPassword": "نسيت كلمة المرور؟",
+  "authForgotTitle": "استعادة كلمة المرور",
+  "authForgotCopy": "سنرسل رمزًا مكوَّنًا من ٦ أرقام إلى بريدك",
+  "authForgotSuccess": "إن كان البريد مسجلًا لدينا فسيصلك الرمز",
+  "authSendCode": "إرسال الرمز",
+  "authEmail": "البريد الإلكتروني",
+  "authPassword": "كلمة المرور",
+  "authNewPassword": "كلمة المرور الجديدة",
+  "authConfirmPassword": "تأكيد كلمة المرور",
+  "authDisplayName": "الاسم",
+  "authFieldRequired": "مطلوب",
+  "authInvalidEmail": "بريد غير صالح",
+  "authPasswordTooShort": "كلمة المرور ٨ أحرف على الأقل",
+  "authPasswordMismatch": "كلمتا المرور غير متطابقتين",
+  "authPasswordStrengthWeak": "ضعيفة",
+  "authPasswordStrengthOk": "مقبولة",
+  "authPasswordStrengthStrong": "قوية",
+  "authPasswordChanged": "تم تغيير كلمة المرور",
+  "authMustAcceptTerms": "يجب الموافقة على السياسة والشروط",
+  "authAcceptPrefix": "أوافق على",
+  "authAcceptAnd": "و",
+  "authPrivacy": "سياسة الخصوصية",
+  "authTerms": "الشروط",
+  "authOtpTitle": "أدخل الرمز",
+  "authOtpCopy": "أُرسل رمز مكوَّن من ٦ أرقام إلى {email}",
+  "@authOtpCopy": {
+    "placeholders": {
+      "email": {"type": "String"}
+    }
+  },
+  "authVerifyCode": "تحقق",
+  "authOtpResendIn": "إعادة الإرسال بعد {time}",
+  "@authOtpResendIn": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "authOtpResend": "إعادة الإرسال",
+  "authOtpResent": "أُرسل الرمز",
+  "authOtpWrong": "الرمز غير صحيح",
+  "authOtpExpired": "انتهت صلاحية الرمز — اطلب رمزًا جديدًا",
+  "authOtpLocked": "محاولات كثيرة — اطلب رمزًا جديدًا",
+  "authResetTitle": "كلمة مرور جديدة",
+  "authSavePassword": "حفظ كلمة المرور",
+  "authWelcomeVerified": "مرحبًا — تم التحقق من حسابك",
+  "authWrongCredentials": "البريد أو كلمة المرور غير صحيحة",
+  "authEmailAlreadyInUse": "البريد مستخدم مسبقًا",
+  "authWeakPassword": "كلمة المرور ضعيفة جدًا",
+  "authTooManyRequests": "محاولات كثيرة — حاول لاحقًا",
+  "authNetworkError": "خطأ في الشبكة — أعد المحاولة",
+  "authRequiresRecentLogin": "سجّل الدخول مجددًا للمتابعة",
+  "authSessionExpired": "انتهت الجلسة، سجّل الدخول من جديد للمزامنة",
+  "authUnavailable": "تسجيل الدخول غير متاح حاليًا",
+  "authGenericError": "حدث خطأ ما",
+  "authSyncInProgress": "جارٍ مزامنة بياناتك…",
+  "authSyncFailed": "تعذّرت المزامنة — ستُعاد لاحقًا"
 }

@@ -662,4 +662,401 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get startReading => 'Commencer la lecture';
+
+  @override
+  String get tabHome => 'Accueil';
+
+  @override
+  String get homeGreeting => 'Que la paix soit sur vous';
+
+  @override
+  String homeGreetingNamed(String name) {
+    return 'Bonjour, $name';
+  }
+
+  @override
+  String get homeHijriApprox => 'approx.';
+
+  @override
+  String get homeContinueReading => 'Continuer la lecture';
+
+  @override
+  String homeContinueA11y(String title, String part, String page) {
+    return 'Continuer la lecture de $title, volume $part, page $page';
+  }
+
+  @override
+  String homeBookCrumb(String book, String section) {
+    return 'Livre $book · Chapitre $section';
+  }
+
+  @override
+  String homeVolPage(String vol, String page) {
+    return 'T. $vol · p. $page';
+  }
+
+  @override
+  String homePageOnly(String page) {
+    return 'p. $page';
+  }
+
+  @override
+  String homePercent(String pct) {
+    return '$pct %';
+  }
+
+  @override
+  String get homeStreakDays => 'Jours consécutifs';
+
+  @override
+  String get homeWeeklyMinutes => 'Minutes cette semaine';
+
+  @override
+  String get homeWeeklyPages => 'Pages cette semaine';
+
+  @override
+  String get homeRecentHistory => 'Lectures récentes';
+
+  @override
+  String get homeViewAll => 'Tout voir';
+
+  @override
+  String get homeQuickBookmarks => 'Signets';
+
+  @override
+  String get homeQuickNotes => 'Mes notes';
+
+  @override
+  String get homeSyncBanner => 'Connectez-vous pour synchroniser vos lectures';
+
+  @override
+  String get homeSyncBannerCta => 'Se connecter';
+
+  @override
+  String get homeEmptyTitle => 'Commencez votre parcours avec la bibliothèque';
+
+  @override
+  String get homeEmptyCta => 'Parcourir le catalogue';
+
+  @override
+  String get homeBookNotDownloaded => 'Livre non téléchargé';
+
+  @override
+  String get profileTitle => 'Profil';
+
+  @override
+  String get profileGuest => 'Invité';
+
+  @override
+  String get profileGuestCopy =>
+      'Vous utilisez l\'application sans compte — vos données restent sur cet appareil uniquement';
+
+  @override
+  String get profileSignInCta => 'Se connecter ou créer un compte';
+
+  @override
+  String get profileEditName => 'Modifier le nom';
+
+  @override
+  String get profileEditNameHint => 'Nom (1–40 caractères)';
+
+  @override
+  String get profileEditNameSave => 'Enregistrer';
+
+  @override
+  String get profileEditNameSaved => 'Nom mis à jour';
+
+  @override
+  String get profileEditNameInvalid => 'Le nom doit contenir 1 à 40 caractères';
+
+  @override
+  String get profileLifetimeBooks => 'Livres commencés';
+
+  @override
+  String get profileLifetimePages => 'Pages lues';
+
+  @override
+  String get profileLifetimeMinutes => 'Minutes de lecture';
+
+  @override
+  String get profileLongestStreak => 'Plus longue série';
+
+  @override
+  String get profileSync => 'Synchronisation';
+
+  @override
+  String profileLastSynced(String relative) {
+    return 'Dernière sync : $relative';
+  }
+
+  @override
+  String get profileNeverSynced => 'Pas encore synchronisé';
+
+  @override
+  String get profileSyncNow => 'Synchroniser';
+
+  @override
+  String get profileSyncing => 'Synchronisation en cours…';
+
+  @override
+  String get profileSyncCellular => 'Sync via données mobiles';
+
+  @override
+  String get profileSyncError => 'Échec de la sync — réessayez';
+
+  @override
+  String get profileShortcutStorage => 'Gérer le stockage';
+
+  @override
+  String get profileShortcutHistory => 'Historique de lecture';
+
+  @override
+  String get profileShortcutBookmarks => 'Signets';
+
+  @override
+  String get profileShortcutNotes => 'Mes notes';
+
+  @override
+  String get profileShortcutSettings => 'Paramètres';
+
+  @override
+  String get profileChangePassword => 'Changer le mot de passe';
+
+  @override
+  String get profileCurrentPassword => 'Mot de passe actuel';
+
+  @override
+  String get profileNewPassword => 'Nouveau mot de passe';
+
+  @override
+  String get profileConfirmPassword => 'Confirmer le mot de passe';
+
+  @override
+  String get profilePasswordChanged => 'Mot de passe modifié';
+
+  @override
+  String get profilePasswordMismatch =>
+      'Les mots de passe ne correspondent pas';
+
+  @override
+  String get profileSignOut => 'Se déconnecter';
+
+  @override
+  String get profileSignOutConfirm =>
+      'Votre historique et vos notes resteront sur cet appareil';
+
+  @override
+  String get profileDeleteAccount => 'Supprimer le compte';
+
+  @override
+  String get profileDeleteExplain =>
+      'Votre compte cloud et toutes les données synchronisées seront supprimés. Les données locales restent sauf si vous cochez l\'option ci-dessous.';
+
+  @override
+  String get profileDeleteWipeLocal =>
+      'Supprimer aussi mes données de cet appareil';
+
+  @override
+  String get profileDeleteTypeConfirm => 'Tapez «حذف» pour confirmer';
+
+  @override
+  String get profileDeleteConfirmWord => 'حذف';
+
+  @override
+  String get profileDeleteDone => 'Compte supprimé';
+
+  @override
+  String get profileDeleteFailed =>
+      'Impossible de supprimer le compte — réessayez';
+
+  @override
+  String get profileAccount => 'Compte';
+
+  @override
+  String get bookmarksListTitle => 'Signets';
+
+  @override
+  String get notesListTitle => 'Mes notes';
+
+  @override
+  String get notesListEmpty => 'Aucune note — ajoutez-en en lisant';
+
+  @override
+  String get authValueCopy =>
+      'Connectez-vous pour synchroniser lectures et notes sur vos appareils';
+
+  @override
+  String get authContinueApple => 'Continuer avec Apple';
+
+  @override
+  String get authContinueGoogle => 'Continuer avec Google';
+
+  @override
+  String get authContinueEmail => 'E-mail';
+
+  @override
+  String get authContinueGuest => 'Continuer sans compte';
+
+  @override
+  String get authSignInTitle => 'Connexion';
+
+  @override
+  String get authSignUpTitle => 'Créer un compte';
+
+  @override
+  String get authSignIn => 'Se connecter';
+
+  @override
+  String get authSignUp => 'Créer un compte';
+
+  @override
+  String get authCreateAccount => 'Créer un compte';
+
+  @override
+  String get authForgotPassword => 'Mot de passe oublié ?';
+
+  @override
+  String get authForgotTitle => 'Mot de passe oublié';
+
+  @override
+  String get authForgotCopy =>
+      'Nous enverrons un code à 6 chiffres à votre e-mail';
+
+  @override
+  String get authForgotSuccess =>
+      'Si cet e-mail est enregistré, vous recevrez un code';
+
+  @override
+  String get authSendCode => 'Envoyer le code';
+
+  @override
+  String get authEmail => 'E-mail';
+
+  @override
+  String get authPassword => 'Mot de passe';
+
+  @override
+  String get authNewPassword => 'Nouveau mot de passe';
+
+  @override
+  String get authConfirmPassword => 'Confirmer le mot de passe';
+
+  @override
+  String get authDisplayName => 'Nom';
+
+  @override
+  String get authFieldRequired => 'Ce champ est requis';
+
+  @override
+  String get authInvalidEmail => 'E-mail invalide';
+
+  @override
+  String get authPasswordTooShort =>
+      'Le mot de passe doit contenir au moins 8 caractères';
+
+  @override
+  String get authPasswordMismatch => 'Les mots de passe ne correspondent pas';
+
+  @override
+  String get authPasswordStrengthWeak => 'Faible — ajoutez lettres et chiffres';
+
+  @override
+  String get authPasswordStrengthOk => 'Correct';
+
+  @override
+  String get authPasswordStrengthStrong => 'Fort';
+
+  @override
+  String get authPasswordChanged => 'Mot de passe modifié';
+
+  @override
+  String get authMustAcceptTerms =>
+      'Veuillez accepter la politique et les conditions';
+
+  @override
+  String get authAcceptPrefix => 'J\'accepte la';
+
+  @override
+  String get authAcceptAnd => 'et les';
+
+  @override
+  String get authPrivacy => 'Politique de confidentialité';
+
+  @override
+  String get authTerms => 'Conditions';
+
+  @override
+  String get authOtpTitle => 'Code de vérification';
+
+  @override
+  String authOtpCopy(String email) {
+    return 'Saisissez le code à 6 chiffres envoyé à $email';
+  }
+
+  @override
+  String get authVerifyCode => 'Vérifier';
+
+  @override
+  String authOtpResendIn(String time) {
+    return 'Renvoyer dans $time';
+  }
+
+  @override
+  String get authOtpResend => 'Renvoyer le code';
+
+  @override
+  String get authOtpResent => 'Code renvoyé';
+
+  @override
+  String get authOtpWrong => 'Code incorrect';
+
+  @override
+  String get authOtpExpired => 'Code expiré — demandez-en un nouveau';
+
+  @override
+  String get authOtpLocked => 'Trop de tentatives — demandez un nouveau code';
+
+  @override
+  String get authResetTitle => 'Nouveau mot de passe';
+
+  @override
+  String get authSavePassword => 'Enregistrer le mot de passe';
+
+  @override
+  String get authWelcomeVerified => 'Bienvenue — e-mail vérifié';
+
+  @override
+  String get authWrongCredentials => 'E-mail ou mot de passe incorrect';
+
+  @override
+  String get authEmailAlreadyInUse => 'Cet e-mail est déjà utilisé';
+
+  @override
+  String get authWeakPassword => 'Mot de passe trop faible';
+
+  @override
+  String get authTooManyRequests => 'Trop de tentatives — réessayez plus tard';
+
+  @override
+  String get authNetworkError => 'Erreur réseau — vérifiez la connexion';
+
+  @override
+  String get authRequiresRecentLogin => 'Reconnectez-vous pour continuer';
+
+  @override
+  String get authSessionExpired =>
+      'Session terminée — reconnectez-vous pour synchroniser';
+
+  @override
+  String get authUnavailable => 'La connexion est indisponible pour le moment';
+
+  @override
+  String get authGenericError => 'Une erreur s\'est produite — réessayez';
+
+  @override
+  String get authSyncInProgress => 'Synchronisation de vos données…';
+
+  @override
+  String get authSyncFailed =>
+      'Échec de la synchronisation — nouvel essai plus tard';
 }

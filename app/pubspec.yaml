@@ -25,6 +25,14 @@ dependencies:
   package_info_plus: ^9.0.1
   url_launcher: ^6.3.2
   share_plus: ^12.0.2
+  hijri: ^3.0.0
+  firebase_core: ^4.15.0
+  firebase_auth: ^6.7.0
+  cloud_firestore: ^6.10.0
+  cloud_functions: ^6.5.0
+  google_sign_in: ^6.3.0
+  sign_in_with_apple: ^6.1.4
+  pin_code_fields: ^8.0.1
 
 dev_dependencies:
   flutter_test:

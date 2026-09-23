@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ishamela/app.dart';
+import 'package:ishamela/core/auth/firebase_bootstrap.dart';
 import 'package:ishamela/core/db/web_sqlite.dart';
 
 /// Web entry: WASM sqlite + IndexedDB VFS, then the real app shell.
@@ -9,5 +10,6 @@ import 'package:ishamela/core/db/web_sqlite.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await WebSqlite.init();
+  await initFirebaseBestEffort();
   runApp(const ProviderScope(child: IshamelaApp()));
 }

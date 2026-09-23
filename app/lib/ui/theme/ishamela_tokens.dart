@@ -20,6 +20,7 @@ class IshamelaTokens extends ThemeExtension<IshamelaTokens> {
     required this.highlight,
     required this.chipBg,
     required this.segmentTrack,
+    required this.danger,
     required this.spinePalette,
   });
 
@@ -50,6 +51,9 @@ class IshamelaTokens extends ThemeExtension<IshamelaTokens> {
   final Color chipBg;
   final Color segmentTrack;
 
+  /// Destructive actions (SPEC-024) — `#B3402E` paper/sepia, `#E06A55` night.
+  final Color danger;
+
   /// Category-hued spine fills (length 5).
   final List<Color> spinePalette;
 
@@ -70,6 +74,7 @@ class IshamelaTokens extends ThemeExtension<IshamelaTokens> {
     highlight: Color(0xFFF3E2A9),
     chipBg: Color(0xFFF0EADB),
     segmentTrack: Color(0xFFEDE6D4),
+    danger: Color(0xFFB3402E),
     spinePalette: [
       Color(0xFF0E3B30),
       Color(0xFF114437),
@@ -104,6 +109,7 @@ class IshamelaTokens extends ThemeExtension<IshamelaTokens> {
     Color? highlight,
     Color? chipBg,
     Color? segmentTrack,
+    Color? danger,
     List<Color>? spinePalette,
   }) {
     return IshamelaTokens(
@@ -123,6 +129,7 @@ class IshamelaTokens extends ThemeExtension<IshamelaTokens> {
       highlight: highlight ?? this.highlight,
       chipBg: chipBg ?? this.chipBg,
       segmentTrack: segmentTrack ?? this.segmentTrack,
+      danger: danger ?? this.danger,
       spinePalette: spinePalette ?? this.spinePalette,
     );
   }
@@ -147,6 +154,7 @@ class IshamelaTokens extends ThemeExtension<IshamelaTokens> {
       highlight: Color.lerp(highlight, other.highlight, t)!,
       chipBg: Color.lerp(chipBg, other.chipBg, t)!,
       segmentTrack: Color.lerp(segmentTrack, other.segmentTrack, t)!,
+      danger: Color.lerp(danger, other.danger, t)!,
       spinePalette: [
         for (var i = 0; i < spinePalette.length; i++)
           Color.lerp(

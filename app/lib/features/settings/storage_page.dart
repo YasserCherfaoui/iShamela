@@ -229,7 +229,9 @@ class _StoragePageState extends ConsumerState<StoragePage> {
                           message: l10n.noInstalledBooks,
                           actionLabel: l10n.browseCatalog,
                           onAction: () {
-                            ref.read(homeTabIndexProvider.notifier).go(0);
+                            ref
+                                .read(homeTabIndexProvider.notifier)
+                                .go(HomeTabs.catalog);
                             Navigator.pop(context);
                           },
                         )

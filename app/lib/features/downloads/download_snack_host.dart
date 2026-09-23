@@ -8,6 +8,7 @@ import 'package:ishamela/core/models/models.dart';
 import 'package:ishamela/core/providers.dart';
 import 'package:ishamela/features/downloads/download_service.dart';
 import 'package:ishamela/features/downloads/download_snack_state.dart';
+import 'package:ishamela/features/downloads/downloads_page.dart';
 import 'package:ishamela/features/downloads/enqueue_result.dart';
 import 'package:ishamela/features/reader/reader_page.dart';
 import 'package:ishamela/ui/theme/ishamela_theme.dart';
@@ -190,8 +191,13 @@ class _DownloadSnackBar extends ConsumerWidget {
               : l10n.downloadingBook(state.primaryTitle),
           l10n.viewDownloads,
           () {
-            ref.read(homeTabIndexProvider.notifier).go(2);
+            final nav = appNavigatorKey.currentState;
             ref.read(downloadSnackProvider.notifier).dismiss();
+            nav?.push(
+              MaterialPageRoute<void>(
+                builder: (_) => const DownloadsPage(),
+              ),
+            );
           },
           Icons.download,
           t.goldSoft,

@@ -866,7 +866,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     }
   }
 
-  Widget _sideIndexPane(AppLocalizations l10n) {
+  /// [onSheetTick] rebuilds a modal host — parent [setState] alone does not
+  /// refresh [showModalBottomSheet] content.
+  Widget _sideIndexPane(AppLocalizations l10n, {VoidCallback? onSheetTick}) {
     // Depend on ticks so badges rebuild when annotations/bookmarks change.
     final ticks = _notesTick + _bookmarksTick;
     assert(ticks >= 0);
@@ -884,7 +886,10 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
           child: SegmentedPills(
             labels: [l10n.toc, bookmarkLabel, notesLabel],
             selectedIndex: _paneTab,
-            onChanged: (i) => setState(() => _paneTab = i),
+            onChanged: (i) {
+              setState(() => _paneTab = i);
+              onSheetTick?.call();
+            },
           ),
         ),
         Expanded(
@@ -1337,7 +1342,12 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         child: SafeArea(
           child: SizedBox(
             height: MediaQuery.sizeOf(context).height * 0.6,
-            child: _sideIndexPane(l10n),
+            child: StatefulBuilder(
+              builder: (_, setSheet) => _sideIndexPane(
+                l10n,
+                onSheetTick: () => setSheet(() {}),
+              ),
+            ),
           ),
         ),
       ),

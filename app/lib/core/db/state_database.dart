@@ -169,6 +169,30 @@ class StateDatabase {
       );
       db.execute('PRAGMA user_version = 7');
     }
+    final version8 =
+        db.select('PRAGMA user_version').first.columnAt(0) as int;
+    if (version8 < 8) {
+      // SPEC-023: session duration + sync_state for Home / Profile.
+      try {
+        db.execute(
+          'ALTER TABLE reading_history ADD COLUMN duration_seconds INTEGER',
+        );
+      } catch (_) {
+        // column may already exist
+      }
+      db.execute('''
+        CREATE TABLE IF NOT EXISTS sync_state (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          last_synced_at INTEGER,
+          last_error TEXT,
+          cellular_allowed INTEGER NOT NULL DEFAULT 1
+        )
+      ''');
+      db.execute(
+        'INSERT OR IGNORE INTO sync_state (id, cellular_allowed) VALUES (1, 1)',
+      );
+      db.execute('PRAGMA user_version = 8');
+    }
     return StateDatabase(db);
   }
 
@@ -532,15 +556,29 @@ class StateDatabase {
     _db.execute('DELETE FROM text_notes WHERE id = ?', [id]);
   }
 
-  // --- SPEC-014 reading history & bookmarks ---
+  // --- SPEC-014 / SPEC-023 reading history & bookmarks ---
 
   static const historyCoalesce = Duration(minutes: 30);
   static const historyMaxAge = Duration(days: 90);
   static const historyMaxRows = 500;
 
+  /// Idle-cap for credited session seconds (SPEC-023 §2.3).
+  static const historyDurationCapSeconds = 30 * 60;
+
   String _bookmarkPartKey(String? part) => part ?? '';
 
+  /// Credited seconds for [elapsedMs], capped at [historyDurationCapSeconds].
+  static int cappedDurationSeconds(int elapsedMs) {
+    if (elapsedMs <= 0) return 0;
+    final sec = elapsedMs ~/ 1000;
+    return sec > historyDurationCapSeconds ? historyDurationCapSeconds : sec;
+  }
+
   /// Open or coalesce a history session; prune on insert. Spec-testable windows.
+  ///
+  /// On coalesce (page turn or close), [duration_seconds] accumulates the delta
+  /// since the last checkpoint (prior closed_at, or opened_at + prior duration),
+  /// capped at [historyDurationCapSeconds] total.
   int touchReadingHistory({
     required int bookId,
     required int pageId,
@@ -555,7 +593,7 @@ class StateDatabase {
   }) {
     final newest = _db.select(
       '''
-      SELECT id, opened_at FROM reading_history
+      SELECT id, opened_at, closed_at, duration_seconds FROM reading_history
       WHERE book_id = ?
       ORDER BY opened_at DESC LIMIT 1
       ''',
@@ -566,25 +604,47 @@ class StateDatabase {
       final openedAt = newest.first['opened_at'] as int;
       if (nowMs - openedAt <= coalesceWindow.inMilliseconds) {
         final id = newest.first['id'] as int;
+        final prevClosed = newest.first['closed_at'] as int?;
+        final prevDuration = newest.first['duration_seconds'] as int?;
+        final lastCheckpoint = prevClosed ??
+            (openedAt + (prevDuration ?? 0) * 1000);
+        final deltaMs = nowMs - lastCheckpoint;
+        final added = cappedDurationSeconds(deltaMs);
+        final nextDuration = ((prevDuration ?? 0) + added)
+            .clamp(0, historyDurationCapSeconds)
+            .toInt();
         _db.execute(
           '''
           UPDATE reading_history SET
             part = ?, page_id = ?, print_page = ?, section_title = ?,
-            closed_at = ?
+            closed_at = ?, duration_seconds = ?
           WHERE id = ?
           ''',
-          [part, pageId, printPage, sectionTitle, closedAt, id],
+          [part, pageId, printPage, sectionTitle, closedAt, nextDuration, id],
         );
         return id;
       }
     }
+    final insertDuration =
+        closing ? cappedDurationSeconds(0) : null; // open-only: no duration yet
+    // closing on a brand-new row is unusual; duration stays 0 until activity.
     _db.execute(
       '''
       INSERT INTO reading_history
-        (book_id, part, page_id, print_page, section_title, opened_at, closed_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+        (book_id, part, page_id, print_page, section_title, opened_at, closed_at,
+         duration_seconds)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       ''',
-      [bookId, part, pageId, printPage, sectionTitle, nowMs, closedAt],
+      [
+        bookId,
+        part,
+        pageId,
+        printPage,
+        sectionTitle,
+        nowMs,
+        closedAt,
+        insertDuration,
+      ],
     );
     final id = _db.lastInsertRowId;
     _pruneReadingHistory(nowMs: nowMs, maxAge: maxAge, maxRows: maxRows);
@@ -621,7 +681,7 @@ class StateDatabase {
         .select(
           '''
           SELECT id, book_id, part, page_id, print_page, section_title,
-                 opened_at, closed_at
+                 opened_at, closed_at, duration_seconds
           FROM reading_history ORDER BY opened_at DESC
           ''',
         )
@@ -629,11 +689,25 @@ class StateDatabase {
         .toList();
   }
 
+  /// Raw history rows for DAOs that need map access (SPEC-023).
+  List<Map<String, Object?>> readingHistoryRows() {
+    return _db
+        .select(
+          '''
+          SELECT id, book_id, part, page_id, print_page, section_title,
+                 opened_at, closed_at, duration_seconds
+          FROM reading_history ORDER BY opened_at DESC
+          ''',
+        )
+        .map((r) => Map<String, Object?>.from(r))
+        .toList();
+  }
+
   ReadingHistoryEntry? latestReadingHistory() {
     final rows = _db.select(
       '''
       SELECT id, book_id, part, page_id, print_page, section_title,
-             opened_at, closed_at
+             opened_at, closed_at, duration_seconds
       FROM reading_history ORDER BY opened_at DESC LIMIT 1
       ''',
     );
@@ -659,8 +733,55 @@ class StateDatabase {
       sectionTitle: r['section_title'] as String?,
       openedAt: r['opened_at'] as int,
       closedAt: r['closed_at'] as int?,
+      durationSeconds: r['duration_seconds'] as int?,
     );
   }
+
+  // --- SPEC-023 / SPEC-024 sync_state + prefs ---
+
+  SyncState getSyncState() {
+    final rows = _db.select(
+      'SELECT last_synced_at, last_error, cellular_allowed FROM sync_state WHERE id = 1',
+    );
+    if (rows.isEmpty) {
+      return const SyncState(cellularAllowed: true);
+    }
+    final r = rows.first;
+    return SyncState(
+      lastSyncedAt: r['last_synced_at'] as int?,
+      lastError: r['last_error'] as String?,
+      cellularAllowed: (r['cellular_allowed'] as int?) == 1,
+    );
+  }
+
+  void setSyncState({
+    int? lastSyncedAt,
+    String? lastError,
+    bool? cellularAllowed,
+    bool clearError = false,
+  }) {
+    final cur = getSyncState();
+    _db.execute(
+      '''
+      INSERT INTO sync_state (id, last_synced_at, last_error, cellular_allowed)
+      VALUES (1, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        last_synced_at = excluded.last_synced_at,
+        last_error = excluded.last_error,
+        cellular_allowed = excluded.cellular_allowed
+      ''',
+      [
+        lastSyncedAt ?? cur.lastSyncedAt,
+        clearError ? null : (lastError ?? cur.lastError),
+        (cellularAllowed ?? cur.cellularAllowed) ? 1 : 0,
+      ],
+    );
+  }
+
+  /// Prefs via existing `settings` table (sync banner dismiss, etc.).
+  String? getPref(String key) => setting(key);
+
+  void setPref(String key, String value) => setSetting(key, value);
 
   List<Bookmark> bookmarksForBook(int bookId) {
     return _db
@@ -772,6 +893,32 @@ class StateDatabase {
       label: r['label'] as String?,
       createdAt: r['created_at'] as int,
     );
+  }
+
+  /// All bookmarks across books (SPEC-023 quick-action destination).
+  List<Bookmark> listAllBookmarks() {
+    return _db
+        .select(
+          '''
+          SELECT id, book_id, part, page_id, print_page, label, created_at
+          FROM bookmarks ORDER BY created_at DESC
+          ''',
+        )
+        .map(_bookmarkFromRow)
+        .toList();
+  }
+
+  /// All text notes across books (SPEC-023 quick-action destination).
+  List<Map<String, Object?>> listAllNotes() {
+    return _db
+        .select(
+          '''
+          SELECT id, book_id, page_id, start_offset, end_offset, note, created_at
+          FROM text_notes ORDER BY created_at DESC
+          ''',
+        )
+        .map((r) => Map<String, Object?>.from(r))
+        .toList();
   }
 }
 

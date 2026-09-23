@@ -8,7 +8,7 @@ import 'package:ishamela/features/catalog/catalog_page.dart';
 import 'package:ishamela/features/downloads/download_service.dart';
 import 'package:ishamela/features/downloads/download_snack_host.dart';
 import 'package:ishamela/features/downloads/download_tabs.dart';
-import 'package:ishamela/features/downloads/downloads_page.dart';
+import 'package:ishamela/features/home/home_page.dart';
 import 'package:ishamela/features/library/library_page.dart';
 import 'package:ishamela/features/settings/settings_page.dart';
 import 'package:ishamela/features/splash/startup_splash.dart';
@@ -82,6 +82,15 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     return filterDownloadTasks(svc.listTasks(), DownloadsTab.active).length;
   }
 
+  void _select(int i) {
+    final current = ref.read(homeTabIndexProvider);
+    if (i == current && i == HomeTabs.home) {
+      ref.read(homeScrollToTopTickProvider.notifier).bump();
+      return;
+    }
+    ref.read(homeTabIndexProvider.notifier).go(i);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -90,10 +99,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     final locale = ref.watch(appLocaleProvider);
     final textDir =
         locale.languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr;
+    // SPEC-023: Home · Library · Catalog · Settings
     final pages = const [
-      CatalogPage(),
+      HomePage(),
       LibraryPage(),
-      DownloadsPage(),
+      CatalogPage(),
       SettingsPage(),
     ];
 
@@ -106,17 +116,17 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     final activeCount = _activeDownloadCount();
     final destinations = [
       AppBottomNavDestination(
-        icon: Icons.menu_book_outlined,
-        label: l10n.tabCatalog,
+        icon: Icons.home_outlined,
+        label: l10n.tabHome,
       ),
       AppBottomNavDestination(
         icon: Icons.library_books_outlined,
         label: l10n.tabLibrary,
+        badgeCount: activeCount > 0 ? activeCount : null,
       ),
       AppBottomNavDestination(
-        icon: Icons.download_outlined,
-        label: l10n.tabDownloads,
-        badgeCount: activeCount > 0 ? activeCount : null,
+        icon: Icons.menu_book_outlined,
+        label: l10n.tabCatalog,
       ),
       AppBottomNavDestination(
         icon: Icons.settings_outlined,
@@ -126,8 +136,6 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
     final body = pages[index];
 
-    void select(int i) => ref.read(homeTabIndexProvider.notifier).go(i);
-
     if (wide) {
       return Directionality(
         textDirection: textDir,
@@ -136,7 +144,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
             children: [
               NavigationRail(
                 selectedIndex: index,
-                onDestinationSelected: select,
+                onDestinationSelected: _select,
                 labelType: NavigationRailLabelType.all,
                 destinations: [
                   for (final d in destinations)
@@ -169,11 +177,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         bottomNavigationBar: AppBottomNav(
           destinations: destinations,
           selectedIndex: index,
-          onDestinationSelected: select,
+          onDestinationSelected: _select,
         ),
       ),
     );
   }
+
   Widget _railIcon(AppBottomNavDestination d, {bool selected = false}) {
     final count = d.badgeCount ?? 0;
     Widget icon = Icon(d.icon);

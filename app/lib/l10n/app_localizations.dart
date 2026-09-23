@@ -1255,6 +1255,738 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'ابدأ القراءة'**
   String get startReading;
+
+  /// No description provided for @tabHome.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرئيسية'**
+  String get tabHome;
+
+  /// No description provided for @homeGreeting.
+  ///
+  /// In ar, this message translates to:
+  /// **'السلام عليكم'**
+  String get homeGreeting;
+
+  /// No description provided for @homeGreetingNamed.
+  ///
+  /// In ar, this message translates to:
+  /// **'أهلًا، {name}'**
+  String homeGreetingNamed(String name);
+
+  /// No description provided for @homeHijriApprox.
+  ///
+  /// In ar, this message translates to:
+  /// **'تقريبًا'**
+  String get homeHijriApprox;
+
+  /// No description provided for @homeContinueReading.
+  ///
+  /// In ar, this message translates to:
+  /// **'متابعة القراءة'**
+  String get homeContinueReading;
+
+  /// No description provided for @homeContinueA11y.
+  ///
+  /// In ar, this message translates to:
+  /// **'متابعة قراءة {title}، الجزء {part}، الصفحة {page}'**
+  String homeContinueA11y(String title, String part, String page);
+
+  /// No description provided for @homeBookCrumb.
+  ///
+  /// In ar, this message translates to:
+  /// **'كتاب {book} · باب {section}'**
+  String homeBookCrumb(String book, String section);
+
+  /// No description provided for @homeVolPage.
+  ///
+  /// In ar, this message translates to:
+  /// **'ج {vol} · ص {page}'**
+  String homeVolPage(String vol, String page);
+
+  /// No description provided for @homePageOnly.
+  ///
+  /// In ar, this message translates to:
+  /// **'ص {page}'**
+  String homePageOnly(String page);
+
+  /// No description provided for @homePercent.
+  ///
+  /// In ar, this message translates to:
+  /// **'٪{pct}'**
+  String homePercent(String pct);
+
+  /// No description provided for @homeStreakDays.
+  ///
+  /// In ar, this message translates to:
+  /// **'أيام متتالية'**
+  String get homeStreakDays;
+
+  /// No description provided for @homeWeeklyMinutes.
+  ///
+  /// In ar, this message translates to:
+  /// **'دقائق هذا الأسبوع'**
+  String get homeWeeklyMinutes;
+
+  /// No description provided for @homeWeeklyPages.
+  ///
+  /// In ar, this message translates to:
+  /// **'صفحات هذا الأسبوع'**
+  String get homeWeeklyPages;
+
+  /// No description provided for @homeRecentHistory.
+  ///
+  /// In ar, this message translates to:
+  /// **'آخر القراءات'**
+  String get homeRecentHistory;
+
+  /// No description provided for @homeViewAll.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرض الكل'**
+  String get homeViewAll;
+
+  /// No description provided for @homeQuickBookmarks.
+  ///
+  /// In ar, this message translates to:
+  /// **'العلامات'**
+  String get homeQuickBookmarks;
+
+  /// No description provided for @homeQuickNotes.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملاحظاتي'**
+  String get homeQuickNotes;
+
+  /// No description provided for @homeSyncBanner.
+  ///
+  /// In ar, this message translates to:
+  /// **'سجّل الدخول لمزامنة قراءاتك عبر أجهزتك'**
+  String get homeSyncBanner;
+
+  /// No description provided for @homeSyncBannerCta.
+  ///
+  /// In ar, this message translates to:
+  /// **'تسجيل الدخول'**
+  String get homeSyncBannerCta;
+
+  /// No description provided for @homeEmptyTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابدأ رحلتك مع المكتبة'**
+  String get homeEmptyTitle;
+
+  /// No description provided for @homeEmptyCta.
+  ///
+  /// In ar, this message translates to:
+  /// **'تصفَّح الفهرس'**
+  String get homeEmptyCta;
+
+  /// No description provided for @homeBookNotDownloaded.
+  ///
+  /// In ar, this message translates to:
+  /// **'الكتاب غير منزّل'**
+  String get homeBookNotDownloaded;
+
+  /// No description provided for @profileTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'الملف الشخصي'**
+  String get profileTitle;
+
+  /// No description provided for @profileGuest.
+  ///
+  /// In ar, this message translates to:
+  /// **'ضيف'**
+  String get profileGuest;
+
+  /// No description provided for @profileGuestCopy.
+  ///
+  /// In ar, this message translates to:
+  /// **'أنت تستخدم التطبيق بدون حساب — بياناتك محفوظة على هذا الجهاز فقط'**
+  String get profileGuestCopy;
+
+  /// No description provided for @profileSignInCta.
+  ///
+  /// In ar, this message translates to:
+  /// **'تسجيل الدخول أو إنشاء حساب'**
+  String get profileSignInCta;
+
+  /// No description provided for @profileEditName.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعديل الاسم'**
+  String get profileEditName;
+
+  /// No description provided for @profileEditNameHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'الاسم (١–٤٠ حرفًا)'**
+  String get profileEditNameHint;
+
+  /// No description provided for @profileEditNameSave.
+  ///
+  /// In ar, this message translates to:
+  /// **'حفظ'**
+  String get profileEditNameSave;
+
+  /// No description provided for @profileEditNameSaved.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تحديث الاسم'**
+  String get profileEditNameSaved;
+
+  /// No description provided for @profileEditNameInvalid.
+  ///
+  /// In ar, this message translates to:
+  /// **'الاسم يجب أن يكون بين ١ و ٤٠ حرفًا'**
+  String get profileEditNameInvalid;
+
+  /// No description provided for @profileLifetimeBooks.
+  ///
+  /// In ar, this message translates to:
+  /// **'كتب بدأتها'**
+  String get profileLifetimeBooks;
+
+  /// No description provided for @profileLifetimePages.
+  ///
+  /// In ar, this message translates to:
+  /// **'صفحات مقروءة'**
+  String get profileLifetimePages;
+
+  /// No description provided for @profileLifetimeMinutes.
+  ///
+  /// In ar, this message translates to:
+  /// **'دقائق القراءة'**
+  String get profileLifetimeMinutes;
+
+  /// No description provided for @profileLongestStreak.
+  ///
+  /// In ar, this message translates to:
+  /// **'أطول سلسلة أيام'**
+  String get profileLongestStreak;
+
+  /// No description provided for @profileSync.
+  ///
+  /// In ar, this message translates to:
+  /// **'المزامنة'**
+  String get profileSync;
+
+  /// No description provided for @profileLastSynced.
+  ///
+  /// In ar, this message translates to:
+  /// **'آخر مزامنة: {relative}'**
+  String profileLastSynced(String relative);
+
+  /// No description provided for @profileNeverSynced.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم تتم المزامنة بعد'**
+  String get profileNeverSynced;
+
+  /// No description provided for @profileSyncNow.
+  ///
+  /// In ar, this message translates to:
+  /// **'مزامنة الآن'**
+  String get profileSyncNow;
+
+  /// No description provided for @profileSyncing.
+  ///
+  /// In ar, this message translates to:
+  /// **'جارٍ مزامنة بياناتك…'**
+  String get profileSyncing;
+
+  /// No description provided for @profileSyncCellular.
+  ///
+  /// In ar, this message translates to:
+  /// **'المزامنة عبر بيانات الهاتف'**
+  String get profileSyncCellular;
+
+  /// No description provided for @profileSyncError.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّرت المزامنة — أعد المحاولة'**
+  String get profileSyncError;
+
+  /// No description provided for @profileShortcutStorage.
+  ///
+  /// In ar, this message translates to:
+  /// **'إدارة التخزين'**
+  String get profileShortcutStorage;
+
+  /// No description provided for @profileShortcutHistory.
+  ///
+  /// In ar, this message translates to:
+  /// **'سجل القراءة'**
+  String get profileShortcutHistory;
+
+  /// No description provided for @profileShortcutBookmarks.
+  ///
+  /// In ar, this message translates to:
+  /// **'العلامات'**
+  String get profileShortcutBookmarks;
+
+  /// No description provided for @profileShortcutNotes.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملاحظاتي'**
+  String get profileShortcutNotes;
+
+  /// No description provided for @profileShortcutSettings.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإعدادات'**
+  String get profileShortcutSettings;
+
+  /// No description provided for @profileChangePassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'تغيير كلمة المرور'**
+  String get profileChangePassword;
+
+  /// No description provided for @profileCurrentPassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'كلمة المرور الحالية'**
+  String get profileCurrentPassword;
+
+  /// No description provided for @profileNewPassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'كلمة المرور الجديدة'**
+  String get profileNewPassword;
+
+  /// No description provided for @profileConfirmPassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'تأكيد كلمة المرور'**
+  String get profileConfirmPassword;
+
+  /// No description provided for @profilePasswordChanged.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تغيير كلمة المرور'**
+  String get profilePasswordChanged;
+
+  /// No description provided for @profilePasswordMismatch.
+  ///
+  /// In ar, this message translates to:
+  /// **'كلمتا المرور غير متطابقتين'**
+  String get profilePasswordMismatch;
+
+  /// No description provided for @profileSignOut.
+  ///
+  /// In ar, this message translates to:
+  /// **'تسجيل الخروج'**
+  String get profileSignOut;
+
+  /// No description provided for @profileSignOutConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'سيبقى سجلك وملاحظاتك على هذا الجهاز'**
+  String get profileSignOutConfirm;
+
+  /// No description provided for @profileDeleteAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'حذف الحساب'**
+  String get profileDeleteAccount;
+
+  /// No description provided for @profileDeleteExplain.
+  ///
+  /// In ar, this message translates to:
+  /// **'سيُحذف حسابك السحابي وجميع البيانات المتزامنة. تبقى بياناتك المحلية على هذا الجهاز ما لم تفعّل الخيار أدناه.'**
+  String get profileDeleteExplain;
+
+  /// No description provided for @profileDeleteWipeLocal.
+  ///
+  /// In ar, this message translates to:
+  /// **'احذف بياناتي من هذا الجهاز أيضًا'**
+  String get profileDeleteWipeLocal;
+
+  /// No description provided for @profileDeleteTypeConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب «حذف» للتأكيد'**
+  String get profileDeleteTypeConfirm;
+
+  /// No description provided for @profileDeleteConfirmWord.
+  ///
+  /// In ar, this message translates to:
+  /// **'حذف'**
+  String get profileDeleteConfirmWord;
+
+  /// No description provided for @profileDeleteDone.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم حذف الحساب'**
+  String get profileDeleteDone;
+
+  /// No description provided for @profileDeleteFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر حذف الحساب — أعد المحاولة'**
+  String get profileDeleteFailed;
+
+  /// No description provided for @profileAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحساب'**
+  String get profileAccount;
+
+  /// No description provided for @bookmarksListTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'العلامات'**
+  String get bookmarksListTitle;
+
+  /// No description provided for @notesListTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملاحظاتي'**
+  String get notesListTitle;
+
+  /// No description provided for @notesListEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا ملاحظات بعد — أضف ملاحظة أثناء القراءة'**
+  String get notesListEmpty;
+
+  /// No description provided for @authValueCopy.
+  ///
+  /// In ar, this message translates to:
+  /// **'سجّل الدخول لمزامنة قراءاتك وملاحظاتك عبر أجهزتك'**
+  String get authValueCopy;
+
+  /// No description provided for @authContinueApple.
+  ///
+  /// In ar, this message translates to:
+  /// **'متابعة عبر Apple'**
+  String get authContinueApple;
+
+  /// No description provided for @authContinueGoogle.
+  ///
+  /// In ar, this message translates to:
+  /// **'متابعة عبر Google'**
+  String get authContinueGoogle;
+
+  /// No description provided for @authContinueEmail.
+  ///
+  /// In ar, this message translates to:
+  /// **'البريد الإلكتروني'**
+  String get authContinueEmail;
+
+  /// No description provided for @authContinueGuest.
+  ///
+  /// In ar, this message translates to:
+  /// **'متابعة بدون حساب'**
+  String get authContinueGuest;
+
+  /// No description provided for @authSignInTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تسجيل الدخول'**
+  String get authSignInTitle;
+
+  /// No description provided for @authSignUpTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'إنشاء حساب'**
+  String get authSignUpTitle;
+
+  /// No description provided for @authSignIn.
+  ///
+  /// In ar, this message translates to:
+  /// **'تسجيل الدخول'**
+  String get authSignIn;
+
+  /// No description provided for @authSignUp.
+  ///
+  /// In ar, this message translates to:
+  /// **'إنشاء حساب'**
+  String get authSignUp;
+
+  /// No description provided for @authCreateAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'إنشاء حساب'**
+  String get authCreateAccount;
+
+  /// No description provided for @authForgotPassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'نسيت كلمة المرور؟'**
+  String get authForgotPassword;
+
+  /// No description provided for @authForgotTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'استعادة كلمة المرور'**
+  String get authForgotTitle;
+
+  /// No description provided for @authForgotCopy.
+  ///
+  /// In ar, this message translates to:
+  /// **'سنرسل رمزًا مكوَّنًا من ٦ أرقام إلى بريدك'**
+  String get authForgotCopy;
+
+  /// No description provided for @authForgotSuccess.
+  ///
+  /// In ar, this message translates to:
+  /// **'إن كان البريد مسجلًا لدينا فسيصلك الرمز'**
+  String get authForgotSuccess;
+
+  /// No description provided for @authSendCode.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال الرمز'**
+  String get authSendCode;
+
+  /// No description provided for @authEmail.
+  ///
+  /// In ar, this message translates to:
+  /// **'البريد الإلكتروني'**
+  String get authEmail;
+
+  /// No description provided for @authPassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'كلمة المرور'**
+  String get authPassword;
+
+  /// No description provided for @authNewPassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'كلمة المرور الجديدة'**
+  String get authNewPassword;
+
+  /// No description provided for @authConfirmPassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'تأكيد كلمة المرور'**
+  String get authConfirmPassword;
+
+  /// No description provided for @authDisplayName.
+  ///
+  /// In ar, this message translates to:
+  /// **'الاسم'**
+  String get authDisplayName;
+
+  /// No description provided for @authFieldRequired.
+  ///
+  /// In ar, this message translates to:
+  /// **'مطلوب'**
+  String get authFieldRequired;
+
+  /// No description provided for @authInvalidEmail.
+  ///
+  /// In ar, this message translates to:
+  /// **'بريد غير صالح'**
+  String get authInvalidEmail;
+
+  /// No description provided for @authPasswordTooShort.
+  ///
+  /// In ar, this message translates to:
+  /// **'كلمة المرور ٨ أحرف على الأقل'**
+  String get authPasswordTooShort;
+
+  /// No description provided for @authPasswordMismatch.
+  ///
+  /// In ar, this message translates to:
+  /// **'كلمتا المرور غير متطابقتين'**
+  String get authPasswordMismatch;
+
+  /// No description provided for @authPasswordStrengthWeak.
+  ///
+  /// In ar, this message translates to:
+  /// **'ضعيفة'**
+  String get authPasswordStrengthWeak;
+
+  /// No description provided for @authPasswordStrengthOk.
+  ///
+  /// In ar, this message translates to:
+  /// **'مقبولة'**
+  String get authPasswordStrengthOk;
+
+  /// No description provided for @authPasswordStrengthStrong.
+  ///
+  /// In ar, this message translates to:
+  /// **'قوية'**
+  String get authPasswordStrengthStrong;
+
+  /// No description provided for @authPasswordChanged.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تغيير كلمة المرور'**
+  String get authPasswordChanged;
+
+  /// No description provided for @authMustAcceptTerms.
+  ///
+  /// In ar, this message translates to:
+  /// **'يجب الموافقة على السياسة والشروط'**
+  String get authMustAcceptTerms;
+
+  /// No description provided for @authAcceptPrefix.
+  ///
+  /// In ar, this message translates to:
+  /// **'أوافق على'**
+  String get authAcceptPrefix;
+
+  /// No description provided for @authAcceptAnd.
+  ///
+  /// In ar, this message translates to:
+  /// **'و'**
+  String get authAcceptAnd;
+
+  /// No description provided for @authPrivacy.
+  ///
+  /// In ar, this message translates to:
+  /// **'سياسة الخصوصية'**
+  String get authPrivacy;
+
+  /// No description provided for @authTerms.
+  ///
+  /// In ar, this message translates to:
+  /// **'الشروط'**
+  String get authTerms;
+
+  /// No description provided for @authOtpTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل الرمز'**
+  String get authOtpTitle;
+
+  /// No description provided for @authOtpCopy.
+  ///
+  /// In ar, this message translates to:
+  /// **'أُرسل رمز مكوَّن من ٦ أرقام إلى {email}'**
+  String authOtpCopy(String email);
+
+  /// No description provided for @authVerifyCode.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحقق'**
+  String get authVerifyCode;
+
+  /// No description provided for @authOtpResendIn.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعادة الإرسال بعد {time}'**
+  String authOtpResendIn(String time);
+
+  /// No description provided for @authOtpResend.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعادة الإرسال'**
+  String get authOtpResend;
+
+  /// No description provided for @authOtpResent.
+  ///
+  /// In ar, this message translates to:
+  /// **'أُرسل الرمز'**
+  String get authOtpResent;
+
+  /// No description provided for @authOtpWrong.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرمز غير صحيح'**
+  String get authOtpWrong;
+
+  /// No description provided for @authOtpExpired.
+  ///
+  /// In ar, this message translates to:
+  /// **'انتهت صلاحية الرمز — اطلب رمزًا جديدًا'**
+  String get authOtpExpired;
+
+  /// No description provided for @authOtpLocked.
+  ///
+  /// In ar, this message translates to:
+  /// **'محاولات كثيرة — اطلب رمزًا جديدًا'**
+  String get authOtpLocked;
+
+  /// No description provided for @authResetTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'كلمة مرور جديدة'**
+  String get authResetTitle;
+
+  /// No description provided for @authSavePassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'حفظ كلمة المرور'**
+  String get authSavePassword;
+
+  /// No description provided for @authWelcomeVerified.
+  ///
+  /// In ar, this message translates to:
+  /// **'مرحبًا — تم التحقق من حسابك'**
+  String get authWelcomeVerified;
+
+  /// No description provided for @authWrongCredentials.
+  ///
+  /// In ar, this message translates to:
+  /// **'البريد أو كلمة المرور غير صحيحة'**
+  String get authWrongCredentials;
+
+  /// No description provided for @authEmailAlreadyInUse.
+  ///
+  /// In ar, this message translates to:
+  /// **'البريد مستخدم مسبقًا'**
+  String get authEmailAlreadyInUse;
+
+  /// No description provided for @authWeakPassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'كلمة المرور ضعيفة جدًا'**
+  String get authWeakPassword;
+
+  /// No description provided for @authTooManyRequests.
+  ///
+  /// In ar, this message translates to:
+  /// **'محاولات كثيرة — حاول لاحقًا'**
+  String get authTooManyRequests;
+
+  /// No description provided for @authNetworkError.
+  ///
+  /// In ar, this message translates to:
+  /// **'خطأ في الشبكة — أعد المحاولة'**
+  String get authNetworkError;
+
+  /// No description provided for @authRequiresRecentLogin.
+  ///
+  /// In ar, this message translates to:
+  /// **'سجّل الدخول مجددًا للمتابعة'**
+  String get authRequiresRecentLogin;
+
+  /// No description provided for @authSessionExpired.
+  ///
+  /// In ar, this message translates to:
+  /// **'انتهت الجلسة، سجّل الدخول من جديد للمزامنة'**
+  String get authSessionExpired;
+
+  /// No description provided for @authUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'تسجيل الدخول غير متاح حاليًا'**
+  String get authUnavailable;
+
+  /// No description provided for @authGenericError.
+  ///
+  /// In ar, this message translates to:
+  /// **'حدث خطأ ما'**
+  String get authGenericError;
+
+  /// No description provided for @authSyncInProgress.
+  ///
+  /// In ar, this message translates to:
+  /// **'جارٍ مزامنة بياناتك…'**
+  String get authSyncInProgress;
+
+  /// No description provided for @authSyncFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّرت المزامنة — ستُعاد لاحقًا'**
+  String get authSyncFailed;
 }
 
 class _AppLocalizationsDelegate

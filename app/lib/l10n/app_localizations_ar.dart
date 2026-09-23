@@ -656,4 +656,391 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get startReading => 'ابدأ القراءة';
+
+  @override
+  String get tabHome => 'الرئيسية';
+
+  @override
+  String get homeGreeting => 'السلام عليكم';
+
+  @override
+  String homeGreetingNamed(String name) {
+    return 'أهلًا، $name';
+  }
+
+  @override
+  String get homeHijriApprox => 'تقريبًا';
+
+  @override
+  String get homeContinueReading => 'متابعة القراءة';
+
+  @override
+  String homeContinueA11y(String title, String part, String page) {
+    return 'متابعة قراءة $title، الجزء $part، الصفحة $page';
+  }
+
+  @override
+  String homeBookCrumb(String book, String section) {
+    return 'كتاب $book · باب $section';
+  }
+
+  @override
+  String homeVolPage(String vol, String page) {
+    return 'ج $vol · ص $page';
+  }
+
+  @override
+  String homePageOnly(String page) {
+    return 'ص $page';
+  }
+
+  @override
+  String homePercent(String pct) {
+    return '٪$pct';
+  }
+
+  @override
+  String get homeStreakDays => 'أيام متتالية';
+
+  @override
+  String get homeWeeklyMinutes => 'دقائق هذا الأسبوع';
+
+  @override
+  String get homeWeeklyPages => 'صفحات هذا الأسبوع';
+
+  @override
+  String get homeRecentHistory => 'آخر القراءات';
+
+  @override
+  String get homeViewAll => 'عرض الكل';
+
+  @override
+  String get homeQuickBookmarks => 'العلامات';
+
+  @override
+  String get homeQuickNotes => 'ملاحظاتي';
+
+  @override
+  String get homeSyncBanner => 'سجّل الدخول لمزامنة قراءاتك عبر أجهزتك';
+
+  @override
+  String get homeSyncBannerCta => 'تسجيل الدخول';
+
+  @override
+  String get homeEmptyTitle => 'ابدأ رحلتك مع المكتبة';
+
+  @override
+  String get homeEmptyCta => 'تصفَّح الفهرس';
+
+  @override
+  String get homeBookNotDownloaded => 'الكتاب غير منزّل';
+
+  @override
+  String get profileTitle => 'الملف الشخصي';
+
+  @override
+  String get profileGuest => 'ضيف';
+
+  @override
+  String get profileGuestCopy =>
+      'أنت تستخدم التطبيق بدون حساب — بياناتك محفوظة على هذا الجهاز فقط';
+
+  @override
+  String get profileSignInCta => 'تسجيل الدخول أو إنشاء حساب';
+
+  @override
+  String get profileEditName => 'تعديل الاسم';
+
+  @override
+  String get profileEditNameHint => 'الاسم (١–٤٠ حرفًا)';
+
+  @override
+  String get profileEditNameSave => 'حفظ';
+
+  @override
+  String get profileEditNameSaved => 'تم تحديث الاسم';
+
+  @override
+  String get profileEditNameInvalid => 'الاسم يجب أن يكون بين ١ و ٤٠ حرفًا';
+
+  @override
+  String get profileLifetimeBooks => 'كتب بدأتها';
+
+  @override
+  String get profileLifetimePages => 'صفحات مقروءة';
+
+  @override
+  String get profileLifetimeMinutes => 'دقائق القراءة';
+
+  @override
+  String get profileLongestStreak => 'أطول سلسلة أيام';
+
+  @override
+  String get profileSync => 'المزامنة';
+
+  @override
+  String profileLastSynced(String relative) {
+    return 'آخر مزامنة: $relative';
+  }
+
+  @override
+  String get profileNeverSynced => 'لم تتم المزامنة بعد';
+
+  @override
+  String get profileSyncNow => 'مزامنة الآن';
+
+  @override
+  String get profileSyncing => 'جارٍ مزامنة بياناتك…';
+
+  @override
+  String get profileSyncCellular => 'المزامنة عبر بيانات الهاتف';
+
+  @override
+  String get profileSyncError => 'تعذّرت المزامنة — أعد المحاولة';
+
+  @override
+  String get profileShortcutStorage => 'إدارة التخزين';
+
+  @override
+  String get profileShortcutHistory => 'سجل القراءة';
+
+  @override
+  String get profileShortcutBookmarks => 'العلامات';
+
+  @override
+  String get profileShortcutNotes => 'ملاحظاتي';
+
+  @override
+  String get profileShortcutSettings => 'الإعدادات';
+
+  @override
+  String get profileChangePassword => 'تغيير كلمة المرور';
+
+  @override
+  String get profileCurrentPassword => 'كلمة المرور الحالية';
+
+  @override
+  String get profileNewPassword => 'كلمة المرور الجديدة';
+
+  @override
+  String get profileConfirmPassword => 'تأكيد كلمة المرور';
+
+  @override
+  String get profilePasswordChanged => 'تم تغيير كلمة المرور';
+
+  @override
+  String get profilePasswordMismatch => 'كلمتا المرور غير متطابقتين';
+
+  @override
+  String get profileSignOut => 'تسجيل الخروج';
+
+  @override
+  String get profileSignOutConfirm => 'سيبقى سجلك وملاحظاتك على هذا الجهاز';
+
+  @override
+  String get profileDeleteAccount => 'حذف الحساب';
+
+  @override
+  String get profileDeleteExplain =>
+      'سيُحذف حسابك السحابي وجميع البيانات المتزامنة. تبقى بياناتك المحلية على هذا الجهاز ما لم تفعّل الخيار أدناه.';
+
+  @override
+  String get profileDeleteWipeLocal => 'احذف بياناتي من هذا الجهاز أيضًا';
+
+  @override
+  String get profileDeleteTypeConfirm => 'اكتب «حذف» للتأكيد';
+
+  @override
+  String get profileDeleteConfirmWord => 'حذف';
+
+  @override
+  String get profileDeleteDone => 'تم حذف الحساب';
+
+  @override
+  String get profileDeleteFailed => 'تعذّر حذف الحساب — أعد المحاولة';
+
+  @override
+  String get profileAccount => 'الحساب';
+
+  @override
+  String get bookmarksListTitle => 'العلامات';
+
+  @override
+  String get notesListTitle => 'ملاحظاتي';
+
+  @override
+  String get notesListEmpty => 'لا ملاحظات بعد — أضف ملاحظة أثناء القراءة';
+
+  @override
+  String get authValueCopy =>
+      'سجّل الدخول لمزامنة قراءاتك وملاحظاتك عبر أجهزتك';
+
+  @override
+  String get authContinueApple => 'متابعة عبر Apple';
+
+  @override
+  String get authContinueGoogle => 'متابعة عبر Google';
+
+  @override
+  String get authContinueEmail => 'البريد الإلكتروني';
+
+  @override
+  String get authContinueGuest => 'متابعة بدون حساب';
+
+  @override
+  String get authSignInTitle => 'تسجيل الدخول';
+
+  @override
+  String get authSignUpTitle => 'إنشاء حساب';
+
+  @override
+  String get authSignIn => 'تسجيل الدخول';
+
+  @override
+  String get authSignUp => 'إنشاء حساب';
+
+  @override
+  String get authCreateAccount => 'إنشاء حساب';
+
+  @override
+  String get authForgotPassword => 'نسيت كلمة المرور؟';
+
+  @override
+  String get authForgotTitle => 'استعادة كلمة المرور';
+
+  @override
+  String get authForgotCopy => 'سنرسل رمزًا مكوَّنًا من ٦ أرقام إلى بريدك';
+
+  @override
+  String get authForgotSuccess => 'إن كان البريد مسجلًا لدينا فسيصلك الرمز';
+
+  @override
+  String get authSendCode => 'إرسال الرمز';
+
+  @override
+  String get authEmail => 'البريد الإلكتروني';
+
+  @override
+  String get authPassword => 'كلمة المرور';
+
+  @override
+  String get authNewPassword => 'كلمة المرور الجديدة';
+
+  @override
+  String get authConfirmPassword => 'تأكيد كلمة المرور';
+
+  @override
+  String get authDisplayName => 'الاسم';
+
+  @override
+  String get authFieldRequired => 'مطلوب';
+
+  @override
+  String get authInvalidEmail => 'بريد غير صالح';
+
+  @override
+  String get authPasswordTooShort => 'كلمة المرور ٨ أحرف على الأقل';
+
+  @override
+  String get authPasswordMismatch => 'كلمتا المرور غير متطابقتين';
+
+  @override
+  String get authPasswordStrengthWeak => 'ضعيفة';
+
+  @override
+  String get authPasswordStrengthOk => 'مقبولة';
+
+  @override
+  String get authPasswordStrengthStrong => 'قوية';
+
+  @override
+  String get authPasswordChanged => 'تم تغيير كلمة المرور';
+
+  @override
+  String get authMustAcceptTerms => 'يجب الموافقة على السياسة والشروط';
+
+  @override
+  String get authAcceptPrefix => 'أوافق على';
+
+  @override
+  String get authAcceptAnd => 'و';
+
+  @override
+  String get authPrivacy => 'سياسة الخصوصية';
+
+  @override
+  String get authTerms => 'الشروط';
+
+  @override
+  String get authOtpTitle => 'أدخل الرمز';
+
+  @override
+  String authOtpCopy(String email) {
+    return 'أُرسل رمز مكوَّن من ٦ أرقام إلى $email';
+  }
+
+  @override
+  String get authVerifyCode => 'تحقق';
+
+  @override
+  String authOtpResendIn(String time) {
+    return 'إعادة الإرسال بعد $time';
+  }
+
+  @override
+  String get authOtpResend => 'إعادة الإرسال';
+
+  @override
+  String get authOtpResent => 'أُرسل الرمز';
+
+  @override
+  String get authOtpWrong => 'الرمز غير صحيح';
+
+  @override
+  String get authOtpExpired => 'انتهت صلاحية الرمز — اطلب رمزًا جديدًا';
+
+  @override
+  String get authOtpLocked => 'محاولات كثيرة — اطلب رمزًا جديدًا';
+
+  @override
+  String get authResetTitle => 'كلمة مرور جديدة';
+
+  @override
+  String get authSavePassword => 'حفظ كلمة المرور';
+
+  @override
+  String get authWelcomeVerified => 'مرحبًا — تم التحقق من حسابك';
+
+  @override
+  String get authWrongCredentials => 'البريد أو كلمة المرور غير صحيحة';
+
+  @override
+  String get authEmailAlreadyInUse => 'البريد مستخدم مسبقًا';
+
+  @override
+  String get authWeakPassword => 'كلمة المرور ضعيفة جدًا';
+
+  @override
+  String get authTooManyRequests => 'محاولات كثيرة — حاول لاحقًا';
+
+  @override
+  String get authNetworkError => 'خطأ في الشبكة — أعد المحاولة';
+
+  @override
+  String get authRequiresRecentLogin => 'سجّل الدخول مجددًا للمتابعة';
+
+  @override
+  String get authSessionExpired => 'انتهت الجلسة، سجّل الدخول من جديد للمزامنة';
+
+  @override
+  String get authUnavailable => 'تسجيل الدخول غير متاح حاليًا';
+
+  @override
+  String get authGenericError => 'حدث خطأ ما';
+
+  @override
+  String get authSyncInProgress => 'جارٍ مزامنة بياناتك…';
+
+  @override
+  String get authSyncFailed => 'تعذّرت المزامنة — ستُعاد لاحقًا';
 }

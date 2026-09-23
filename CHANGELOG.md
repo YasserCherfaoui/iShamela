@@ -4,8 +4,16 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Added
+
+- Home screen (SPEC-023): first tab «الرئيسية» with greeting + Hijri/Gregorian date, continue-reading card, weekly streak/minutes/pages chips, recent history, bookmarks/notes quick actions, and guest sync banner. Shell tab order is Home · Library · Catalog · Settings (Downloads reachable from Settings).
+- User profile (SPEC-024): guest + signed-in variants with lifetime stats (Arabic-Indic digits), sync controls, shortcuts, and account management (sign-out / change password / delete account); Settings → الحساب entry.
+- Accounts & authentication (SPEC-022): Firebase Auth (Apple / Google / email+OTP), AuthWelcomeScreen, guest mode, and local→cloud merge scaffolding (`AuthController.syncNow`).
+
 ### Changed
 
+- Platform SDK floors for FlutterFire: macOS 10.15, iOS 15.0, Android `minSdk` ≥ 23.
+- Reader TOC bottom sheet: الفهرس / العلامات / الملاحظات tabs rebuild via `StatefulBuilder` (parent `setState` alone did not refresh the modal).
 - Reader selection toolbar: **Remove highlight** when the selection overlaps existing highlights (deletes all overlapping rows; SPEC-010).
 - Web reader: disable the browser context menu and show the highlight/note/cite toolbar when a text selection finishes (right-click still works too).
 - Fix catalog/index row state after download (revision tick + treat `done` as installed); snackbar **افتح** uses the app navigator key so it can push the Reader.
@@ -14,6 +22,7 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
+- Accounts & authentication UI + controller (SPEC-022): optional Firebase guest-safe auth (`authProvider`), Apple/Google/email+OTP screens, merge/sync skeleton, ARB strings (ar/en/fr).
 - Vercel deploy config: root `vercel.json` + `scripts/vercel-{install,build}.sh` (Flutter 3.32.5, `app/build/web`, SPA rewrite) so importing the repo builds the web app with no dashboard overrides.
 - Brand assets, splash & download feedback (SPEC-020): Warm Manuscript icon (SVG→rasters script), native+Flutter splash, catalog affordance mapper + idempotent enqueue, themed download snackbar host.
 - Storage manager (SPEC-015): `installed_size_bytes` on `state.sqlite` v7, Settings storage card, manage-storage screen with size-sorted uninstall.

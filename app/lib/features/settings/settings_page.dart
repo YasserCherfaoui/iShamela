@@ -5,6 +5,8 @@ import 'package:ishamela/l10n/app_localizations.dart';
 import 'package:ishamela/core/format_bytes.dart';
 import 'package:ishamela/core/providers.dart';
 import 'package:ishamela/core/storage_size.dart';
+import 'package:ishamela/features/downloads/downloads_page.dart';
+import 'package:ishamela/features/profile/profile_page.dart';
 import 'package:ishamela/features/reader/reader_styles.dart';
 import 'package:ishamela/features/reader/role_color.dart';
 import 'package:ishamela/features/reader/text_roles.dart';
@@ -52,6 +54,8 @@ class SettingsPage extends ConsumerWidget {
             ),
           ],
         ),
+        const SizedBox(height: 16),
+        _AccountCard(),
         const SizedBox(height: 16),
         Text(
           l10n.readingTheme,
@@ -578,6 +582,43 @@ class _StorageCardState extends ConsumerState<_StorageCard> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _AccountCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final t = IshamelaTokens.of(context);
+    return Material(
+      color: t.card,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: t.hairline),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ListTile(
+            title: Text(l10n.profileAccount),
+            trailing: const Icon(Icons.chevron_left),
+            onTap: () => ProfilePage.open(context),
+          ),
+          const Divider(height: 1),
+          ListTile(
+            title: Text(l10n.tabDownloads),
+            trailing: const Icon(Icons.chevron_left),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const DownloadsPage(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }

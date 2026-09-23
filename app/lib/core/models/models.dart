@@ -131,7 +131,7 @@ class DownloadTask {
   final int updatedAt;
 }
 
-/// SPEC-014 reading session row.
+/// SPEC-014 / SPEC-023 reading session row.
 class ReadingHistoryEntry {
   ReadingHistoryEntry({
     required this.id,
@@ -142,6 +142,7 @@ class ReadingHistoryEntry {
     this.printPage,
     this.sectionTitle,
     this.closedAt,
+    this.durationSeconds,
   });
 
   final int id;
@@ -152,6 +153,22 @@ class ReadingHistoryEntry {
   final String? sectionTitle;
   final int openedAt;
   final int? closedAt;
+
+  /// Session length in seconds (SPEC-023); null until first page-turn/close.
+  final int? durationSeconds;
+}
+
+/// Local sync status row (SPEC-023 / SPEC-024).
+class SyncState {
+  const SyncState({
+    this.lastSyncedAt,
+    this.lastError,
+    this.cellularAllowed = true,
+  });
+
+  final int? lastSyncedAt;
+  final String? lastError;
+  final bool cellularAllowed;
 }
 
 /// SPEC-014 page bookmark.

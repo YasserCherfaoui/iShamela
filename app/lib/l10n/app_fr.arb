@@ -367,5 +367,176 @@
   },
   "preparingLibrary": "Préparation de votre bibliothèque…",
   "appTagline": "Votre bibliothèque des sciences islamiques — hors ligne",
-  "startReading": "Commencer la lecture"
+  "startReading": "Commencer la lecture",
+  "tabHome": "Accueil",
+  "homeGreeting": "Que la paix soit sur vous",
+  "homeGreetingNamed": "Bonjour, {name}",
+  "@homeGreetingNamed": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "homeHijriApprox": "approx.",
+  "homeContinueReading": "Continuer la lecture",
+  "homeContinueA11y": "Continuer la lecture de {title}, volume {part}, page {page}",
+  "@homeContinueA11y": {
+    "placeholders": {
+      "title": {"type": "String"},
+      "part": {"type": "String"},
+      "page": {"type": "String"}
+    }
+  },
+  "homeBookCrumb": "Livre {book} · Chapitre {section}",
+  "@homeBookCrumb": {
+    "placeholders": {
+      "book": {"type": "String"},
+      "section": {"type": "String"}
+    }
+  },
+  "homeVolPage": "T. {vol} · p. {page}",
+  "@homeVolPage": {
+    "placeholders": {
+      "vol": {"type": "String"},
+      "page": {"type": "String"}
+    }
+  },
+  "homePageOnly": "p. {page}",
+  "@homePageOnly": {
+    "placeholders": {
+      "page": {"type": "String"}
+    }
+  },
+  "homePercent": "{pct} %",
+  "@homePercent": {
+    "placeholders": {
+      "pct": {"type": "String"}
+    }
+  },
+  "homeStreakDays": "Jours consécutifs",
+  "homeWeeklyMinutes": "Minutes cette semaine",
+  "homeWeeklyPages": "Pages cette semaine",
+  "homeRecentHistory": "Lectures récentes",
+  "homeViewAll": "Tout voir",
+  "homeQuickBookmarks": "Signets",
+  "homeQuickNotes": "Mes notes",
+  "homeSyncBanner": "Connectez-vous pour synchroniser vos lectures",
+  "homeSyncBannerCta": "Se connecter",
+  "homeEmptyTitle": "Commencez votre parcours avec la bibliothèque",
+  "homeEmptyCta": "Parcourir le catalogue",
+  "homeBookNotDownloaded": "Livre non téléchargé",
+  "profileTitle": "Profil",
+  "profileGuest": "Invité",
+  "profileGuestCopy": "Vous utilisez l'application sans compte — vos données restent sur cet appareil uniquement",
+  "profileSignInCta": "Se connecter ou créer un compte",
+  "profileEditName": "Modifier le nom",
+  "profileEditNameHint": "Nom (1–40 caractères)",
+  "profileEditNameSave": "Enregistrer",
+  "profileEditNameSaved": "Nom mis à jour",
+  "profileEditNameInvalid": "Le nom doit contenir 1 à 40 caractères",
+  "profileLifetimeBooks": "Livres commencés",
+  "profileLifetimePages": "Pages lues",
+  "profileLifetimeMinutes": "Minutes de lecture",
+  "profileLongestStreak": "Plus longue série",
+  "profileSync": "Synchronisation",
+  "profileLastSynced": "Dernière sync : {relative}",
+  "@profileLastSynced": {
+    "placeholders": {
+      "relative": {"type": "String"}
+    }
+  },
+  "profileNeverSynced": "Pas encore synchronisé",
+  "profileSyncNow": "Synchroniser",
+  "profileSyncing": "Synchronisation en cours…",
+  "profileSyncCellular": "Sync via données mobiles",
+  "profileSyncError": "Échec de la sync — réessayez",
+  "profileShortcutStorage": "Gérer le stockage",
+  "profileShortcutHistory": "Historique de lecture",
+  "profileShortcutBookmarks": "Signets",
+  "profileShortcutNotes": "Mes notes",
+  "profileShortcutSettings": "Paramètres",
+  "profileChangePassword": "Changer le mot de passe",
+  "profileCurrentPassword": "Mot de passe actuel",
+  "profileNewPassword": "Nouveau mot de passe",
+  "profileConfirmPassword": "Confirmer le mot de passe",
+  "profilePasswordChanged": "Mot de passe modifié",
+  "profilePasswordMismatch": "Les mots de passe ne correspondent pas",
+  "profileSignOut": "Se déconnecter",
+  "profileSignOutConfirm": "Votre historique et vos notes resteront sur cet appareil",
+  "profileDeleteAccount": "Supprimer le compte",
+  "profileDeleteExplain": "Votre compte cloud et toutes les données synchronisées seront supprimés. Les données locales restent sauf si vous cochez l'option ci-dessous.",
+  "profileDeleteWipeLocal": "Supprimer aussi mes données de cet appareil",
+  "profileDeleteTypeConfirm": "Tapez «حذف» pour confirmer",
+  "profileDeleteConfirmWord": "حذف",
+  "profileDeleteDone": "Compte supprimé",
+  "profileDeleteFailed": "Impossible de supprimer le compte — réessayez",
+  "profileAccount": "Compte",
+  "bookmarksListTitle": "Signets",
+  "notesListTitle": "Mes notes",
+  "notesListEmpty": "Aucune note — ajoutez-en en lisant",
+  "authValueCopy": "Connectez-vous pour synchroniser lectures et notes sur vos appareils",
+  "authContinueApple": "Continuer avec Apple",
+  "authContinueGoogle": "Continuer avec Google",
+  "authContinueEmail": "E-mail",
+  "authContinueGuest": "Continuer sans compte",
+  "authPrivacy": "Politique de confidentialité",
+  "authTerms": "Conditions",
+  "authSignInTitle": "Connexion",
+  "authSignUpTitle": "Créer un compte",
+  "authForgotTitle": "Mot de passe oublié",
+  "authOtpTitle": "Code de vérification",
+  "authResetTitle": "Nouveau mot de passe",
+  "authEmail": "E-mail",
+  "authPassword": "Mot de passe",
+  "authNewPassword": "Nouveau mot de passe",
+  "authConfirmPassword": "Confirmer le mot de passe",
+  "authDisplayName": "Nom",
+  "authSignIn": "Se connecter",
+  "authSignUp": "Créer un compte",
+  "authCreateAccount": "Créer un compte",
+  "authForgotPassword": "Mot de passe oublié ?",
+  "authForgotCopy": "Nous enverrons un code à 6 chiffres à votre e-mail",
+  "authForgotSuccess": "Si cet e-mail est enregistré, vous recevrez un code",
+  "authSendCode": "Envoyer le code",
+  "authVerifyCode": "Vérifier",
+  "authSavePassword": "Enregistrer le mot de passe",
+  "authPasswordChanged": "Mot de passe modifié",
+  "authWelcomeVerified": "Bienvenue — e-mail vérifié",
+  "authOtpCopy": "Saisissez le code à 6 chiffres envoyé à {email}",
+  "@authOtpCopy": {
+    "placeholders": {
+      "email": {"type": "String"}
+    }
+  },
+  "authOtpResendIn": "Renvoyer dans {time}",
+  "@authOtpResendIn": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "authOtpResend": "Renvoyer le code",
+  "authOtpResent": "Code renvoyé",
+  "authOtpWrong": "Code incorrect",
+  "authOtpExpired": "Code expiré — demandez-en un nouveau",
+  "authOtpLocked": "Trop de tentatives — demandez un nouveau code",
+  "authFieldRequired": "Ce champ est requis",
+  "authInvalidEmail": "E-mail invalide",
+  "authPasswordTooShort": "Le mot de passe doit contenir au moins 8 caractères",
+  "authPasswordMismatch": "Les mots de passe ne correspondent pas",
+  "authPasswordStrengthWeak": "Faible — ajoutez lettres et chiffres",
+  "authPasswordStrengthOk": "Correct",
+  "authPasswordStrengthStrong": "Fort",
+  "authMustAcceptTerms": "Veuillez accepter la politique et les conditions",
+  "authAcceptPrefix": "J'accepte la",
+  "authAcceptAnd": "et les",
+  "authWrongCredentials": "E-mail ou mot de passe incorrect",
+  "authEmailAlreadyInUse": "Cet e-mail est déjà utilisé",
+  "authWeakPassword": "Mot de passe trop faible",
+  "authTooManyRequests": "Trop de tentatives — réessayez plus tard",
+  "authNetworkError": "Erreur réseau — vérifiez la connexion",
+  "authRequiresRecentLogin": "Reconnectez-vous pour continuer",
+  "authSessionExpired": "Session terminée — reconnectez-vous pour synchroniser",
+  "authUnavailable": "La connexion est indisponible pour le moment",
+  "authGenericError": "Une erreur s'est produite — réessayez",
+  "authSyncInProgress": "Synchronisation de vos données…",
+  "authSyncFailed": "Échec de la synchronisation — nouvel essai plus tard"
 }

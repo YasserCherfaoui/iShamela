@@ -171,12 +171,13 @@ IshamelaTokens _chromeFor(ReadingAtmosphere atmosphere) {
       return IshamelaTokens.paperLight.copyWith(
         paper: const Color(0xFFF1E5CC),
         readerPaper: const Color(0xFFF1E5CC),
-        card: const Color(0xFFE9DAB9),
+        card: const Color(0xFFEBDCBB),
         hairline: const Color(0xFFE0D2AF),
         ink: const Color(0xFF3A3226),
         muted: const Color(0xFF8A7B5C),
         chipBg: const Color(0xFFE9DAB9),
         segmentTrack: const Color(0xFFE0D2AF),
+        danger: const Color(0xFFB3402E),
       );
     case ReadingAtmosphere.night:
       // green900 stays brand-deep (hero fill). emphasis = night titles mint
@@ -184,7 +185,7 @@ IshamelaTokens _chromeFor(ReadingAtmosphere atmosphere) {
       return IshamelaTokens.paperLight.copyWith(
         paper: const Color(0xFF101B17),
         readerPaper: const Color(0xFF101B17),
-        card: const Color(0xFF1B2A24),
+        card: const Color(0xFF16241D),
         hairline: const Color(0xFF223229),
         ink: const Color(0xFFE7E1D2),
         muted: const Color(0xFF7E9187),
@@ -198,6 +199,7 @@ IshamelaTokens _chromeFor(ReadingAtmosphere atmosphere) {
         highlight: const Color(0xFF3D3421),
         chipBg: const Color(0xFF1B2A24),
         segmentTrack: const Color(0xFF223229),
+        danger: const Color(0xFFE06A55),
       );
   }
 }
