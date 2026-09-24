@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -126,6 +128,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   List<BookSearchHit> _hits = const [];
   Set<int> _highlightPageIds = {};
   StateDatabase? _state;
+
+  /// Captured while mounted. [ref] is unsafe in [dispose].
+  Future<void> Function(StateDatabase db)? _pushReading;
   int _paneTab = 0;
 
   /// Prevents multi-page jumps from a single overscroll gesture.
@@ -220,9 +225,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
       }
       if (resumeMissing && mounted) {
         final l10n = AppLocalizations.of(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.pageNotFound)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.pageNotFound)));
       }
     } catch (e) {
       if (!mounted) return;
@@ -233,6 +238,11 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   @override
   void dispose() {
     _closeHistorySession();
+    final state = _state;
+    final push = _pushReading;
+    if (state != null && push != null) {
+      unawaited(push(state));
+    }
     _pageController?.dispose();
     _jumpCtrl.dispose();
     _searchCtrl.dispose();
@@ -263,8 +273,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     );
   }
 
-  String? _sectionTitleFor(int pageId) =>
-      _sectionTitleForToc(_toc, pageId);
+  String? _sectionTitleFor(int pageId) => _sectionTitleForToc(_toc, pageId);
 
   static String? _sectionTitleForToc(List<TocEntry> toc, int pageId) {
     if (toc.isEmpty) return null;
@@ -347,10 +356,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
 
   void _runSearch() {
     if (_db == null) return;
-    final hits = _db!.searchInBook(
-      _searchCtrl.text,
-      exactPhrase: _exactPhrase,
-    );
+    final hits = _db!.searchInBook(_searchCtrl.text, exactPhrase: _exactPhrase);
     setState(() {
       _hits = hits;
       _highlightPageIds = hits.map((h) => h.pageId).toSet();
@@ -359,6 +365,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
 
   @override
   Widget build(BuildContext context) {
+    _pushReading = ref.read(authProvider.notifier).pushReading;
     final l10n = AppLocalizations.of(context);
     final title = widget.title ?? _db?.meta('title') ?? 'book_${widget.bookId}';
     final width = MediaQuery.sizeOf(context).width;
@@ -397,10 +404,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                   part != null && part.isNotEmpty
                       ? 'ج$part · ص$printNo'
                       : 'ص$printNo',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: reader.muted,
-                  ),
+                  style: TextStyle(fontSize: 11, color: reader.muted),
                 ),
             ],
           ),
@@ -482,10 +486,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                 }
               },
               itemBuilder: (_) {
-                final state = ref.read(stateDatabaseProvider).maybeWhen(
-                      data: (s) => s,
-                      orElse: () => null,
-                    );
+                final state = ref
+                    .read(stateDatabaseProvider)
+                    .maybeWhen(data: (s) => s, orElse: () => null);
                 final count = state?.annotationCountForBook(widget.bookId) ?? 0;
                 return [
                   if (!wide)
@@ -527,41 +530,33 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         body: _error != null
             ? Center(child: Text('$_error'))
             : _db == null
-                ? const Center(child: CircularProgressIndicator())
-                : Column(
-                    children: [
-                      if (_hits.isNotEmpty) _searchHits(l10n),
-                      Expanded(
-                        child: Row(
-                          children: [
-                            if (showToc)
-                              SizedBox(
-                                width: 300,
-                                child: _sideIndexPane(l10n),
-                              ),
-                            if (showToc) const VerticalDivider(width: 1),
-                            Expanded(
-                              child: Center(
-                                child: ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    maxWidth: 660,
-                                  ),
-                                  child: _bodyPane(title),
-                                ),
-                              ),
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+                children: [
+                  if (_hits.isNotEmpty) _searchHits(l10n),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        if (showToc)
+                          SizedBox(width: 300, child: _sideIndexPane(l10n)),
+                        if (showToc) const VerticalDivider(width: 1),
+                        Expanded(
+                          child: Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 660),
+                              child: _bodyPane(title),
                             ),
-                            if (showCard) const VerticalDivider(width: 1),
-                            if (showCard)
-                              SizedBox(
-                                width: 300,
-                                child: _cardPane(l10n, title),
-                              ),
-                          ],
+                          ),
                         ),
-                      ),
-                      _bottomNavBar(l10n),
-                    ],
+                        if (showCard) const VerticalDivider(width: 1),
+                        if (showCard)
+                          SizedBox(width: 300, child: _cardPane(l10n, title)),
+                      ],
+                    ),
                   ),
+                  _bottomNavBar(l10n),
+                ],
+              ),
       ),
     );
   }
@@ -799,7 +794,8 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   Widget _bookmarkToggleButton(AppLocalizations l10n, BookPage? page) {
     final _ = _bookmarksTick;
     final state = _state;
-    final marked = state != null &&
+    final marked =
+        state != null &&
         page != null &&
         state.isPageBookmarked(
           bookId: widget.bookId,
@@ -816,9 +812,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         tooltip: l10n.bookmarks,
         icon: AnimatedScale(
           scale: marked ? 1.1 : 1.0,
-          duration: reduce
-              ? Duration.zero
-              : const Duration(milliseconds: 150),
+          duration: reduce ? Duration.zero : const Duration(milliseconds: 150),
           curve: Curves.easeOut,
           child: Icon(
             marked ? Icons.bookmark : Icons.bookmark_border,
@@ -860,9 +854,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         ),
       );
     } else {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.bookmarkRemoved)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l10n.bookmarkRemoved)));
     }
   }
 
@@ -877,8 +869,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     final bookmarkLabel = bookmarkCount > 0
         ? '${l10n.bookmarks} $bookmarkCount'
         : l10n.bookmarks;
-    final notesLabel =
-        noteCount > 0 ? '${l10n.notesTab} $noteCount' : l10n.notesTab;
+    final notesLabel = noteCount > 0
+        ? '${l10n.notesTab} $noteCount'
+        : l10n.notesTab;
     return Column(
       children: [
         Padding(
@@ -895,11 +888,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         Expanded(
           child: IndexedStack(
             index: _paneTab,
-            children: [
-              _tocList(l10n),
-              _bookmarksList(l10n),
-              _notesList(l10n),
-            ],
+            children: [_tocList(l10n), _bookmarksList(l10n), _notesList(l10n)],
           ),
         ),
       ],
@@ -936,8 +925,10 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
               borderRadius: BorderRadius.circular(10),
               onTap: () => _jumpToId(e.pageId),
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
                 child: Row(
                   children: [
                     Expanded(
@@ -947,8 +938,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontFamily: 'Amiri',
-                          fontWeight:
-                              selected ? FontWeight.w700 : FontWeight.w400,
+                          fontWeight: selected
+                              ? FontWeight.w700
+                              : FontWeight.w400,
                           fontSize: 14,
                           color: selected ? t.emphasis : t.ink,
                         ),
@@ -995,11 +987,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
           title: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis),
           trailing: Text(
             printNo,
-            style: TextStyle(
-              fontFamily: kFontUi,
-              fontSize: 11,
-              color: t.muted,
-            ),
+            style: TextStyle(fontFamily: kFontUi, fontSize: 11, color: t.muted),
           ),
           onTap: () => _jumpToId(b.pageId),
           onLongPress: () => _bookmarkActions(l10n, b),
@@ -1076,16 +1064,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
           dense: true,
           leading: CircleAvatar(
             radius: 12,
-            child: Text(
-              '${i + 1}',
-              style: const TextStyle(fontSize: 11),
-            ),
+            child: Text('${i + 1}', style: const TextStyle(fontSize: 11)),
           ),
-          title: Text(
-            preview,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
+          title: Text(preview, maxLines: 2, overflow: TextOverflow.ellipsis),
           subtitle: Text(l10n.notePageLabel(printNo)),
           onTap: () => _jumpToId(pageId),
         );
@@ -1140,9 +1121,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                 : '$title, $author$partBit, p. $printNo';
             await Clipboard.setData(ClipboardData(text: text));
             if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(l10n.copiedCitation)),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(l10n.copiedCitation)));
           },
           child: Text(l10n.copyBibliography),
         ),
@@ -1241,44 +1222,49 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                     searchHit
                         ? _highlightedBody(page.body)
                         : (_state == null
-                            ? buildBodyDisplay(page.body)
-                            : AnnotatedBody(
-                                body: page.body,
-                                bookId: widget.bookId,
-                                pageId: page.id,
-                                state: _state!,
-                                title: title,
-                                author: author,
-                                part: part,
-                                pageNumber: page.pageNumber,
-                                textStyles: ref.watch(readerTextStylesProvider),
-                                onNotesChanged: () {
-                                  WidgetsBinding.instance
-                                      .addPostFrameCallback((_) {
-                                    if (mounted) {
-                                      setState(() => _notesTick++);
-                                    }
-                                  });
-                                },
-                              )),
+                              ? buildBodyDisplay(page.body)
+                              : AnnotatedBody(
+                                  body: page.body,
+                                  bookId: widget.bookId,
+                                  pageId: page.id,
+                                  state: _state!,
+                                  title: title,
+                                  author: author,
+                                  part: part,
+                                  pageNumber: page.pageNumber,
+                                  textStyles: ref.watch(
+                                    readerTextStylesProvider,
+                                  ),
+                                  onNotesChanged: () {
+                                    WidgetsBinding.instance
+                                        .addPostFrameCallback((_) {
+                                          if (mounted) {
+                                            setState(() => _notesTick++);
+                                          }
+                                        });
+                                  },
+                                )),
                     if (footnotes != null && footnotes.isNotEmpty) ...[
                       const SizedBox(height: 24),
                       Divider(color: ReaderThemeTokens.of(context).hairline),
                       Text(
                         l10n.footnotes,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              color: IshamelaTokens.of(context).gold,
-                              fontFamily: 'Amiri',
-                              fontWeight: FontWeight.w700,
-                            ),
+                          color: IshamelaTokens.of(context).gold,
+                          fontFamily: 'Amiri',
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       _FootnotesBlock(
                         text: footnotes,
                         fontSize:
-                            (ref.watch(readerTextStylesProvider).fontSize) * 0.9,
-                        fontFamily:
-                            ref.watch(readerTextStylesProvider).font.familyName,
+                            (ref.watch(readerTextStylesProvider).fontSize) *
+                            0.9,
+                        fontFamily: ref
+                            .watch(readerTextStylesProvider)
+                            .font
+                            .familyName,
                       ),
                     ],
                   ],
@@ -1306,11 +1292,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     final reader = ReaderThemeTokens.of(context);
     final spans = <InlineSpan>[];
     var cursor = 0;
-    final base = TextStyle(
-      fontSize: 20,
-      height: 1.9,
-      color: reader.body,
-    );
+    final base = TextStyle(fontSize: 20, height: 1.9, color: reader.body);
     var hi = base.copyWith(backgroundColor: reader.highlight);
     if (reader.highlightUnderline != null) {
       hi = hi.copyWith(
@@ -1343,10 +1325,8 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
           child: SizedBox(
             height: MediaQuery.sizeOf(context).height * 0.6,
             child: StatefulBuilder(
-              builder: (_, setSheet) => _sideIndexPane(
-                l10n,
-                onSheetTick: () => setSheet(() {}),
-              ),
+              builder: (_, setSheet) =>
+                  _sideIndexPane(l10n, onSheetTick: () => setSheet(() {})),
             ),
           ),
         ),
@@ -1408,10 +1388,7 @@ class _FootnotesBlock extends StatelessWidget {
         spans.add(
           TextSpan(
             text: m.group(1),
-            style: base.copyWith(
-              color: gold,
-              fontWeight: FontWeight.w700,
-            ),
+            style: base.copyWith(color: gold, fontWeight: FontWeight.w700),
           ),
         );
         spans.add(TextSpan(text: line.substring(m.end), style: base));

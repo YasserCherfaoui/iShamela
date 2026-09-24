@@ -570,5 +570,16 @@
   "authOtpSpam": "Vous n'avez pas reçu le code ? Vérifiez les indésirables",
   "authOtpConfirm": "Confirmer",
   "authChangeEmail": "Changer l'e-mail",
-  "authSignUpCta": "Créer le compte"
+  "authSignUpCta": "Créer le compte",
+  "homeSyncTooltip": "Synchroniser",
+  "homeSyncTitle": "Synchronisation",
+  "homeSyncInSync": "Cet appareil correspond à votre compte",
+  "homeSyncLocalOnly": "Uniquement sur cet appareil",
+  "homeSyncRemoteOnly": "Uniquement sur le compte",
+  "homeSyncLocalNewer": "Cet appareil est plus récent",
+  "homeSyncRemoteNewer": "Le compte est plus récent",
+  "homeSyncThisDevice": "Cet appareil",
+  "homeSyncAccount": "Compte",
+  "homeSyncSignIn": "Connectez-vous pour comparer cet appareil à votre compte",
+  "homeSyncLoadFailed": "Impossible de charger la copie du compte"
 }

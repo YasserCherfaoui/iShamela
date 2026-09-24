@@ -13,8 +13,7 @@ class StateDatabase {
   static Future<StateDatabase> open(AppPaths paths) async {
     final db = openAppDatabase(paths.stateSqlite);
     db.execute('PRAGMA foreign_keys = ON');
-    final version =
-        db.select('PRAGMA user_version').first.columnAt(0) as int;
+    final version = db.select('PRAGMA user_version').first.columnAt(0) as int;
     if (version < 1) {
       db.execute('''
         CREATE TABLE IF NOT EXISTS downloads (
@@ -39,8 +38,7 @@ class StateDatabase {
       ''');
       db.execute('PRAGMA user_version = 1');
     }
-    final version2 =
-        db.select('PRAGMA user_version').first.columnAt(0) as int;
+    final version2 = db.select('PRAGMA user_version').first.columnAt(0) as int;
     if (version2 < 2) {
       db.execute('''
         CREATE TABLE IF NOT EXISTS reading_state (
@@ -51,8 +49,7 @@ class StateDatabase {
       ''');
       db.execute('PRAGMA user_version = 2');
     }
-    final version3 =
-        db.select('PRAGMA user_version').first.columnAt(0) as int;
+    final version3 = db.select('PRAGMA user_version').first.columnAt(0) as int;
     if (version3 < 3) {
       db.execute('''
         CREATE TABLE IF NOT EXISTS settings (
@@ -62,8 +59,7 @@ class StateDatabase {
       ''');
       db.execute('PRAGMA user_version = 3');
     }
-    final version4 =
-        db.select('PRAGMA user_version').first.columnAt(0) as int;
+    final version4 = db.select('PRAGMA user_version').first.columnAt(0) as int;
     if (version4 < 4) {
       db.execute('''
         CREATE TABLE IF NOT EXISTS highlights (
@@ -99,20 +95,16 @@ class StateDatabase {
       );
       db.execute('PRAGMA user_version = 4');
     }
-    final version5 =
-        db.select('PRAGMA user_version').first.columnAt(0) as int;
+    final version5 = db.select('PRAGMA user_version').first.columnAt(0) as int;
     if (version5 < 5) {
       try {
-        db.execute(
-          'ALTER TABLE installed_books ADD COLUMN page_count INTEGER',
-        );
+        db.execute('ALTER TABLE installed_books ADD COLUMN page_count INTEGER');
       } catch (_) {
         // column may already exist
       }
       db.execute('PRAGMA user_version = 5');
     }
-    final version6 =
-        db.select('PRAGMA user_version').first.columnAt(0) as int;
+    final version6 = db.select('PRAGMA user_version').first.columnAt(0) as int;
     if (version6 < 6) {
       db.execute('''
         CREATE TABLE IF NOT EXISTS reading_history (
@@ -152,25 +144,21 @@ class StateDatabase {
       );
       db.execute('PRAGMA user_version = 6');
     }
-    final version7 =
-        db.select('PRAGMA user_version').first.columnAt(0) as int;
+    final version7 = db.select('PRAGMA user_version').first.columnAt(0) as int;
     if (version7 < 7) {
       try {
         db.execute(
           'ALTER TABLE installed_books ADD COLUMN installed_size_bytes INTEGER',
         );
       } catch (_) {}
-      db.execute(
-        '''
+      db.execute('''
         UPDATE installed_books
         SET installed_size_bytes = sqlite_bytes
         WHERE installed_size_bytes IS NULL
-        ''',
-      );
+        ''');
       db.execute('PRAGMA user_version = 7');
     }
-    final version8 =
-        db.select('PRAGMA user_version').first.columnAt(0) as int;
+    final version8 = db.select('PRAGMA user_version').first.columnAt(0) as int;
     if (version8 < 8) {
       // SPEC-023: session duration + sync_state for Home / Profile.
       try {
@@ -193,8 +181,7 @@ class StateDatabase {
       );
       db.execute('PRAGMA user_version = 8');
     }
-    final version9 =
-        db.select('PRAGMA user_version').first.columnAt(0) as int;
+    final version9 = db.select('PRAGMA user_version').first.columnAt(0) as int;
     if (version9 < 9) {
       // SPEC-025: library exclusions + auto-download toggle.
       try {
@@ -337,12 +324,10 @@ class StateDatabase {
 
   List<({int bookId, int? sizeBytes})> installedBooksBySizeDesc() {
     return _db
-        .select(
-          '''
+        .select('''
           SELECT book_id, installed_size_bytes FROM installed_books
           ORDER BY installed_size_bytes DESC NULLS LAST, book_id ASC
-          ''',
-        )
+          ''')
         .map(
           (r) => (
             bookId: r['book_id'] as int,
@@ -415,14 +400,28 @@ class StateDatabase {
     return rows.first['page_id'] as int;
   }
 
+  /// Every saved reading position, newest first. Sync uploads this list.
+  List<({int bookId, int pageId, int updatedAt})> listReadingStates() {
+    final rows = _db.select('''
+      SELECT book_id, page_id, updated_at FROM reading_state
+      ORDER BY updated_at DESC
+      ''');
+    return [
+      for (final r in rows)
+        (
+          bookId: r['book_id'] as int,
+          pageId: r['page_id'] as int,
+          updatedAt: r['updated_at'] as int,
+        ),
+    ];
+  }
+
   /// Most recently updated reading position (for continue-reading hero).
   ({int bookId, int pageId, int updatedAt})? latestReadingState() {
-    final rows = _db.select(
-      '''
+    final rows = _db.select('''
       SELECT book_id, page_id, updated_at FROM reading_state
       ORDER BY updated_at DESC LIMIT 1
-      ''',
-    );
+      ''');
     if (rows.isEmpty) return null;
     final r = rows.first;
     return (
@@ -638,8 +637,8 @@ class StateDatabase {
         final id = newest.first['id'] as int;
         final prevClosed = newest.first['closed_at'] as int?;
         final prevDuration = newest.first['duration_seconds'] as int?;
-        final lastCheckpoint = prevClosed ??
-            (openedAt + (prevDuration ?? 0) * 1000);
+        final lastCheckpoint =
+            prevClosed ?? (openedAt + (prevDuration ?? 0) * 1000);
         final deltaMs = nowMs - lastCheckpoint;
         final added = cappedDurationSeconds(deltaMs);
         final nextDuration = ((prevDuration ?? 0) + added)
@@ -657,8 +656,9 @@ class StateDatabase {
         return id;
       }
     }
-    final insertDuration =
-        closing ? cappedDurationSeconds(0) : null; // open-only: no duration yet
+    final insertDuration = closing
+        ? cappedDurationSeconds(0)
+        : null; // open-only: no duration yet
     // closing on a brand-new row is unusual; duration stays 0 until activity.
     _db.execute(
       '''
@@ -689,10 +689,7 @@ class StateDatabase {
     required int maxRows,
   }) {
     final cutoff = nowMs - maxAge.inMilliseconds;
-    _db.execute(
-      'DELETE FROM reading_history WHERE opened_at < ?',
-      [cutoff],
-    );
+    _db.execute('DELETE FROM reading_history WHERE opened_at < ?', [cutoff]);
     final count =
         _db.select('SELECT COUNT(*) AS n FROM reading_history').first['n']
             as int;
@@ -710,13 +707,11 @@ class StateDatabase {
 
   List<ReadingHistoryEntry> listReadingHistory() {
     return _db
-        .select(
-          '''
+        .select('''
           SELECT id, book_id, part, page_id, print_page, section_title,
                  opened_at, closed_at, duration_seconds
           FROM reading_history ORDER BY opened_at DESC
-          ''',
-        )
+          ''')
         .map(_historyFromRow)
         .toList();
   }
@@ -724,25 +719,21 @@ class StateDatabase {
   /// Raw history rows for DAOs that need map access (SPEC-023).
   List<Map<String, Object?>> readingHistoryRows() {
     return _db
-        .select(
-          '''
+        .select('''
           SELECT id, book_id, part, page_id, print_page, section_title,
                  opened_at, closed_at, duration_seconds
           FROM reading_history ORDER BY opened_at DESC
-          ''',
-        )
+          ''')
         .map((r) => Map<String, Object?>.from(r))
         .toList();
   }
 
   ReadingHistoryEntry? latestReadingHistory() {
-    final rows = _db.select(
-      '''
+    final rows = _db.select('''
       SELECT id, book_id, part, page_id, print_page, section_title,
              opened_at, closed_at, duration_seconds
       FROM reading_history ORDER BY opened_at DESC LIMIT 1
-      ''',
-    );
+      ''');
     if (rows.isEmpty) return null;
     return _historyFromRow(rows.first);
   }
@@ -828,9 +819,8 @@ class StateDatabase {
   void setLibrarySetupDone(bool done) =>
       setPref(librarySetupPref, done ? '1' : '0');
 
-  Set<int> libraryExclusionIds() => _idSet(
-        'SELECT book_id FROM library_exclusions',
-      );
+  Set<int> libraryExclusionIds() =>
+      _idSet('SELECT book_id FROM library_exclusions');
 
   void addLibraryExclusion(int bookId) {
     _db.execute(
@@ -843,8 +833,7 @@ class StateDatabase {
     _db.execute('DELETE FROM library_exclusions WHERE book_id = ?', [bookId]);
   }
 
-  Set<int> libraryDeferredIds() =>
-      _markIds('deferred');
+  Set<int> libraryDeferredIds() => _markIds('deferred');
 
   Set<int> libraryHeldIds() => _markIds('held');
 
@@ -865,20 +854,17 @@ class StateDatabase {
       _setMark(bookId, 'auto_sync', on);
 
   Set<int> _markIds(String column) {
-    return _idSet(
-      'SELECT book_id FROM library_marks WHERE $column = 1',
-    );
+    return _idSet('SELECT book_id FROM library_marks WHERE $column = 1');
   }
 
   void _setMark(int bookId, String column, bool on) {
-    _db.execute(
-      'INSERT OR IGNORE INTO library_marks (book_id) VALUES (?)',
-      [bookId],
-    );
-    _db.execute(
-      'UPDATE library_marks SET $column = ? WHERE book_id = ?',
-      [on ? 1 : 0, bookId],
-    );
+    _db.execute('INSERT OR IGNORE INTO library_marks (book_id) VALUES (?)', [
+      bookId,
+    ]);
+    _db.execute('UPDATE library_marks SET $column = ? WHERE book_id = ?', [
+      on ? 1 : 0,
+      bookId,
+    ]);
   }
 
   Set<int> _idSet(String sql) {
@@ -987,8 +973,7 @@ class StateDatabase {
     required int bookId,
     required int pageId,
     String? part,
-  }) =>
-      bookmarkForPage(bookId: bookId, pageId: pageId, part: part) != null;
+  }) => bookmarkForPage(bookId: bookId, pageId: pageId, part: part) != null;
 
   /// Returns the bookmark id when added, or null when removed.
   int? toggleBookmark({
@@ -1039,12 +1024,10 @@ class StateDatabase {
   }
 
   void updateBookmarkLabel(int id, String? label) {
-    final stored =
-        (label == null || label.trim().isEmpty) ? null : label.trim();
-    _db.execute(
-      'UPDATE bookmarks SET label = ? WHERE id = ?',
-      [stored, id],
-    );
+    final stored = (label == null || label.trim().isEmpty)
+        ? null
+        : label.trim();
+    _db.execute('UPDATE bookmarks SET label = ? WHERE id = ?', [stored, id]);
   }
 
   void deleteBookmark(int id) {
@@ -1066,12 +1049,10 @@ class StateDatabase {
   /// All bookmarks across books (SPEC-023 quick-action destination).
   List<Bookmark> listAllBookmarks() {
     return _db
-        .select(
-          '''
+        .select('''
           SELECT id, book_id, part, page_id, print_page, label, created_at
           FROM bookmarks ORDER BY created_at DESC
-          ''',
-        )
+          ''')
         .map(_bookmarkFromRow)
         .toList();
   }
@@ -1079,14 +1060,11 @@ class StateDatabase {
   /// All text notes across books (SPEC-023 quick-action destination).
   List<Map<String, Object?>> listAllNotes() {
     return _db
-        .select(
-          '''
+        .select('''
           SELECT id, book_id, page_id, start_offset, end_offset, note, created_at
           FROM text_notes ORDER BY created_at DESC
-          ''',
-        )
+          ''')
         .map((r) => Map<String, Object?>.from(r))
         .toList();
   }
 }
-

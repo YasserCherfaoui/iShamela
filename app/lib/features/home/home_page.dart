@@ -14,6 +14,7 @@ import 'package:ishamela/features/auth/auth_welcome_screen.dart';
 import 'package:ishamela/features/catalog/catalog_service.dart';
 import 'package:ishamela/features/downloads/downloads_page.dart';
 import 'package:ishamela/features/home/home_stats_dao.dart';
+import 'package:ishamela/features/home/home_sync_sheet.dart';
 import 'package:ishamela/features/library/bookmarks_page.dart';
 import 'package:ishamela/features/library/history_page.dart';
 import 'package:ishamela/features/library/notes_list_page.dart';
@@ -83,11 +84,11 @@ class _HomePageState extends ConsumerState<HomePage> {
     if (!mounted) return;
     final svc = await ref.read(downloadServiceProvider.future);
     final running = svc.listTasks().any(
-          (t) =>
-              t.bookId == entry.bookId &&
-              t.status != DownloadStatus.done &&
-              t.status != DownloadStatus.error,
-        );
+      (t) =>
+          t.bookId == entry.bookId &&
+          t.status != DownloadStatus.done &&
+          t.status != DownloadStatus.error,
+    );
     if (!mounted) return;
     if (running) {
       await Navigator.of(context).push<void>(
@@ -112,6 +113,12 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
+  Future<void> _onPullRefresh() async {
+    final db = await ref.read(stateDatabaseProvider.future);
+    await ref.read(authProvider.notifier).pullReading(db);
+    ref.read(readingSyncRevisionProvider.notifier).bump();
+  }
+
   Future<void> _dismissSyncBanner(StateDatabase state) async {
     final version = _appVersion ?? '0';
     state.setPref(_kSyncBannerDismissKey, version);
@@ -128,6 +135,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     final catalogAsync = ref.watch(catalogRepositoryProvider);
     final width = MediaQuery.sizeOf(context).width;
 
+    ref.watch(readingSyncRevisionProvider);
     ref.listen(homeScrollToTopTickProvider, (prev, next) {
       if (prev != next) _scrollToTop();
     });
@@ -149,27 +157,31 @@ class _HomePageState extends ConsumerState<HomePage> {
         final historyCount = state.listReadingHistory().length;
         final isGuest = auth.isGuest;
         final dismissedVersion = state.getPref(_kSyncBannerDismissKey);
-        final showSyncBanner = isGuest &&
-            historyCount >= 3 &&
-            dismissedVersion != _appVersion;
+        final showSyncBanner =
+            isGuest && historyCount >= 3 && dismissedVersion != _appVersion;
 
         if (latest == null) {
-          return ListView(
-            controller: _scroll,
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-            children: [
-              _HomeHeader(auth: auth, locale: locale),
-              const SizedBox(height: 20),
-              _EmptyInvitation(
-                onBrowse: () =>
-                    ref.read(homeTabIndexProvider.notifier).go(HomeTabs.catalog),
-              ),
-              const SizedBox(height: 24),
-              _QuickActions(
-                onBookmarks: () => BookmarksPage.open(context),
-                onNotes: () => NotesListPage.open(context),
-              ),
-            ],
+          return RefreshIndicator(
+            onRefresh: _onPullRefresh,
+            child: ListView(
+              controller: _scroll,
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+              children: [
+                _HomeHeader(auth: auth, locale: locale),
+                const SizedBox(height: 20),
+                _EmptyInvitation(
+                  onBrowse: () => ref
+                      .read(homeTabIndexProvider.notifier)
+                      .go(HomeTabs.catalog),
+                ),
+                const SizedBox(height: 24),
+                _QuickActions(
+                  onBookmarks: () => BookmarksPage.open(context),
+                  onNotes: () => NotesListPage.open(context),
+                ),
+              ],
+            ),
           );
         }
 
@@ -178,60 +190,63 @@ class _HomePageState extends ConsumerState<HomePage> {
         final total = book != null && book.pageCount > 0
             ? book.pageCount
             : (state.installedPageCount(latest.bookId) ?? 0);
-        final progress =
-            total > 0 ? (latest.pageId / total).clamp(0.0, 1.0) : 0.0;
+        final progress = total > 0
+            ? (latest.pageId / total).clamp(0.0, 1.0)
+            : 0.0;
 
-        return ListView(
-          controller: _scroll,
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-          children: [
-            _HomeHeader(auth: auth, locale: locale),
-            const SizedBox(height: 16),
-            _ContinueCard(
-              entry: latest,
-              book: book,
-              installed: installed,
-              progress: progress,
-              locale: locale,
-              onTap: () => _openOrPromptDownload(
+        return RefreshIndicator(
+          onRefresh: _onPullRefresh,
+          child: ListView(
+            controller: _scroll,
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+            children: [
+              _HomeHeader(auth: auth, locale: locale),
+              const SizedBox(height: 16),
+              _ContinueCard(
                 entry: latest,
                 book: book,
                 installed: installed,
-              ),
-            ),
-            const SizedBox(height: 16),
-            _WeeklyStatsStrip(stats: stats, locale: locale),
-            const SizedBox(height: 8),
-            _RecentHeader(
-              onViewAll: () => HistoryPage.open(context),
-            ),
-            if (recent.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text(
-                  l10n.historyEmpty,
-                  style: TextStyle(
-                    fontFamily: kFontUi,
-                    fontSize: 13,
-                    color: t.muted,
-                  ),
+                progress: progress,
+                locale: locale,
+                onTap: () => _openOrPromptDownload(
+                  entry: latest,
+                  book: book,
+                  installed: installed,
                 ),
-              )
-            else
-              ..._buildRecentGroups(recent, catalog, state, locale),
-            const SizedBox(height: 16),
-            _QuickActions(
-              onBookmarks: () => BookmarksPage.open(context),
-              onNotes: () => NotesListPage.open(context),
-            ),
-            if (showSyncBanner) ...[
-              const SizedBox(height: 16),
-              _SyncBanner(
-                onSignIn: () => AuthWelcomeScreen.open(context),
-                onDismiss: () => _dismissSyncBanner(state),
               ),
+              const SizedBox(height: 16),
+              _WeeklyStatsStrip(stats: stats, locale: locale),
+              const SizedBox(height: 8),
+              _RecentHeader(onViewAll: () => HistoryPage.open(context)),
+              if (recent.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    l10n.historyEmpty,
+                    style: TextStyle(
+                      fontFamily: kFontUi,
+                      fontSize: 13,
+                      color: t.muted,
+                    ),
+                  ),
+                )
+              else
+                ..._buildRecentGroups(recent, catalog, state, locale),
+              const SizedBox(height: 16),
+              _QuickActions(
+                onBookmarks: () => BookmarksPage.open(context),
+                onNotes: () => NotesListPage.open(context),
+              ),
+              if (showSyncBanner) ...[
+                const SizedBox(height: 16),
+                _SyncBanner(
+                  onSignIn: () => AuthWelcomeScreen.open(context),
+                  onDismiss: () => _dismissSyncBanner(state),
+                ),
+              ],
             ],
-          ],
+          ),
         );
       },
     );
@@ -355,7 +370,9 @@ class _HomeHeader extends ConsumerWidget {
                   ),
                   children: [
                     TextSpan(
-                      text: named ? '${l10n.homeGreeting}، ' : l10n.homeGreeting,
+                      text: named
+                          ? '${l10n.homeGreeting}، '
+                          : l10n.homeGreeting,
                     ),
                     if (named)
                       TextSpan(
@@ -380,12 +397,28 @@ class _HomeHeader extends ConsumerWidget {
             ],
           ),
         ),
-        const SizedBox(width: 8),
-        _AvatarButton(
-          profile: profile,
-          onTap: () => ProfilePage.open(context),
-        ),
+        const SizedBox(width: 4),
+        _SyncButton(onTap: () => showHomeSyncSheet(context)),
+        const SizedBox(width: 4),
+        _AvatarButton(profile: profile, onTap: () => ProfilePage.open(context)),
       ],
+    );
+  }
+}
+
+class _SyncButton extends StatelessWidget {
+  const _SyncButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final t = IshamelaTokens.of(context);
+    return IconButton(
+      tooltip: l10n.homeSyncTooltip,
+      onPressed: onTap,
+      icon: Icon(Icons.sync, color: t.emphasis),
     );
   }
 }
@@ -434,9 +467,7 @@ class _AvatarButton extends StatelessWidget {
 
     return Material(
       color: Colors.transparent,
-      shape: CircleBorder(
-        side: BorderSide(color: t.goldSoft, width: 2),
-      ),
+      shape: CircleBorder(side: BorderSide(color: t.goldSoft, width: 2)),
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: onTap,
@@ -968,10 +999,7 @@ class _EmptyInvitation extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            FilledButton(
-              onPressed: onBrowse,
-              child: Text(l10n.homeEmptyCta),
-            ),
+            FilledButton(onPressed: onBrowse, child: Text(l10n.homeEmptyCta)),
           ],
         ),
       ),
@@ -986,13 +1014,13 @@ class _HomeSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = IshamelaTokens.of(context);
     Widget block({double h = 80}) => Container(
-          height: h,
-          decoration: BoxDecoration(
-            color: t.card,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: t.hairline),
-          ),
-        );
+      height: h,
+      decoration: BoxDecoration(
+        color: t.card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: t.hairline),
+      ),
+    );
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
       children: [

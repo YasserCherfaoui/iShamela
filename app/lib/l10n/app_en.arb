@@ -570,5 +570,16 @@
   "authOtpSpam": "Didn't get the code? Check your spam folder",
   "authOtpConfirm": "Confirm",
   "authChangeEmail": "Change email",
-  "authSignUpCta": "Create account"
+  "authSignUpCta": "Create account",
+  "homeSyncTooltip": "Sync",
+  "homeSyncTitle": "Sync",
+  "homeSyncInSync": "This device matches your account",
+  "homeSyncLocalOnly": "Only on this device",
+  "homeSyncRemoteOnly": "Only on your account",
+  "homeSyncLocalNewer": "This device is newer",
+  "homeSyncRemoteNewer": "Account is newer",
+  "homeSyncThisDevice": "This device",
+  "homeSyncAccount": "Account",
+  "homeSyncSignIn": "Sign in to compare this device with your account",
+  "homeSyncLoadFailed": "Could not load the account copy"
 }

@@ -327,6 +327,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
     final catalogAsync = ref.watch(catalogRepositoryProvider);
     final downloadsAsync = ref.watch(downloadServiceProvider);
     ref.watch(downloadRevisionProvider);
+    ref.watch(readingSyncRevisionProvider);
 
     ref.listen(downloadServiceProvider, (prev, next) {
       next.whenData((svc) {

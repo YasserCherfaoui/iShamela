@@ -570,5 +570,16 @@
   "authOtpSpam": "لم يصلك الرمز؟ تحقق من مجلد الرسائل غير المرغوبة",
   "authOtpConfirm": "تأكيد",
   "authChangeEmail": "تغيير البريد الإلكتروني",
-  "authSignUpCta": "إنشاء الحساب"
+  "authSignUpCta": "إنشاء الحساب",
+  "homeSyncTooltip": "مزامنة",
+  "homeSyncTitle": "المزامنة",
+  "homeSyncInSync": "هذا الجهاز يطابق حسابك",
+  "homeSyncLocalOnly": "على هذا الجهاز فقط",
+  "homeSyncRemoteOnly": "على الحساب فقط",
+  "homeSyncLocalNewer": "هذا الجهاز أحدث",
+  "homeSyncRemoteNewer": "الحساب أحدث",
+  "homeSyncThisDevice": "هذا الجهاز",
+  "homeSyncAccount": "الحساب",
+  "homeSyncSignIn": "سجّل الدخول لمقارنة هذا الجهاز بحسابك",
+  "homeSyncLoadFailed": "تعذّر تحميل نسخة الحساب"
 }

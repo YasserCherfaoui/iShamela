@@ -22,12 +22,26 @@ final authProvider = NotifierProvider<AuthController, AuthStatus>(
 /// Root navigator — snack overlays sit outside the route tree (SPEC-020).
 final appNavigatorKey = GlobalKey<NavigatorState>();
 
+/// Bumped after a reading-progress pull so Home and Library rebuild.
+/// [stateDatabaseProvider] does not notify when SQLite rows change.
+final readingSyncRevisionProvider =
+    NotifierProvider<ReadingSyncRevisionNotifier, int>(
+      ReadingSyncRevisionNotifier.new,
+    );
+
+class ReadingSyncRevisionNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void bump() => state++;
+}
+
 /// Bumped whenever the download queue / install registry changes so catalog
 /// and library rows rebuild (FutureProviders alone do not).
 final downloadRevisionProvider =
     NotifierProvider<DownloadRevisionNotifier, int>(
-  DownloadRevisionNotifier.new,
-);
+      DownloadRevisionNotifier.new,
+    );
 
 class DownloadRevisionNotifier extends Notifier<int> {
   @override
@@ -72,7 +86,9 @@ final catalogSyncTickProvider = FutureProvider<void>((ref) async {
 });
 
 /// Runs catalog sync, then exposes a repository (so the UI sees a just-installed DB).
-final catalogRepositoryProvider = FutureProvider<CatalogRepository>((ref) async {
+final catalogRepositoryProvider = FutureProvider<CatalogRepository>((
+  ref,
+) async {
   await ref.watch(catalogSyncTickProvider.future);
   final paths = await ref.watch(appPathsProvider.future);
   return CatalogRepository(paths);
@@ -102,13 +118,13 @@ final downloadServiceProvider = FutureProvider<DownloadService>((ref) async {
 
 final readerTextStylesProvider =
     NotifierProvider<ReaderTextStylesNotifier, ReaderTextStyles>(
-  ReaderTextStylesNotifier.new,
-);
+      ReaderTextStylesNotifier.new,
+    );
 
 final readingAtmosphereProvider =
     NotifierProvider<ReadingAtmosphereNotifier, ReadingAtmosphere>(
-  ReadingAtmosphereNotifier.new,
-);
+      ReadingAtmosphereNotifier.new,
+    );
 
 /// SPEC-016 persisted UI locale (`ar` | `en` | `fr`).
 final appLocaleProvider = NotifierProvider<AppLocaleNotifier, Locale>(
@@ -118,8 +134,8 @@ final appLocaleProvider = NotifierProvider<AppLocaleNotifier, Locale>(
 /// Pending catalog search query when jumping from Library text-search empty CTA.
 final catalogPendingQueryProvider =
     NotifierProvider<CatalogPendingQueryNotifier, String?>(
-  CatalogPendingQueryNotifier.new,
-);
+      CatalogPendingQueryNotifier.new,
+    );
 
 /// Shell tab indices — Home · Library · Catalog · Settings (SPEC-023).
 abstract final class HomeTabs {
@@ -136,9 +152,7 @@ final homeTabIndexProvider = NotifierProvider<HomeTabIndexNotifier, int>(
 
 /// Bumped when the user re-taps the Home tab so [HomePage] scrolls to top.
 final homeScrollToTopTickProvider =
-    NotifierProvider<HomeScrollToTopNotifier, int>(
-  HomeScrollToTopNotifier.new,
-);
+    NotifierProvider<HomeScrollToTopNotifier, int>(HomeScrollToTopNotifier.new);
 
 class CatalogPendingQueryNotifier extends Notifier<String?> {
   @override

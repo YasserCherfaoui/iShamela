@@ -2113,6 +2113,72 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'إنشاء الحساب'**
   String get authSignUpCta;
+
+  /// No description provided for @homeSyncTooltip.
+  ///
+  /// In ar, this message translates to:
+  /// **'مزامنة'**
+  String get homeSyncTooltip;
+
+  /// No description provided for @homeSyncTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'المزامنة'**
+  String get homeSyncTitle;
+
+  /// No description provided for @homeSyncInSync.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا الجهاز يطابق حسابك'**
+  String get homeSyncInSync;
+
+  /// No description provided for @homeSyncLocalOnly.
+  ///
+  /// In ar, this message translates to:
+  /// **'على هذا الجهاز فقط'**
+  String get homeSyncLocalOnly;
+
+  /// No description provided for @homeSyncRemoteOnly.
+  ///
+  /// In ar, this message translates to:
+  /// **'على الحساب فقط'**
+  String get homeSyncRemoteOnly;
+
+  /// No description provided for @homeSyncLocalNewer.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا الجهاز أحدث'**
+  String get homeSyncLocalNewer;
+
+  /// No description provided for @homeSyncRemoteNewer.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحساب أحدث'**
+  String get homeSyncRemoteNewer;
+
+  /// No description provided for @homeSyncThisDevice.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا الجهاز'**
+  String get homeSyncThisDevice;
+
+  /// No description provided for @homeSyncAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحساب'**
+  String get homeSyncAccount;
+
+  /// No description provided for @homeSyncSignIn.
+  ///
+  /// In ar, this message translates to:
+  /// **'سجّل الدخول لمقارنة هذا الجهاز بحسابك'**
+  String get homeSyncSignIn;
+
+  /// No description provided for @homeSyncLoadFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تحميل نسخة الحساب'**
+  String get homeSyncLoadFailed;
 }
 
 class _AppLocalizationsDelegate

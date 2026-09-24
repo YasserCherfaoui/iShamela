@@ -1128,4 +1128,38 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get authSignUpCta => 'Créer le compte';
+
+  @override
+  String get homeSyncTooltip => 'Synchroniser';
+
+  @override
+  String get homeSyncTitle => 'Synchronisation';
+
+  @override
+  String get homeSyncInSync => 'Cet appareil correspond à votre compte';
+
+  @override
+  String get homeSyncLocalOnly => 'Uniquement sur cet appareil';
+
+  @override
+  String get homeSyncRemoteOnly => 'Uniquement sur le compte';
+
+  @override
+  String get homeSyncLocalNewer => 'Cet appareil est plus récent';
+
+  @override
+  String get homeSyncRemoteNewer => 'Le compte est plus récent';
+
+  @override
+  String get homeSyncThisDevice => 'Cet appareil';
+
+  @override
+  String get homeSyncAccount => 'Compte';
+
+  @override
+  String get homeSyncSignIn =>
+      'Connectez-vous pour comparer cet appareil à votre compte';
+
+  @override
+  String get homeSyncLoadFailed => 'Impossible de charger la copie du compte';
 }

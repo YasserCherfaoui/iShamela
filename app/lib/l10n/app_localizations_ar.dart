@@ -1110,4 +1110,37 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get authSignUpCta => 'إنشاء الحساب';
+
+  @override
+  String get homeSyncTooltip => 'مزامنة';
+
+  @override
+  String get homeSyncTitle => 'المزامنة';
+
+  @override
+  String get homeSyncInSync => 'هذا الجهاز يطابق حسابك';
+
+  @override
+  String get homeSyncLocalOnly => 'على هذا الجهاز فقط';
+
+  @override
+  String get homeSyncRemoteOnly => 'على الحساب فقط';
+
+  @override
+  String get homeSyncLocalNewer => 'هذا الجهاز أحدث';
+
+  @override
+  String get homeSyncRemoteNewer => 'الحساب أحدث';
+
+  @override
+  String get homeSyncThisDevice => 'هذا الجهاز';
+
+  @override
+  String get homeSyncAccount => 'الحساب';
+
+  @override
+  String get homeSyncSignIn => 'سجّل الدخول لمقارنة هذا الجهاز بحسابك';
+
+  @override
+  String get homeSyncLoadFailed => 'تعذّر تحميل نسخة الحساب';
 }

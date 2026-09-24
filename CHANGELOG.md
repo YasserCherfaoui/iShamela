@@ -6,6 +6,9 @@ All notable changes to this project are documented in this file.
 
 ### Fixed
 
+- Reading progress syncs when a book is closed, and is pulled when the app opens or the home screen is pulled down. Every saved book position is uploaded, not only the latest one.
+- Closing a book no longer throws when uploading progress. The sync action is kept from the last frame, because Riverpod forbids `ref` during dispose.
+- Home header has a sync button beside the avatar. Its sheet shows the last sync and any reading positions that differ from the account, then runs a two-way sync.
 - macOS release CI no longer requires a Mac App Development provisioning profile. The GitHub artifact is unsigned; local signing is unchanged.
 - Library sync no longer resumes finished downloads. Only books paused for the network policy are released when Wi-Fi returns.
 - iOS reader: honorific ligatures (ﷺ and the U+FD40–U+FD4F forms) fall back to Scheherazade New so they no longer render as squares. Amiri does not include those glyphs, and iOS does not substitute them the way macOS does.

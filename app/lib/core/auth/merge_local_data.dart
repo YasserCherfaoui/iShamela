@@ -16,16 +16,13 @@ class LocalUserDataSnapshot {
   final List<Map<String, Object?>> progress;
 
   bool get isEmpty =>
-      history.isEmpty &&
-      bookmarks.isEmpty &&
-      notes.isEmpty &&
-      progress.isEmpty;
+      history.isEmpty && bookmarks.isEmpty && notes.isEmpty && progress.isEmpty;
 }
 
 /// Builds a [LocalUserDataSnapshot] from public [StateDatabase] APIs.
 ///
-/// Bookmarks/notes are collected per installed book; progress uses the latest
-/// reading_state row when present. Full-table listing may land with Home/Profile.
+/// Bookmarks/notes are collected per installed book. Progress is every
+/// `reading_state` row so closing one book does not drop the others.
 LocalUserDataSnapshot snapshotLocalUserData(
   StateDatabase db, {
   Iterable<int> bookIds = const [],
@@ -51,15 +48,14 @@ LocalUserDataSnapshot snapshotLocalUserData(
     }
   }
 
-  final progress = <Map<String, Object?>>[];
-  final latest = db.latestReadingState();
-  if (latest != null) {
-    progress.add({
-      'book_id': latest.bookId,
-      'page_id': latest.pageId,
-      'updatedAt': latest.updatedAt,
-    });
-  }
+  final progress = [
+    for (final row in db.listReadingStates())
+      {
+        'book_id': row.bookId,
+        'page_id': row.pageId,
+        'updatedAt': row.updatedAt,
+      },
+  ];
 
   return LocalUserDataSnapshot(
     history: history,
@@ -70,30 +66,31 @@ LocalUserDataSnapshot snapshotLocalUserData(
 }
 
 Map<String, Object?> _historyMap(ReadingHistoryEntry e) => {
-      'id': e.id,
-      'book_id': e.bookId,
-      'part': e.part,
-      'page_id': e.pageId,
-      'print_page': e.printPage,
-      'section_title': e.sectionTitle,
-      'opened_at': e.openedAt,
-      'closed_at': e.closedAt,
-      'updatedAt': e.closedAt ?? e.openedAt,
-    };
+  'id': e.id,
+  'book_id': e.bookId,
+  'part': e.part,
+  'page_id': e.pageId,
+  'print_page': e.printPage,
+  'section_title': e.sectionTitle,
+  'opened_at': e.openedAt,
+  'closed_at': e.closedAt,
+  'updatedAt': e.closedAt ?? e.openedAt,
+};
 
 Map<String, Object?> _bookmarkMap(Bookmark b) => {
-      'id': b.id,
-      'book_id': b.bookId,
-      'part': b.part,
-      'page_id': b.pageId,
-      'print_page': b.printPage,
-      'label': b.label,
-      'updatedAt': b.createdAt,
-    };
+  'id': b.id,
+  'book_id': b.bookId,
+  'part': b.part,
+  'page_id': b.pageId,
+  'print_page': b.printPage,
+  'label': b.label,
+  'updatedAt': b.createdAt,
+};
 
 int? _asInt(Object? v) {
   if (v is int) return v;
   if (v is num) return v.toInt();
+  if (v is String) return int.tryParse(v);
   return null;
 }
 

@@ -1116,4 +1116,38 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authSignUpCta => 'Create account';
+
+  @override
+  String get homeSyncTooltip => 'Sync';
+
+  @override
+  String get homeSyncTitle => 'Sync';
+
+  @override
+  String get homeSyncInSync => 'This device matches your account';
+
+  @override
+  String get homeSyncLocalOnly => 'Only on this device';
+
+  @override
+  String get homeSyncRemoteOnly => 'Only on your account';
+
+  @override
+  String get homeSyncLocalNewer => 'This device is newer';
+
+  @override
+  String get homeSyncRemoteNewer => 'Account is newer';
+
+  @override
+  String get homeSyncThisDevice => 'This device';
+
+  @override
+  String get homeSyncAccount => 'Account';
+
+  @override
+  String get homeSyncSignIn =>
+      'Sign in to compare this device with your account';
+
+  @override
+  String get homeSyncLoadFailed => 'Could not load the account copy';
 }

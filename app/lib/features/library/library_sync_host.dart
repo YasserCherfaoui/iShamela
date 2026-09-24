@@ -89,7 +89,10 @@ class _LibrarySyncHostState extends ConsumerState<LibrarySyncHost>
         _knownInstalled = installed;
       }
       final auth = ref.read(authProvider.notifier);
-      await auth.syncNow(db);
+      // Retry a close-book upload that failed offline, then pull other devices.
+      await auth.pushReading(db);
+      await auth.pullReading(db);
+      ref.read(readingSyncRevisionProvider.notifier).bump();
       final remote = await auth.pullLibrary();
       final link = await _link();
       final free = await deviceFreeBytes(paths);
@@ -127,11 +130,7 @@ class _LibrarySyncHostState extends ConsumerState<LibrarySyncHost>
                 : result.selected,
           );
           await auth.pushLibrary(follow.upserts);
-          await applyLibraryPlan(
-            state: db,
-            downloads: downloads,
-            plan: follow,
-          );
+          await applyLibraryPlan(state: db, downloads: downloads, plan: follow);
         }
       } else if (plan.showStorageSheet &&
           plan.requiredBytes != _storagePromptBytes) {
@@ -153,7 +152,9 @@ class _LibrarySyncHostState extends ConsumerState<LibrarySyncHost>
             db.markLibraryDeferred(id, on: false);
             await downloads.enqueue(id);
           }
-          for (final id in plan.storageBookIds.where((id) => !picked.contains(id))) {
+          for (final id in plan.storageBookIds.where(
+            (id) => !picked.contains(id),
+          )) {
             db.markLibraryDeferred(id, on: true);
           }
         }

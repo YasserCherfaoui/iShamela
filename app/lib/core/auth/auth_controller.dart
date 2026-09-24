@@ -12,6 +12,7 @@ import 'package:ishamela/core/auth/auth_errors.dart';
 import 'package:ishamela/core/auth/auth_state.dart';
 import 'package:ishamela/core/auth/firebase_bootstrap.dart';
 import 'package:ishamela/core/auth/merge_local_data.dart';
+import 'package:ishamela/core/auth/reading_diff.dart';
 import 'package:ishamela/core/auth/sync_service.dart';
 import 'package:ishamela/core/auth/user_profile.dart';
 import 'package:ishamela/core/db/state_database.dart';
@@ -83,7 +84,8 @@ class AuthController extends Notifier<AuthStatus> {
       }
     }
     // OAuth users are treated as verified for sync purposes.
-    final verified = user.emailVerified ||
+    final verified =
+        user.emailVerified ||
         providers.contains(AuthProviderKind.google) ||
         providers.contains(AuthProviderKind.apple);
     return UserProfile(
@@ -132,7 +134,8 @@ class AuthController extends Notifier<AuthStatus> {
         '940987204287-638kvo2uo56bj712ospf2cso3prhfvpq.apps.googleusercontent.com';
     const webClientId =
         '940987204287-i32s08v3mlpngvn98v58q133m2h5kpt3.apps.googleusercontent.com';
-    final applePlatform = defaultTargetPlatform == TargetPlatform.iOS ||
+    final applePlatform =
+        defaultTargetPlatform == TargetPlatform.iOS ||
         defaultTargetPlatform == TargetPlatform.macOS;
     _google ??= GoogleSignIn(
       clientId: applePlatform ? iosClientId : null,
@@ -197,10 +200,7 @@ class AuthController extends Notifier<AuthStatus> {
     await FirebaseAuth.instance.signOut();
   }
 
-  Future<void> sendOtp({
-    required String email,
-    required String purpose,
-  }) async {
+  Future<void> sendOtp({required String email, required String purpose}) async {
     if (!firebaseReady) throw AuthUnavailable();
     final callable = _functions.httpsCallable('sendOtp');
     await callable.call<Map<String, dynamic>>({
@@ -319,11 +319,7 @@ class AuthController extends Notifier<AuthStatus> {
     final status = state;
     if (status is! AuthSignedIn) return;
     try {
-      final bookIds = {
-        ...db.installedBookIds(),
-        ...db.listReadingHistory().map((e) => e.bookId),
-      };
-      final snap = snapshotLocalUserData(db, bookIds: bookIds);
+      final snap = snapshotLocalUserData(db, bookIds: _syncBookIds(db));
       await _sync.mergeLocalData(
         uid: status.profile.uid,
         local: snap,
@@ -348,11 +344,7 @@ class AuthController extends Notifier<AuthStatus> {
     }
     onProgress?.call(kSyncProgressMessageKey);
     try {
-      final bookIds = {
-        ...db.installedBookIds(),
-        ...db.listReadingHistory().map((e) => e.bookId),
-      };
-      final snap = snapshotLocalUserData(db, bookIds: bookIds);
+      final snap = snapshotLocalUserData(db, bookIds: _syncBookIds(db));
       final ok = await _sync.mergeLocalData(
         uid: status.profile.uid,
         local: snap,
@@ -386,6 +378,44 @@ class AuthController extends Notifier<AuthStatus> {
     final status = state;
     if (status is! AuthSignedIn || docs.isEmpty) return;
     await _sync.upsertLibrary(status.profile.uid, docs);
+  }
+
+  /// Push local progress, history, bookmarks, and notes. Used when a book
+  /// closes. Guests and failures are ignored so leaving the reader never blocks.
+  Future<void> pushReading(StateDatabase db) async {
+    final status = state;
+    if (status is! AuthSignedIn) return;
+    try {
+      final snap = snapshotLocalUserData(db, bookIds: _syncBookIds(db));
+      await _sync.mergeLocalData(uid: status.profile.uid, local: snap);
+    } catch (_) {}
+  }
+
+  /// Reading positions that differ between this device and Firestore.
+  /// Does not write. Throws [AuthUnavailable] when sync is not allowed.
+  Future<List<ReadingProgressDiff>> previewReadingDiff(StateDatabase db) async {
+    final status = state;
+    if (status is! AuthSignedIn) throw AuthUnavailable();
+    final remote = await _sync.fetchProgress(status.profile.uid);
+    return diffReadingProgress(local: db.listReadingStates(), remote: remote);
+  }
+
+  /// Pull remote progress and history into SQLite. Last-write-wins on
+  /// `updatedAt`. Guests and failures are ignored.
+  Future<void> pullReading(StateDatabase db) async {
+    final status = state;
+    if (status is! AuthSignedIn) return;
+    try {
+      await _pullReading(status.profile.uid, db);
+    } catch (_) {}
+  }
+
+  Set<int> _syncBookIds(StateDatabase db) {
+    return {
+      ...db.installedBookIds(),
+      ...db.listReadingHistory().map((e) => e.bookId),
+      ...db.listReadingStates().map((e) => e.bookId),
+    };
   }
 
   Future<void> _pullReading(String uid, StateDatabase db) async {
