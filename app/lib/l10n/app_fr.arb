@@ -370,7 +370,7 @@
   "startReading": "Commencer la lecture",
   "tabHome": "Accueil",
   "homeGreeting": "Que la paix soit sur vous",
-  "homeGreetingNamed": "Bonjour, {name}",
+  "homeGreetingNamed": "Que la paix soit sur vous, {name}",
   "@homeGreetingNamed": {
     "placeholders": {
       "name": {"type": "String"}
@@ -498,13 +498,13 @@
   "bookmarksListTitle": "Signets",
   "notesListTitle": "Mes notes",
   "notesListEmpty": "Aucune note — ajoutez-en en lisant",
-  "authValueCopy": "Connectez-vous pour synchroniser lectures et notes sur vos appareils",
+  "authValueCopy": "Connectez-vous pour synchroniser vos livres, lectures et notes sur vos appareils",
   "authContinueApple": "Continuer avec Apple",
   "authContinueGoogle": "Continuer avec Google",
-  "authContinueEmail": "E-mail",
+  "authContinueEmail": "Continuer avec l'e-mail",
   "authContinueGuest": "Continuer sans compte",
   "authPrivacy": "Politique de confidentialité",
-  "authTerms": "Conditions",
+  "authTerms": "Conditions d'utilisation",
   "authSignInTitle": "Connexion",
   "authSignUpTitle": "Créer un compte",
   "authForgotTitle": "Mot de passe oublié",
@@ -548,7 +548,7 @@
   "authPasswordTooShort": "Le mot de passe doit contenir au moins 8 caractères",
   "authPasswordMismatch": "Les mots de passe ne correspondent pas",
   "authPasswordStrengthWeak": "Faible — ajoutez lettres et chiffres",
-  "authPasswordStrengthOk": "Correct",
+  "authPasswordStrengthOk": "Bonne",
   "authPasswordStrengthStrong": "Fort",
   "authMustAcceptTerms": "Veuillez accepter la politique et les conditions",
   "authAcceptPrefix": "J'accepte la",
@@ -563,5 +563,12 @@
   "authUnavailable": "La connexion est indisponible pour le moment",
   "authGenericError": "Une erreur s'est produite — réessayez",
   "authSyncInProgress": "Synchronisation de vos données…",
-  "authSyncFailed": "Échec de la synchronisation — nouvel essai plus tard"
+  "authSyncFailed": "Échec de la synchronisation — nouvel essai plus tard",
+  "authAgreeLead": "En continuant, vous acceptez la",
+  "authOr": "ou",
+  "authOtpPrompt": "Saisissez le code à 6 chiffres envoyé à",
+  "authOtpSpam": "Vous n'avez pas reçu le code ? Vérifiez les indésirables",
+  "authOtpConfirm": "Confirmer",
+  "authChangeEmail": "Changer l'e-mail",
+  "authSignUpCta": "Créer le compte"
 }

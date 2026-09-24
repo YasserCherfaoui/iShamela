@@ -668,7 +668,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String homeGreetingNamed(String name) {
-    return 'Hello, $name';
+    return 'Peace be upon you, $name';
   }
 
   @override
@@ -923,7 +923,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authValueCopy =>
-      'Sign in to sync your reading and notes across devices';
+      'Sign in to sync your books, reading, and notes across your devices';
 
   @override
   String get authContinueApple => 'Continue with Apple';
@@ -932,7 +932,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authContinueGoogle => 'Continue with Google';
 
   @override
-  String get authContinueEmail => 'Email';
+  String get authContinueEmail => 'Continue with email';
 
   @override
   String get authContinueGuest => 'Continue without an account';
@@ -999,7 +999,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authPasswordStrengthWeak => 'Weak';
 
   @override
-  String get authPasswordStrengthOk => 'OK';
+  String get authPasswordStrengthOk => 'Good strength';
 
   @override
   String get authPasswordStrengthStrong => 'Strong';
@@ -1021,10 +1021,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authPrivacy => 'Privacy Policy';
 
   @override
-  String get authTerms => 'Terms';
+  String get authTerms => 'Terms of use';
 
   @override
-  String get authOtpTitle => 'Enter the code';
+  String get authOtpTitle => 'Verification code';
 
   @override
   String authOtpCopy(String email) {
@@ -1095,4 +1095,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authSyncFailed => 'Sync failed — will retry later';
+
+  @override
+  String get authAgreeLead => 'By continuing you agree to the';
+
+  @override
+  String get authOr => 'or';
+
+  @override
+  String get authOtpPrompt => 'Enter the 6-digit code sent to';
+
+  @override
+  String get authOtpSpam => 'Didn\'t get the code? Check your spam folder';
+
+  @override
+  String get authOtpConfirm => 'Confirm';
+
+  @override
+  String get authChangeEmail => 'Change email';
+
+  @override
+  String get authSignUpCta => 'Create account';
 }

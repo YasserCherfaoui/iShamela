@@ -665,7 +665,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String homeGreetingNamed(String name) {
-    return 'أهلًا، $name';
+    return 'السلام عليكم، $name';
   }
 
   @override
@@ -919,16 +919,16 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get authValueCopy =>
-      'سجّل الدخول لمزامنة قراءاتك وملاحظاتك عبر أجهزتك';
+      'سجّل الدخول لمزامنة كتبك وقراءاتك وملاحظاتك عبر أجهزتك';
 
   @override
-  String get authContinueApple => 'متابعة عبر Apple';
+  String get authContinueApple => 'المتابعة عبر Apple';
 
   @override
-  String get authContinueGoogle => 'متابعة عبر Google';
+  String get authContinueGoogle => 'المتابعة عبر Google';
 
   @override
-  String get authContinueEmail => 'البريد الإلكتروني';
+  String get authContinueEmail => 'المتابعة بالبريد الإلكتروني';
 
   @override
   String get authContinueGuest => 'متابعة بدون حساب';
@@ -994,7 +994,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get authPasswordStrengthWeak => 'ضعيفة';
 
   @override
-  String get authPasswordStrengthOk => 'مقبولة';
+  String get authPasswordStrengthOk => 'قوة جيدة';
 
   @override
   String get authPasswordStrengthStrong => 'قوية';
@@ -1015,10 +1015,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get authPrivacy => 'سياسة الخصوصية';
 
   @override
-  String get authTerms => 'الشروط';
+  String get authTerms => 'شروط الاستخدام';
 
   @override
-  String get authOtpTitle => 'أدخل الرمز';
+  String get authOtpTitle => 'رمز التحقق';
 
   @override
   String authOtpCopy(String email) {
@@ -1089,4 +1089,25 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get authSyncFailed => 'تعذّرت المزامنة — ستُعاد لاحقًا';
+
+  @override
+  String get authAgreeLead => 'بمتابعتك فأنت توافق على';
+
+  @override
+  String get authOr => 'أو';
+
+  @override
+  String get authOtpPrompt => 'أدخل الرمز المكوّن من ٦ أرقام المرسل إلى';
+
+  @override
+  String get authOtpSpam => 'لم يصلك الرمز؟ تحقق من مجلد الرسائل غير المرغوبة';
+
+  @override
+  String get authOtpConfirm => 'تأكيد';
+
+  @override
+  String get authChangeEmail => 'تغيير البريد الإلكتروني';
+
+  @override
+  String get authSignUpCta => 'إنشاء الحساب';
 }

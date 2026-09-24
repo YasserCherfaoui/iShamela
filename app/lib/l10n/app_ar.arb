@@ -370,7 +370,7 @@
   "startReading": "ابدأ القراءة",
   "tabHome": "الرئيسية",
   "homeGreeting": "السلام عليكم",
-  "homeGreetingNamed": "أهلًا، {name}",
+  "homeGreetingNamed": "السلام عليكم، {name}",
   "@homeGreetingNamed": {
     "placeholders": {
       "name": {"type": "String"}
@@ -498,10 +498,10 @@
   "bookmarksListTitle": "العلامات",
   "notesListTitle": "ملاحظاتي",
   "notesListEmpty": "لا ملاحظات بعد — أضف ملاحظة أثناء القراءة",
-  "authValueCopy": "سجّل الدخول لمزامنة قراءاتك وملاحظاتك عبر أجهزتك",
-  "authContinueApple": "متابعة عبر Apple",
-  "authContinueGoogle": "متابعة عبر Google",
-  "authContinueEmail": "البريد الإلكتروني",
+  "authValueCopy": "سجّل الدخول لمزامنة كتبك وقراءاتك وملاحظاتك عبر أجهزتك",
+  "authContinueApple": "المتابعة عبر Apple",
+  "authContinueGoogle": "المتابعة عبر Google",
+  "authContinueEmail": "المتابعة بالبريد الإلكتروني",
   "authContinueGuest": "متابعة بدون حساب",
   "authSignInTitle": "تسجيل الدخول",
   "authSignUpTitle": "إنشاء حساب",
@@ -523,15 +523,15 @@
   "authPasswordTooShort": "كلمة المرور ٨ أحرف على الأقل",
   "authPasswordMismatch": "كلمتا المرور غير متطابقتين",
   "authPasswordStrengthWeak": "ضعيفة",
-  "authPasswordStrengthOk": "مقبولة",
+  "authPasswordStrengthOk": "قوة جيدة",
   "authPasswordStrengthStrong": "قوية",
   "authPasswordChanged": "تم تغيير كلمة المرور",
   "authMustAcceptTerms": "يجب الموافقة على السياسة والشروط",
   "authAcceptPrefix": "أوافق على",
   "authAcceptAnd": "و",
   "authPrivacy": "سياسة الخصوصية",
-  "authTerms": "الشروط",
-  "authOtpTitle": "أدخل الرمز",
+  "authTerms": "شروط الاستخدام",
+  "authOtpTitle": "رمز التحقق",
   "authOtpCopy": "أُرسل رمز مكوَّن من ٦ أرقام إلى {email}",
   "@authOtpCopy": {
     "placeholders": {
@@ -563,5 +563,12 @@
   "authUnavailable": "تسجيل الدخول غير متاح حاليًا",
   "authGenericError": "حدث خطأ ما",
   "authSyncInProgress": "جارٍ مزامنة بياناتك…",
-  "authSyncFailed": "تعذّرت المزامنة — ستُعاد لاحقًا"
+  "authSyncFailed": "تعذّرت المزامنة — ستُعاد لاحقًا",
+  "authAgreeLead": "بمتابعتك فأنت توافق على",
+  "authOr": "أو",
+  "authOtpPrompt": "أدخل الرمز المكوّن من ٦ أرقام المرسل إلى",
+  "authOtpSpam": "لم يصلك الرمز؟ تحقق من مجلد الرسائل غير المرغوبة",
+  "authOtpConfirm": "تأكيد",
+  "authChangeEmail": "تغيير البريد الإلكتروني",
+  "authSignUpCta": "إنشاء الحساب"
 }

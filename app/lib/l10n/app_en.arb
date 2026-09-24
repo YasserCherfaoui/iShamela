@@ -370,7 +370,7 @@
   "startReading": "Start reading",
   "tabHome": "Home",
   "homeGreeting": "Peace be upon you",
-  "homeGreetingNamed": "Hello, {name}",
+  "homeGreetingNamed": "Peace be upon you, {name}",
   "@homeGreetingNamed": {
     "placeholders": {
       "name": {"type": "String"}
@@ -498,10 +498,10 @@
   "bookmarksListTitle": "Bookmarks",
   "notesListTitle": "My notes",
   "notesListEmpty": "No notes yet — add one while reading",
-  "authValueCopy": "Sign in to sync your reading and notes across devices",
+  "authValueCopy": "Sign in to sync your books, reading, and notes across your devices",
   "authContinueApple": "Continue with Apple",
   "authContinueGoogle": "Continue with Google",
-  "authContinueEmail": "Email",
+  "authContinueEmail": "Continue with email",
   "authContinueGuest": "Continue without an account",
   "authSignInTitle": "Sign in",
   "authSignUpTitle": "Create account",
@@ -523,15 +523,15 @@
   "authPasswordTooShort": "Password must be at least 8 characters",
   "authPasswordMismatch": "Passwords do not match",
   "authPasswordStrengthWeak": "Weak",
-  "authPasswordStrengthOk": "OK",
+  "authPasswordStrengthOk": "Good strength",
   "authPasswordStrengthStrong": "Strong",
   "authPasswordChanged": "Password changed",
   "authMustAcceptTerms": "Please accept the privacy policy and terms",
   "authAcceptPrefix": "I agree to the",
   "authAcceptAnd": "and",
   "authPrivacy": "Privacy Policy",
-  "authTerms": "Terms",
-  "authOtpTitle": "Enter the code",
+  "authTerms": "Terms of use",
+  "authOtpTitle": "Verification code",
   "authOtpCopy": "A 6-digit code was sent to {email}",
   "@authOtpCopy": {
     "placeholders": {
@@ -563,5 +563,12 @@
   "authUnavailable": "Sign-in is unavailable right now",
   "authGenericError": "Something went wrong",
   "authSyncInProgress": "Syncing your data…",
-  "authSyncFailed": "Sync failed — will retry later"
+  "authSyncFailed": "Sync failed — will retry later",
+  "authAgreeLead": "By continuing you agree to the",
+  "authOr": "or",
+  "authOtpPrompt": "Enter the 6-digit code sent to",
+  "authOtpSpam": "Didn't get the code? Check your spam folder",
+  "authOtpConfirm": "Confirm",
+  "authChangeEmail": "Change email",
+  "authSignUpCta": "Create account"
 }

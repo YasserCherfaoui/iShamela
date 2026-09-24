@@ -102,145 +102,169 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       strong: l10n.authPasswordStrengthStrong,
     );
 
+    final linkStyle = TextStyle(
+      fontFamily: kFontUi,
+      fontSize: 13,
+      color: t.green700,
+      decoration: TextDecoration.underline,
+      decorationColor: t.green700,
+    );
+
     return Scaffold(
       backgroundColor: t.paper,
-      appBar: AppBar(
-        backgroundColor: t.paper,
-        title: Text(
-          l10n.authSignUpTitle,
-          style: TextStyle(
-            fontFamily: kFontAmiri,
-            fontWeight: FontWeight.w700,
-            fontSize: 22,
-            color: t.ink,
-          ),
-        ),
-      ),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+        child: Column(
           children: [
-            TextField(
-              controller: _name,
-              textInputAction: TextInputAction.next,
-              onChanged: (_) => setState(() => _nameError = null),
-              style: authFieldStyle(t),
-              decoration: authFieldDecoration(
-                context,
-                label: l10n.authDisplayName,
-                errorText: _nameError,
-              ),
-            ),
-            const SizedBox(height: 14),
-            AuthLtrField(
-              controller: _email,
-              label: l10n.authEmail,
-              errorText: _emailError,
-              keyboardType: TextInputType.emailAddress,
-              autofillHints: const [AutofillHints.email],
-              textInputAction: TextInputAction.next,
-              onChanged: (_) => setState(() => _emailError = null),
-            ),
-            const SizedBox(height: 14),
-            AuthLtrField(
-              controller: _password,
-              label: l10n.authPassword,
-              errorText: _passwordError,
-              obscureText: _obscure,
-              autofillHints: const [AutofillHints.newPassword],
-              textInputAction: TextInputAction.next,
-              onChanged: (_) => setState(() {
-                _passwordError = null;
-              }),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscure
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                  color: t.muted,
-                ),
-                onPressed: () => setState(() => _obscure = !_obscure),
-              ),
-            ),
-            if (_password.text.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(
-                strength,
-                style: TextStyle(
-                  fontFamily: kFontUi,
-                  fontSize: 12,
-                  color: t.muted,
-                ),
-              ),
-            ],
-            const SizedBox(height: 14),
-            AuthLtrField(
-              controller: _confirm,
-              label: l10n.authConfirmPassword,
-              errorText: _confirmError,
-              obscureText: _obscure,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) => _submit(),
-              onChanged: (_) => setState(() => _confirmError = null),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Checkbox(
-                  value: _accepted,
-                  activeColor: t.green700,
-                  onChanged: (v) => setState(() => _accepted = v ?? false),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Text.rich(
-                      TextSpan(
-                        style: TextStyle(
-                          fontFamily: kFontUi,
-                          fontSize: 13,
-                          color: t.ink,
-                        ),
-                        children: [
-                          TextSpan(text: '${l10n.authAcceptPrefix} '),
-                          TextSpan(
-                            text: l10n.authPrivacy,
-                            style: TextStyle(
-                              color: t.green700,
-                              decoration: TextDecoration.underline,
-                            ),
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = () => launchUrl(
-                                    Uri.parse(AuthWelcomeScreen.privacyUrl),
-                                    mode: LaunchMode.externalApplication,
-                                  ),
-                          ),
-                          TextSpan(text: ' ${l10n.authAcceptAnd} '),
-                          TextSpan(
-                            text: l10n.authTerms,
-                            style: TextStyle(
-                              color: t.green700,
-                              decoration: TextDecoration.underline,
-                            ),
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = () => launchUrl(
-                                    Uri.parse(AuthWelcomeScreen.termsUrl),
-                                    mode: LaunchMode.externalApplication,
-                                  ),
-                          ),
-                        ],
-                      ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                children: [
+                  AuthTopBar(
+                    title: l10n.authSignUpTitle,
+                    onBack: () => Navigator.of(context).pop(),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    l10n.authDisplayName,
+                    textAlign: TextAlign.start,
+                    style: TextStyle(
+                      fontFamily: kFontUi,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: t.ink,
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _name,
+                    textInputAction: TextInputAction.next,
+                    onChanged: (_) => setState(() => _nameError = null),
+                    style: authFieldStyle(t),
+                    decoration: authFieldDecoration(
+                      context,
+                      label: '',
+                      errorText: _nameError,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  AuthLtrField(
+                    controller: _email,
+                    label: l10n.authEmail,
+                    errorText: _emailError,
+                    keyboardType: TextInputType.emailAddress,
+                    autofillHints: const [AutofillHints.email],
+                    textInputAction: TextInputAction.next,
+                    onChanged: (_) => setState(() => _emailError = null),
+                  ),
+                  const SizedBox(height: 16),
+                  AuthLtrField(
+                    controller: _password,
+                    label: l10n.authPassword,
+                    errorText: _passwordError,
+                    obscureText: _obscure,
+                    autofillHints: const [AutofillHints.newPassword],
+                    textInputAction: TextInputAction.next,
+                    onChanged: (_) => setState(() {
+                      _passwordError = null;
+                    }),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscure
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                        color: t.muted,
+                      ),
+                      onPressed: () => setState(() => _obscure = !_obscure),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  PasswordStrengthBar(
+                    password: _password.text,
+                    label: strength,
+                  ),
+                  const SizedBox(height: 16),
+                  AuthLtrField(
+                    controller: _confirm,
+                    label: l10n.authConfirmPassword,
+                    errorText: _confirmError,
+                    obscureText: _obscure,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _submit(),
+                    onChanged: (_) => setState(() => _confirmError = null),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Text.rich(
+                          TextSpan(
+                            style: TextStyle(
+                              fontFamily: kFontUi,
+                              fontSize: 13,
+                              color: t.green700,
+                              height: 1.45,
+                            ),
+                            children: [
+                              TextSpan(text: '${l10n.authAcceptPrefix} '),
+                              TextSpan(
+                                text: l10n.authPrivacy,
+                                style: linkStyle,
+                                recognizer: TapGestureRecognizer()
+                                  ..onTap = () => launchUrl(
+                                        Uri.parse(
+                                          AuthWelcomeScreen.privacyUrl,
+                                        ),
+                                        mode: LaunchMode.externalApplication,
+                                      ),
+                              ),
+                              TextSpan(text: ' ${l10n.authAcceptAnd} '),
+                              TextSpan(
+                                text: l10n.authTerms,
+                                style: linkStyle,
+                                recognizer: TapGestureRecognizer()
+                                  ..onTap = () => launchUrl(
+                                        Uri.parse(AuthWelcomeScreen.termsUrl),
+                                        mode: LaunchMode.externalApplication,
+                                      ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Checkbox(
+                        value: _accepted,
+                        activeColor: t.green700,
+                        side: BorderSide(color: t.green700, width: 1.4),
+                        onChanged: (v) =>
+                            setState(() => _accepted = v ?? false),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 20),
-            AuthPrimaryButton(
-              label: l10n.authSignUp,
-              busy: _busy,
-              onPressed: _submit,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              child: Column(
+                children: [
+                  Text(
+                    l10n.authForgotCopy,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: kFontUi,
+                      fontSize: 13,
+                      color: t.muted,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  AuthPrimaryButton(
+                    label: l10n.authSignUpCta,
+                    busy: _busy,
+                    onPressed: _submit,
+                  ),
+                ],
+              ),
             ),
           ],
         ),

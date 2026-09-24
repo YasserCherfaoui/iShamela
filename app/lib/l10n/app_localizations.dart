@@ -1271,7 +1271,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeGreetingNamed.
   ///
   /// In ar, this message translates to:
-  /// **'أهلًا، {name}'**
+  /// **'السلام عليكم، {name}'**
   String homeGreetingNamed(String name);
 
   /// No description provided for @homeHijriApprox.
@@ -1739,25 +1739,25 @@ abstract class AppLocalizations {
   /// No description provided for @authValueCopy.
   ///
   /// In ar, this message translates to:
-  /// **'سجّل الدخول لمزامنة قراءاتك وملاحظاتك عبر أجهزتك'**
+  /// **'سجّل الدخول لمزامنة كتبك وقراءاتك وملاحظاتك عبر أجهزتك'**
   String get authValueCopy;
 
   /// No description provided for @authContinueApple.
   ///
   /// In ar, this message translates to:
-  /// **'متابعة عبر Apple'**
+  /// **'المتابعة عبر Apple'**
   String get authContinueApple;
 
   /// No description provided for @authContinueGoogle.
   ///
   /// In ar, this message translates to:
-  /// **'متابعة عبر Google'**
+  /// **'المتابعة عبر Google'**
   String get authContinueGoogle;
 
   /// No description provided for @authContinueEmail.
   ///
   /// In ar, this message translates to:
-  /// **'البريد الإلكتروني'**
+  /// **'المتابعة بالبريد الإلكتروني'**
   String get authContinueEmail;
 
   /// No description provided for @authContinueGuest.
@@ -1889,7 +1889,7 @@ abstract class AppLocalizations {
   /// No description provided for @authPasswordStrengthOk.
   ///
   /// In ar, this message translates to:
-  /// **'مقبولة'**
+  /// **'قوة جيدة'**
   String get authPasswordStrengthOk;
 
   /// No description provided for @authPasswordStrengthStrong.
@@ -1931,13 +1931,13 @@ abstract class AppLocalizations {
   /// No description provided for @authTerms.
   ///
   /// In ar, this message translates to:
-  /// **'الشروط'**
+  /// **'شروط الاستخدام'**
   String get authTerms;
 
   /// No description provided for @authOtpTitle.
   ///
   /// In ar, this message translates to:
-  /// **'أدخل الرمز'**
+  /// **'رمز التحقق'**
   String get authOtpTitle;
 
   /// No description provided for @authOtpCopy.
@@ -2071,6 +2071,48 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'تعذّرت المزامنة — ستُعاد لاحقًا'**
   String get authSyncFailed;
+
+  /// No description provided for @authAgreeLead.
+  ///
+  /// In ar, this message translates to:
+  /// **'بمتابعتك فأنت توافق على'**
+  String get authAgreeLead;
+
+  /// No description provided for @authOr.
+  ///
+  /// In ar, this message translates to:
+  /// **'أو'**
+  String get authOr;
+
+  /// No description provided for @authOtpPrompt.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل الرمز المكوّن من ٦ أرقام المرسل إلى'**
+  String get authOtpPrompt;
+
+  /// No description provided for @authOtpSpam.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يصلك الرمز؟ تحقق من مجلد الرسائل غير المرغوبة'**
+  String get authOtpSpam;
+
+  /// No description provided for @authOtpConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'تأكيد'**
+  String get authOtpConfirm;
+
+  /// No description provided for @authChangeEmail.
+  ///
+  /// In ar, this message translates to:
+  /// **'تغيير البريد الإلكتروني'**
+  String get authChangeEmail;
+
+  /// No description provided for @authSignUpCta.
+  ///
+  /// In ar, this message translates to:
+  /// **'إنشاء الحساب'**
+  String get authSignUpCta;
 }
 
 class _AppLocalizationsDelegate

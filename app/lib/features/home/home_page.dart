@@ -21,7 +21,6 @@ import 'package:ishamela/features/profile/profile_page.dart';
 import 'package:ishamela/features/reader/reader_page.dart';
 import 'package:ishamela/ui/book_spine.dart';
 import 'package:ishamela/ui/rosette_divider.dart';
-import 'package:ishamela/ui/section_label.dart';
 import 'package:ishamela/ui/theme/ishamela_theme.dart';
 import 'package:ishamela/ui/theme/ishamela_tokens.dart';
 
@@ -203,20 +202,8 @@ class _HomePageState extends ConsumerState<HomePage> {
             const SizedBox(height: 16),
             _WeeklyStatsStrip(stats: stats, locale: locale),
             const SizedBox(height: 8),
-            SectionLabel(
-              label: l10n.homeRecentHistory,
-              trailing: TextButton(
-                onPressed: () => HistoryPage.open(context),
-                child: Text(
-                  l10n.homeViewAll,
-                  style: TextStyle(
-                    fontFamily: kFontUi,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                    color: t.emphasis,
-                  ),
-                ),
-              ),
+            _RecentHeader(
+              onViewAll: () => HistoryPage.open(context),
             ),
             if (recent.isEmpty)
               Padding(
@@ -343,9 +330,7 @@ class _HomeHeader extends ConsumerWidget {
     final t = IshamelaTokens.of(context);
     final profile = auth.profileOrNull;
     final name = profile?.displayName?.trim();
-    final greeting = (name != null && name.isNotEmpty)
-        ? l10n.homeGreetingNamed(name)
-        : l10n.homeGreeting;
+    final named = name != null && name.isNotEmpty;
 
     final now = DateTime.now();
     final gregorian = DateFormat.yMMMMd(locale.toLanguageTag()).format(now);
@@ -360,13 +345,24 @@ class _HomeHeader extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                greeting,
-                style: TextStyle(
-                  fontFamily: kFontAmiri,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 24,
-                  color: t.ink,
+              Text.rich(
+                TextSpan(
+                  style: TextStyle(
+                    fontFamily: kFontAmiri,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 26,
+                    color: t.ink,
+                  ),
+                  children: [
+                    TextSpan(
+                      text: named ? '${l10n.homeGreeting}، ' : l10n.homeGreeting,
+                    ),
+                    if (named)
+                      TextSpan(
+                        text: name,
+                        style: TextStyle(color: t.emphasis),
+                      ),
+                  ],
                 ),
               ),
               const SizedBox(height: 4),
@@ -439,7 +435,7 @@ class _AvatarButton extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       shape: CircleBorder(
-        side: BorderSide(color: t.goldSoft, width: 1.5),
+        side: BorderSide(color: t.goldSoft, width: 2),
       ),
       child: InkWell(
         customBorder: const CircleBorder(),
@@ -473,10 +469,8 @@ class _ContinueCard extends StatelessWidget {
     final t = IshamelaTokens.of(context);
     final title = book?.title ?? 'book_${entry.bookId}';
     final section = entry.sectionTitle ?? '';
-    final crumb = section.isNotEmpty
-        ? l10n.homeBookCrumb(title, section)
-        : (entry.sectionTitle ?? '');
     final pos = _positionCrumb(l10n, entry, locale);
+    final detail = section.isNotEmpty ? '$section · $pos' : pos;
     final pct = (progress * 100).round();
     final a11y = l10n.homeContinueA11y(
       title,
@@ -497,96 +491,95 @@ class _ContinueCard extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(16),
           child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                BookSpine(
-                  title: title,
-                  categoryId: book?.categoryId ?? 0,
-                  available: installed,
-                  width: 48,
-                  height: 68,
+                Row(
+                  children: [
+                    Text(
+                      l10n.homeContinueReading,
+                      style: TextStyle(
+                        fontFamily: kFontUi,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: t.emphasis,
+                      ),
+                    ),
+                    const Spacer(),
+                    Icon(Icons.chevron_left, color: t.muted, size: 20),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        l10n.homeContinueReading,
-                        style: TextStyle(
-                          fontFamily: kFontUi,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 11,
-                          color: t.gold,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontFamily: kFontAmiri,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 17,
-                          color: t.ink,
-                        ),
-                      ),
-                      if (crumb.isNotEmpty) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          crumb,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: kFontUi,
-                            fontSize: 12,
-                            color: t.muted,
+                const SizedBox(height: 10),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: kFontAmiri,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 22,
+                              color: t.ink,
+                            ),
                           ),
-                        ),
-                      ],
-                      const SizedBox(height: 2),
-                      Text(
-                        pos,
-                        style: TextStyle(
-                          fontFamily: kFontUi,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: t.muted,
+                          const SizedBox(height: 4),
+                          Text(
+                            detail,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: kFontUi,
+                              fontSize: 12,
+                              color: t.muted,
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    BookSpine(
+                      title: title,
+                      categoryId: book?.categoryId ?? 0,
+                      available: installed,
+                      width: 52,
+                      height: 78,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 4,
+                          backgroundColor: t.hairline,
+                          color: const Color(0xFFC6A15B),
                         ),
                       ),
-                      if (progress > 0) ...[
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(999),
-                                child: LinearProgressIndicator(
-                                  value: progress,
-                                  minHeight: 3,
-                                  backgroundColor: t.hairline,
-                                  color: const Color(0xFFC6A15B),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              l10n.homePercent(_statDigits(pct, locale)),
-                              style: TextStyle(
-                                fontFamily: kFontUi,
-                                fontSize: 11,
-                                color: t.muted,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      l10n.homePercent(_statDigits(pct, locale)),
+                      style: TextStyle(
+                        fontFamily: kFontUi,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: t.muted,
+                      ),
+                    ),
+                  ],
                 ),
-                Icon(Icons.chevron_left, color: t.muted),
               ],
             ),
           ),
@@ -605,22 +598,40 @@ class _WeeklyStatsStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+    final scale = MediaQuery.textScalerOf(context).scale(1);
+    final chips = [
+      _StatChip(
+        value: _statDigits(stats.streakDays, locale),
+        label: l10n.homeStreakDays,
+      ),
+      _StatChip(
+        value: _statDigits(stats.weeklyMinutes, locale),
+        label: l10n.homeWeeklyMinutes,
+      ),
+      _StatChip(
+        value: _statDigits(stats.weeklyPages, locale),
+        label: l10n.homeWeeklyPages,
+      ),
+    ];
+    if (scale > 1.25) {
+      return Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final chip in chips)
+            SizedBox(
+              width: (MediaQuery.sizeOf(context).width - 48) / 2,
+              child: chip,
+            ),
+        ],
+      );
+    }
+    return Row(
       children: [
-        _StatChip(
-          value: _statDigits(stats.streakDays, locale),
-          label: l10n.homeStreakDays,
-        ),
-        _StatChip(
-          value: _statDigits(stats.weeklyMinutes, locale),
-          label: l10n.homeWeeklyMinutes,
-        ),
-        _StatChip(
-          value: _statDigits(stats.weeklyPages, locale),
-          label: l10n.homeWeeklyPages,
-        ),
+        for (var i = 0; i < chips.length; i++) ...[
+          if (i > 0) const SizedBox(width: 8),
+          Expanded(child: chips[i]),
+        ],
       ],
     );
   }
@@ -636,31 +647,33 @@ class _StatChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = IshamelaTokens.of(context);
     return Container(
-      constraints: const BoxConstraints(minWidth: 100),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
       decoration: BoxDecoration(
-        color: t.chipBg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: t.hairline),
+        color: t.green100,
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             value,
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: kFontAmiri,
               fontWeight: FontWeight.w700,
-              fontSize: 20,
+              fontSize: 26,
               color: t.emphasis,
             ),
           ),
+          const SizedBox(height: 2),
           Text(
             label,
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: kFontUi,
               fontSize: 11,
-              color: t.muted,
+              height: 1.3,
+              color: t.emphasis.withValues(alpha: 0.72),
             ),
           ),
         ],
@@ -711,8 +724,8 @@ class _RecentHistoryRow extends StatelessWidget {
                   title: title,
                   categoryId: book?.categoryId ?? 0,
                   available: installed,
-                  width: 36,
-                  height: 50,
+                  width: 40,
+                  height: 56,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -726,12 +739,12 @@ class _RecentHistoryRow extends StatelessWidget {
                         style: TextStyle(
                           fontFamily: kFontAmiri,
                           fontWeight: FontWeight.w700,
-                          fontSize: 15,
+                          fontSize: 16,
                           color: t.ink,
                         ),
                       ),
                       Text(
-                        '$pos · $when',
+                        pos,
                         style: TextStyle(
                           fontFamily: kFontUi,
                           fontSize: 12,
@@ -741,10 +754,60 @@ class _RecentHistoryRow extends StatelessWidget {
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
+                Text(
+                  when,
+                  style: TextStyle(
+                    fontFamily: kFontUi,
+                    fontSize: 12,
+                    color: t.muted,
+                  ),
+                ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _RecentHeader extends StatelessWidget {
+  const _RecentHeader({required this.onViewAll});
+
+  final VoidCallback onViewAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final t = IshamelaTokens.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 4),
+      child: Row(
+        children: [
+          Text(
+            l10n.homeRecentHistory,
+            style: TextStyle(
+              fontFamily: kFontAmiri,
+              fontWeight: FontWeight.w700,
+              fontSize: 22,
+              color: t.emphasis,
+            ),
+          ),
+          const Spacer(),
+          TextButton(
+            onPressed: onViewAll,
+            child: Text(
+              l10n.homeViewAll,
+              style: TextStyle(
+                fontFamily: kFontUi,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                color: t.emphasis,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -760,30 +823,54 @@ class _QuickActions extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final t = IshamelaTokens.of(context);
-    return Row(
-      children: [
-        Expanded(
-          child: FilledButton.tonal(
-            onPressed: onBookmarks,
-            style: FilledButton.styleFrom(
-              backgroundColor: t.green100,
-              foregroundColor: t.emphasis,
-              padding: const EdgeInsets.symmetric(vertical: 14),
+    Widget action({
+      required String label,
+      required IconData icon,
+      required VoidCallback onPressed,
+    }) {
+      return Expanded(
+        child: OutlinedButton(
+          onPressed: onPressed,
+          style: OutlinedButton.styleFrom(
+            backgroundColor: t.card,
+            foregroundColor: t.emphasis,
+            side: BorderSide(color: t.hairline),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-            child: Text(l10n.homeQuickBookmarks),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontFamily: kFontUi,
+                  fontWeight: FontWeight.w600,
+                  color: t.emphasis,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Icon(icon, size: 18, color: t.emphasis),
+            ],
           ),
         ),
+      );
+    }
+
+    return Row(
+      children: [
+        action(
+          label: l10n.homeQuickBookmarks,
+          icon: Icons.bookmark_border,
+          onPressed: onBookmarks,
+        ),
         const SizedBox(width: 10),
-        Expanded(
-          child: FilledButton.tonal(
-            onPressed: onNotes,
-            style: FilledButton.styleFrom(
-              backgroundColor: t.green100,
-              foregroundColor: t.emphasis,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-            ),
-            child: Text(l10n.homeQuickNotes),
-          ),
+        action(
+          label: l10n.homeQuickNotes,
+          icon: Icons.edit_outlined,
+          onPressed: onNotes,
         ),
       ],
     );

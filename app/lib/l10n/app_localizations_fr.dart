@@ -671,7 +671,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String homeGreetingNamed(String name) {
-    return 'Bonjour, $name';
+    return 'Que la paix soit sur vous, $name';
   }
 
   @override
@@ -930,7 +930,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get authValueCopy =>
-      'Connectez-vous pour synchroniser lectures et notes sur vos appareils';
+      'Connectez-vous pour synchroniser vos livres, lectures et notes sur vos appareils';
 
   @override
   String get authContinueApple => 'Continuer avec Apple';
@@ -939,7 +939,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get authContinueGoogle => 'Continuer avec Google';
 
   @override
-  String get authContinueEmail => 'E-mail';
+  String get authContinueEmail => 'Continuer avec l\'e-mail';
 
   @override
   String get authContinueGuest => 'Continuer sans compte';
@@ -1008,7 +1008,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get authPasswordStrengthWeak => 'Faible — ajoutez lettres et chiffres';
 
   @override
-  String get authPasswordStrengthOk => 'Correct';
+  String get authPasswordStrengthOk => 'Bonne';
 
   @override
   String get authPasswordStrengthStrong => 'Fort';
@@ -1030,7 +1030,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get authPrivacy => 'Politique de confidentialité';
 
   @override
-  String get authTerms => 'Conditions';
+  String get authTerms => 'Conditions d\'utilisation';
 
   @override
   String get authOtpTitle => 'Code de vérification';
@@ -1106,4 +1106,26 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get authSyncFailed =>
       'Échec de la synchronisation — nouvel essai plus tard';
+
+  @override
+  String get authAgreeLead => 'En continuant, vous acceptez la';
+
+  @override
+  String get authOr => 'ou';
+
+  @override
+  String get authOtpPrompt => 'Saisissez le code à 6 chiffres envoyé à';
+
+  @override
+  String get authOtpSpam =>
+      'Vous n\'avez pas reçu le code ? Vérifiez les indésirables';
+
+  @override
+  String get authOtpConfirm => 'Confirmer';
+
+  @override
+  String get authChangeEmail => 'Changer l\'e-mail';
+
+  @override
+  String get authSignUpCta => 'Créer le compte';
 }

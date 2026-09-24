@@ -187,36 +187,63 @@ class _OtpScreenState extends ConsumerState<OtpScreen>
     final t = IshamelaTokens.of(context);
     final mm = (_secondsLeft ~/ 60).toString();
     final ss = (_secondsLeft % 60).toString().padLeft(2, '0');
+    final resendTime = '$mm:$ss';
+    final resendLead =
+        l10n.authOtpResendIn(resendTime).replaceFirst(resendTime, '').trim();
 
     return Scaffold(
       backgroundColor: t.paper,
-      appBar: AppBar(
-        backgroundColor: t.paper,
-        title: Text(
-          l10n.authOtpTitle,
-          style: TextStyle(
-            fontFamily: kFontAmiri,
-            fontWeight: FontWeight.w700,
-            fontSize: 22,
-            color: t.ink,
-          ),
-        ),
-      ),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+        child: Column(
           children: [
-            Text(
-              l10n.authOtpCopy(widget.email),
-              style: TextStyle(
-                fontFamily: kFontUi,
-                fontSize: 15,
-                height: 1.5,
-                color: t.muted,
-              ),
-            ),
-            const SizedBox(height: 28),
-            AnimatedBuilder(
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                children: [
+                  AuthTopBar(
+                    title: l10n.authOtpTitle,
+                    onBack: () => Navigator.of(context).pop(),
+                  ),
+                  const SizedBox(height: 28),
+                  Center(
+                    child: Container(
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        color: t.green100,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.mail_outline,
+                        color: t.emphasis,
+                        size: 32,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    l10n.authOtpPrompt,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: kFontUi,
+                      fontSize: 14,
+                      height: 1.5,
+                      color: t.muted,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    widget.email,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: kFontUi,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: t.ink,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  AnimatedBuilder(
               animation: _shakeAnim,
               builder: (context, child) {
                 return Transform.translate(
@@ -243,13 +270,13 @@ class _OtpScreenState extends ConsumerState<OtpScreen>
                   ),
                   pinTheme: PinTheme(
                     shape: PinCodeFieldShape.box,
-                    borderRadius: BorderRadius.circular(10),
-                    fieldHeight: 52,
-                    fieldWidth: 44,
+                    borderRadius: BorderRadius.circular(14),
+                    fieldHeight: 56,
+                    fieldWidth: 46,
                     activeFillColor: t.card,
                     selectedFillColor: t.card,
                     inactiveFillColor: t.card,
-                    activeColor: t.green700,
+                    activeColor: t.goldSoft,
                     selectedColor: t.goldSoft,
                     inactiveColor: t.hairline,
                     errorBorderColor: Theme.of(context).colorScheme.error,
@@ -271,35 +298,80 @@ class _OtpScreenState extends ConsumerState<OtpScreen>
                 ),
               ),
             ],
-            const SizedBox(height: 20),
-            AuthPrimaryButton(
-              label: l10n.authVerifyCode,
-              busy: _busy,
-              onPressed: () => _submit(_code.text),
-            ),
-            const SizedBox(height: 16),
-            if (_secondsLeft > 0)
-              Text(
-                l10n.authOtpResendIn('$mm:$ss'),
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: kFontUi,
-                  fontSize: 13,
-                  color: t.muted,
-                ),
-              )
-            else
-              TextButton(
-                onPressed: _busy ? null : _resend,
-                child: Text(
-                  l10n.authOtpResend,
-                  style: TextStyle(
-                    fontFamily: kFontUi,
-                    fontWeight: FontWeight.w600,
-                    color: t.green700,
+                  const SizedBox(height: 18),
+                  if (_secondsLeft > 0)
+                    Text.rich(
+                      TextSpan(
+                        style: TextStyle(
+                          fontFamily: kFontUi,
+                          fontSize: 13,
+                          color: t.muted,
+                        ),
+                        children: [
+                          TextSpan(text: resendLead),
+                          const TextSpan(text: ' '),
+                          TextSpan(
+                            text: resendTime,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: t.ink,
+                            ),
+                          ),
+                        ],
+                      ),
+                      textAlign: TextAlign.center,
+                    )
+                  else
+                    TextButton(
+                      onPressed: _busy ? null : _resend,
+                      child: Text(
+                        l10n.authOtpResend,
+                        style: TextStyle(
+                          fontFamily: kFontUi,
+                          fontWeight: FontWeight.w600,
+                          color: t.green700,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.authOtpSpam,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: kFontUi,
+                      fontSize: 12,
+                      height: 1.45,
+                      color: t.muted,
+                    ),
                   ),
-                ),
+                ],
               ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              child: Column(
+                children: [
+                  AuthPrimaryButton(
+                    label: l10n.authOtpConfirm,
+                    busy: _busy,
+                    onPressed: () => _submit(_code.text),
+                  ),
+                  TextButton(
+                    onPressed: _busy
+                        ? null
+                        : () => Navigator.of(context).pop(),
+                    child: Text(
+                      l10n.authChangeEmail,
+                      style: TextStyle(
+                        fontFamily: kFontUi,
+                        fontWeight: FontWeight.w600,
+                        color: t.ink,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),

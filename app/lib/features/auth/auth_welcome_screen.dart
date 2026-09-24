@@ -9,7 +9,6 @@ import 'package:ishamela/core/providers.dart';
 import 'package:ishamela/features/auth/auth_l10n.dart';
 import 'package:ishamela/features/auth/auth_widgets.dart';
 import 'package:ishamela/features/auth/sign_in_screen.dart';
-import 'package:ishamela/ui/rosette_divider.dart';
 import 'package:ishamela/ui/theme/ishamela_theme.dart';
 import 'package:ishamela/ui/theme/ishamela_tokens.dart';
 import 'package:ishamela/ui/theme/reader_theme_tokens.dart';
@@ -76,31 +75,40 @@ class _AuthWelcomeScreenState extends ConsumerState<AuthWelcomeScreen> {
         ReaderThemeTokens.of(context).atmosphere == ReadingAtmosphere.night;
     final busy = _busyApple || _busyGoogle;
 
+    final linkStyle = TextStyle(
+      fontFamily: kFontUi,
+      fontSize: 12,
+      color: t.green700,
+      decoration: TextDecoration.underline,
+      decorationColor: t.green700,
+    );
+
     return Scaffold(
       backgroundColor: t.paper,
-      appBar: AppBar(
-        backgroundColor: t.paper,
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const RosetteMark(size: 40),
-              const SizedBox(height: 16),
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: AuthCircleButton(
+                  icon: Icons.close,
+                  onPressed: busy ? null : () => Navigator.of(context).pop(),
+                ),
+              ),
+              const SizedBox(height: 28),
+              const Center(child: AuthBrandMark()),
+              const SizedBox(height: 20),
               Text(
                 l10n.appTitle,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: kFontAmiri,
                   fontWeight: FontWeight.w700,
-                  fontSize: 28,
-                  color: t.ink,
+                  fontSize: 32,
+                  color: t.emphasis,
                 ),
               ),
               const SizedBox(height: 12),
@@ -111,17 +119,18 @@ class _AuthWelcomeScreenState extends ConsumerState<AuthWelcomeScreen> {
                   fontFamily: kFontUi,
                   fontSize: 14,
                   color: t.muted,
-                  height: 1.45,
+                  height: 1.55,
                 ),
               ),
               const Spacer(),
               if (supportsAppleSignIn) ...[
                 AuthSecondaryButton(
                   label: l10n.authContinueApple,
+                  iconAtEnd: true,
                   onPressed: busy ? null : _signInApple,
-                  backgroundColor: night ? Colors.white : Colors.black,
+                  backgroundColor: night ? Colors.white : const Color(0xFF1A1A1A),
                   foregroundColor: night ? Colors.black : Colors.white,
-                  borderColor: night ? Colors.white : Colors.black,
+                  borderColor: night ? Colors.white : const Color(0xFF1A1A1A),
                   leading: _busyApple
                       ? SizedBox(
                           width: 18,
@@ -141,6 +150,7 @@ class _AuthWelcomeScreenState extends ConsumerState<AuthWelcomeScreen> {
               ],
               AuthSecondaryButton(
                 label: l10n.authContinueGoogle,
+                iconAtEnd: true,
                 onPressed: busy ? null : _signInGoogle,
                 leading: _busyGoogle
                     ? SizedBox(
@@ -157,16 +167,21 @@ class _AuthWelcomeScreenState extends ConsumerState<AuthWelcomeScreen> {
                           fontFamily: kFontUi,
                           fontWeight: FontWeight.w800,
                           fontSize: 18,
-                          color: t.green700,
+                          color: const Color(0xFF4285F4),
                         ),
                       ),
               ),
               const SizedBox(height: 12),
-              AuthPrimaryButton(
+              AuthSecondaryButton(
                 label: l10n.authContinueEmail,
+                iconAtEnd: true,
                 onPressed: busy ? null : () => SignInScreen.open(context),
+                backgroundColor: t.green100,
+                foregroundColor: t.emphasis,
+                borderColor: t.green100,
+                leading: Icon(Icons.mail_outline, color: t.emphasis, size: 20),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               TextButton(
                 onPressed: busy ? null : () => Navigator.of(context).pop(),
                 child: Text(
@@ -174,35 +189,31 @@ class _AuthWelcomeScreenState extends ConsumerState<AuthWelcomeScreen> {
                   style: TextStyle(
                     fontFamily: kFontUi,
                     fontWeight: FontWeight.w600,
-                    color: t.emphasis,
+                    color: t.ink,
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 4),
               Text.rich(
                 TextSpan(
                   style: TextStyle(
                     fontFamily: kFontUi,
                     fontSize: 12,
                     color: t.muted,
+                    height: 1.5,
                   ),
                   children: [
+                    TextSpan(text: '${l10n.authAgreeLead} '),
                     TextSpan(
                       text: l10n.authPrivacy,
-                      style: TextStyle(
-                        color: t.green700,
-                        decoration: TextDecoration.underline,
-                      ),
+                      style: linkStyle,
                       recognizer: TapGestureRecognizer()
                         ..onTap = () => _openUrl(AuthWelcomeScreen.privacyUrl),
                     ),
-                    TextSpan(text: ' · '),
+                    TextSpan(text: ' ${l10n.authAcceptAnd} '),
                     TextSpan(
                       text: l10n.authTerms,
-                      style: TextStyle(
-                        color: t.green700,
-                        decoration: TextDecoration.underline,
-                      ),
+                      style: linkStyle,
                       recognizer: TapGestureRecognizer()
                         ..onTap = () => _openUrl(AuthWelcomeScreen.termsUrl),
                     ),
