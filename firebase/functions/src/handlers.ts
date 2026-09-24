@@ -22,6 +22,7 @@ import {
   resetTokenDocId,
   sha256,
 } from './crypto_util';
+import type { SendEmailFn } from './email';
 
 export interface AuthDeps {
   getUserByEmail: (email: string) => Promise<admin.auth.UserRecord | null>;
@@ -35,8 +36,13 @@ export interface AuthDeps {
 
 export interface FirestoreDeps {
   otpDoc: (id: string) => FirebaseFirestore.DocumentReference;
-  addMail: (data: Record<string, unknown>) => Promise<unknown>;
   recursiveDeleteUser: (uid: string) => Promise<void>;
+}
+
+export interface HandlerDeps {
+  auth: AuthDeps;
+  db: FirestoreDeps;
+  sendEmail: SendEmailFn;
 }
 
 function otpMailSubject(purpose: OtpPurpose): string {
@@ -59,13 +65,13 @@ export interface SendOtpRequest {
 }
 
 /**
- * Generates a 6-digit OTP, stores its SHA-256 hash, queues email via the
- * Trigger Email extension (`mail/` collection). Always returns `{ok: true}`
- * to avoid account enumeration — including unknown emails and rate limits.
+ * Generates a 6-digit OTP, stores its SHA-256 hash, emails via Resend.
+ * Always returns `{ok: true}` to avoid account enumeration — including
+ * unknown emails, rate limits, and send failures.
  */
 export async function handleSendOtp(
   data: SendOtpRequest,
-  deps: { auth: AuthDeps; db: FirestoreDeps },
+  deps: HandlerDeps,
   options?: {
     nowMs?: number;
     generateCode?: () => string;
@@ -113,14 +119,17 @@ export async function handleSendOtp(
     createdAt: FieldValue.serverTimestamp(),
   });
 
-  await deps.db.addMail({
-    to: [email],
-    message: {
+  try {
+    await deps.sendEmail({
+      to: email,
       subject: otpMailSubject(purpose),
       text: otpMailBody(code, purpose),
       html: `<p>${otpMailBody(code, purpose).replace(/\n/g, '<br>')}</p>`,
-    },
-  });
+    });
+  } catch {
+    // Do not leak send failures; drop the unused code so the user can retry.
+    await docRef.delete().catch(() => undefined);
+  }
 
   return { ok: true };
 }
@@ -138,7 +147,7 @@ export interface VerifyOtpResponse {
 
 export async function handleVerifyOtp(
   data: VerifyOtpRequest,
-  deps: { auth: AuthDeps; db: FirestoreDeps },
+  deps: HandlerDeps,
   options?: {
     nowMs?: number;
     generateResetToken?: () => string;
@@ -215,7 +224,7 @@ export interface ResetPasswordRequest {
 
 export async function handleResetPassword(
   data: ResetPasswordRequest,
-  deps: { auth: AuthDeps; db: FirestoreDeps },
+  deps: HandlerDeps,
   options?: { nowMs?: number },
 ): Promise<{ ok: true }> {
   const email = typeof data.email === 'string' ? normalizeEmail(data.email) : '';
@@ -272,7 +281,7 @@ export async function handleResetPassword(
 
 export async function handleDeleteAccount(
   uid: string | undefined,
-  deps: { auth: AuthDeps; db: FirestoreDeps },
+  deps: HandlerDeps,
 ): Promise<{ ok: true }> {
   if (!uid) {
     throw new HttpsError('unauthenticated', 'must be signed in');

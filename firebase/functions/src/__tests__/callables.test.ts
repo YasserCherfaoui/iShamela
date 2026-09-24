@@ -28,7 +28,7 @@ describe('sendOtp', () => {
 
     const result = await handleSendOtp(
       { email: '  User@Example.com ', purpose: 'verify' },
-      { auth: auth.deps, db: fs.deps },
+      { auth: auth.deps, db: fs.deps, sendEmail: fs.sendEmail },
       { nowMs: now, generateCode: () => '123456' },
     );
 
@@ -49,7 +49,7 @@ describe('sendOtp', () => {
 
     const result = await handleSendOtp(
       { email: 'ghost@example.com', purpose: 'reset' },
-      { auth: auth.deps, db: fs.deps },
+      { auth: auth.deps, db: fs.deps, sendEmail: fs.sendEmail },
     );
 
     expect(result).toEqual({ ok: true });
@@ -67,7 +67,7 @@ describe('sendOtp', () => {
     for (let i = 0; i < MAX_SENDS_PER_WINDOW; i++) {
       await handleSendOtp(
         { email: EMAIL, purpose: 'reset' },
-        { auth: auth.deps, db: fs.deps },
+        { auth: auth.deps, db: fs.deps, sendEmail: fs.sendEmail },
         {
           nowMs: base + i * 1000,
           generateCode: () => `10000${i}`,
@@ -82,7 +82,7 @@ describe('sendOtp', () => {
     // 6th send inside the window — still ok, but no new mail / send count.
     const sixth = await handleSendOtp(
       { email: EMAIL, purpose: 'reset' },
-      { auth: auth.deps, db: fs.deps },
+      { auth: auth.deps, db: fs.deps, sendEmail: fs.sendEmail },
       { nowMs: base + 10_000, generateCode: () => '999999' },
     );
     expect(sixth).toEqual({ ok: true });
@@ -97,7 +97,7 @@ describe('sendOtp', () => {
     // After the window rolls, a new send is allowed.
     const afterWindow = await handleSendOtp(
       { email: EMAIL, purpose: 'reset' },
-      { auth: auth.deps, db: fs.deps },
+      { auth: auth.deps, db: fs.deps, sendEmail: fs.sendEmail },
       {
         nowMs: base + RATE_LIMIT_WINDOW_MS + 1,
         generateCode: () => '654321',
@@ -131,7 +131,7 @@ describe('verifyOtp', () => {
       await expect(
         handleVerifyOtp(
           { email: EMAIL, code: '000000', purpose: 'verify' },
-          { auth: auth.deps, db: fs.deps },
+          { auth: auth.deps, db: fs.deps, sendEmail: fs.sendEmail },
           { nowMs: now },
         ),
       ).rejects.toMatchObject({ code: 'invalid-argument' });
@@ -142,7 +142,7 @@ describe('verifyOtp', () => {
     await expect(
       handleVerifyOtp(
         { email: EMAIL, code: '000000', purpose: 'verify' },
-        { auth: auth.deps, db: fs.deps },
+        { auth: auth.deps, db: fs.deps, sendEmail: fs.sendEmail },
         { nowMs: now },
       ),
     ).rejects.toMatchObject({ code: 'resource-exhausted' });
@@ -168,7 +168,7 @@ describe('verifyOtp', () => {
 
     const result = await handleVerifyOtp(
       { email: EMAIL, code: '424242', purpose: 'verify' },
-      { auth: auth.deps, db: fs.deps },
+      { auth: auth.deps, db: fs.deps, sendEmail: fs.sendEmail },
       { nowMs: now },
     );
 
@@ -197,7 +197,7 @@ describe('verifyOtp', () => {
 
     const result = await handleVerifyOtp(
       { email: EMAIL, code: '777777', purpose: 'reset' },
-      { auth: auth.deps, db: fs.deps },
+      { auth: auth.deps, db: fs.deps, sendEmail: fs.sendEmail },
       { nowMs: now, generateResetToken: () => 'tok_abc' },
     );
 
@@ -224,7 +224,7 @@ describe('resetPassword', () => {
 
     const result = await handleResetPassword(
       { email: EMAIL, resetToken, newPassword: 'newpass12' },
-      { auth: auth.deps, db: fs.deps },
+      { auth: auth.deps, db: fs.deps, sendEmail: fs.sendEmail },
       { nowMs: now },
     );
 
@@ -252,7 +252,7 @@ describe('resetPassword', () => {
     await expect(
       handleResetPassword(
         { email: EMAIL, resetToken: 'bad-token', newPassword: 'newpass12' },
-        { auth: auth.deps, db: fs.deps },
+        { auth: auth.deps, db: fs.deps, sendEmail: fs.sendEmail },
         { nowMs: now },
       ),
     ).rejects.toBeInstanceOf(HttpsError);
@@ -265,7 +265,7 @@ describe('deleteAccount', () => {
     const auth = createFakeAuth();
 
     await expect(
-      handleDeleteAccount(undefined, { auth: auth.deps, db: fs.deps }),
+      handleDeleteAccount(undefined, { auth: auth.deps, db: fs.deps, sendEmail: fs.sendEmail }),
     ).rejects.toMatchObject({ code: 'unauthenticated' });
   });
 
@@ -278,6 +278,7 @@ describe('deleteAccount', () => {
     const result = await handleDeleteAccount(UID, {
       auth: auth.deps,
       db: fs.deps,
+      sendEmail: fs.sendEmail,
     });
 
     expect(result).toEqual({ ok: true });

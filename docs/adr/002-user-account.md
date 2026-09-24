@@ -35,7 +35,7 @@ Adopt **Firebase** as the accounts + user-data backend, with authentication stri
 
 ## Consequences
 
-- **Billing plan:** Cloud Functions and outbound email require the **Blaze** (pay-as-you-go) plan. At current scale this rounds to ~$0; set a budget alert anyway. OTP emails go out via the **Trigger Email** Firebase extension (SMTP — e.g. Resend/Brevo free tier).
+- **Billing plan:** Cloud Functions and outbound email require the **Blaze** (pay-as-you-go) plan. At current scale this rounds to ~$0; set a budget alert anyway. OTP emails are sent **directly from Cloud Functions via the Resend HTTP API** (`RESEND_API_KEY` secret) — not Firebase Auth’s link emails and not Firebase Extensions (Extensions sunset March 2027).
 - **App Store compliance:** offering Google sign-in on iOS **requires** Sign in with Apple (guideline 4.8) — included. In-app **account deletion** is mandatory (guideline 5.1.1(v)) — a callable `deleteAccount` Function (SPEC-024 §4).
 - **Privacy:** update the ishamela.online policy (SPEC-021) for accounts, stored user data, and deletion; App Store privacy labels gain "Identifiers" and "Usage Data (reading activity)". Disable Firebase Analytics collection unless explicitly wanted.
 - **New repo surface:** `firebase/` folder — `firestore.rules`, `firestore.indexes.json`, `functions/` (TypeScript: `sendOtp`, `verifyOtp`, `deleteAccount`), `firebase.json`; config via `flutterfire configure` (the generated `firebase_options.dart` is safe to commit; API keys are not secrets, rules are the security boundary).

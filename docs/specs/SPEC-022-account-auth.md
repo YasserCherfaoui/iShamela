@@ -70,10 +70,10 @@ All screens are RTL, themed like the rest of the app (Paper `#F8F3E6` / Sepia `#
 
 ## 5. OTP backend (Cloud Functions, TypeScript, region `europe-west1`)
 
-- `sendOtp({email, purpose})` — callable. Generates a crypto-random 6-digit code, stores SHA-256 hash in `otps/{email}_{purpose}` (`hash, purpose, attempts: 0, sends, expiresAt: now+10min`), emails it via the **Trigger Email** extension (writes to `mail/` collection; SMTP: Resend/Brevo). Rate limits: 5 sends / 15 min per email+purpose, generic OK response regardless of account existence.
+- `sendOtp({email, purpose})` — callable. Generates a crypto-random 6-digit code, stores SHA-256 hash in `otps/{email}_{purpose}` (`hash, purpose, attempts: 0, sends, expiresAt: now+10min`), emails it **directly via Resend** (`RESEND_API_KEY` secret + `RESEND_FROM`). No Firebase Extensions. Rate limits: 5 sends / 15 min per email+purpose, generic OK response regardless of account existence.
 - `verifyOtp({email, code, purpose})` — callable. Compares hash, increments `attempts` (invalidate at 5), deletes doc on success. `verify` → Admin `updateUser(uid, {emailVerified: true})`; `reset` → returns single-use `resetToken` (random, hashed, 5 min TTL, stored alongside).
 - `resetPassword({email, resetToken, newPassword})` — callable. Validates token, Admin `updateUser(uid, {password})`, revokes refresh tokens.
-- `otps/` and `mail/` are locked to no client access in `firestore.rules`. Unit-test the three functions with the Firebase emulator suite.
+- `otps/` is locked to no client access in `firestore.rules`. Unit-test the callables (handlers + Resend client) with jest.
 
 ## 6. Guest-data merge (first verified sign-in on a device)
 
@@ -91,7 +91,7 @@ All screens are RTL, themed like the rest of the app (Paper `#F8F3E6` / Sepia `#
 6. Signing in on a device with guest history merges it (union, LWW) — verified by a device-A/device-B test script against the emulator.
 7. Sign-out keeps local data and returns Profile/Home to guest state.
 8. All screens render correctly in the three themes, RTL, and pass a VoiceOver/TalkBack pass (labels on every field/button).
-9. `firestore.rules` deny-by-default verified by emulator rule tests; only `users/{uid}/**` readable/writable by its owner; `otps/`, `mail/` client-inaccessible.
+9. `firestore.rules` deny-by-default verified by emulator rule tests; only `users/{uid}/**` readable/writable by its owner; `otps/` client-inaccessible.
 
 ## 8. Open questions
 

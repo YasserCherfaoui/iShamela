@@ -52,22 +52,38 @@ export class FakeDocRef {
 
 export function createFakeFirestore() {
   const otps = new Map<string, DocData>();
-  const mail: DocData[] = [];
+  const sentEmails: DocData[] = [];
   const deletedUsers: string[] = [];
 
   return {
     otps,
-    mail,
+    /** @deprecated alias for tests that still read `.mail` */
+    get mail() {
+      return sentEmails;
+    },
+    sentEmails,
     deletedUsers,
     deps: {
-      otpDoc: (id: string) => new FakeDocRef(otps, id) as unknown as FirebaseFirestore.DocumentReference,
-      addMail: async (data: Record<string, unknown>) => {
-        mail.push(data);
-        return { id: `mail_${mail.length}` };
-      },
+      otpDoc: (id: string) =>
+        new FakeDocRef(otps, id) as unknown as FirebaseFirestore.DocumentReference,
       recursiveDeleteUser: async (uid: string) => {
         deletedUsers.push(uid);
       },
+    },
+    sendEmail: async (msg: {
+      to: string;
+      subject: string;
+      text: string;
+      html: string;
+    }) => {
+      sentEmails.push({
+        to: [msg.to],
+        message: {
+          subject: msg.subject,
+          text: msg.text,
+          html: msg.html,
+        },
+      });
     },
   };
 }

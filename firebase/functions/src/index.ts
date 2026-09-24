@@ -1,11 +1,15 @@
 /**
  * iShamela Cloud Functions — SPEC-022 §5, SPEC-024 §4, ADR-002.
  * Region: europe-west1.
+ *
+ * OTP email is sent directly via Resend (no Firebase Extensions).
  */
 
 import * as admin from 'firebase-admin';
+import { defineSecret, defineString } from 'firebase-functions/params';
 import { setGlobalOptions } from 'firebase-functions/v2';
 import { onCall } from 'firebase-functions/v2/https';
+import { sendViaResend } from './email';
 import {
   AuthDeps,
   FirestoreDeps,
@@ -13,6 +17,7 @@ import {
   handleResetPassword,
   handleSendOtp,
   handleVerifyOtp,
+  HandlerDeps,
   ResetPasswordRequest,
   SendOtpRequest,
   VerifyOtpRequest,
@@ -26,6 +31,17 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 const auth = admin.auth();
+
+/** Set with: firebase functions:secrets:set RESEND_API_KEY */
+const resendApiKey = defineSecret('RESEND_API_KEY');
+
+/**
+ * Verified sender, e.g. `الشاملة <noreply@ishamela.online>`.
+ * Override: firebase functions:config or params — `RESEND_FROM`.
+ */
+const resendFrom = defineString('RESEND_FROM', {
+  default: 'الشاملة <noreply@ishamela.online>',
+});
 
 function liveAuthDeps(): AuthDeps {
   return {
@@ -49,34 +65,41 @@ function liveAuthDeps(): AuthDeps {
 function liveFirestoreDeps(): FirestoreDeps {
   return {
     otpDoc: (id) => db.collection('otps').doc(id),
-    addMail: (data) => db.collection('mail').add(data),
     recursiveDeleteUser: (uid) =>
       db.recursiveDelete(db.collection('users').doc(uid)),
   };
 }
 
-const deps = { auth: liveAuthDeps(), db: liveFirestoreDeps() };
+function liveDeps(): HandlerDeps {
+  return {
+    auth: liveAuthDeps(),
+    db: liveFirestoreDeps(),
+    sendEmail: (msg) =>
+      sendViaResend(resendApiKey.value(), resendFrom.value(), msg),
+  };
+}
 
-export const sendOtp = onCall({ region: 'europe-west1' }, async (request) =>
-  handleSendOtp((request.data ?? {}) as SendOtpRequest, deps),
+export const sendOtp = onCall(
+  { region: 'europe-west1', secrets: [resendApiKey] },
+  async (request) =>
+    handleSendOtp((request.data ?? {}) as SendOtpRequest, liveDeps()),
 );
 
 export const verifyOtp = onCall({ region: 'europe-west1' }, async (request) =>
-  handleVerifyOtp((request.data ?? {}) as VerifyOtpRequest, deps),
+  handleVerifyOtp((request.data ?? {}) as VerifyOtpRequest, liveDeps()),
 );
 
 export const resetPassword = onCall(
   { region: 'europe-west1' },
   async (request) =>
-    handleResetPassword((request.data ?? {}) as ResetPasswordRequest, deps),
+    handleResetPassword((request.data ?? {}) as ResetPasswordRequest, liveDeps()),
 );
 
 export const deleteAccount = onCall(
   { region: 'europe-west1' },
-  async (request) => handleDeleteAccount(request.auth?.uid, deps),
+  async (request) => handleDeleteAccount(request.auth?.uid, liveDeps()),
 );
 
-// Re-export handlers for tests / tooling.
 export {
   handleDeleteAccount,
   handleResetPassword,

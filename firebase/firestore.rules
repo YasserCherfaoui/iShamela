@@ -19,10 +19,5 @@ service cloud.firestore {
     match /otps/{docId} {
       allow read, write: if false;
     }
-
-    // Trigger Email extension queue — Admin/Functions only
-    match /mail/{docId} {
-      allow read, write: if false;
-    }
   }
 }

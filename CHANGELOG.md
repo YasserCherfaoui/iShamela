@@ -12,6 +12,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- OTP email: send directly via **Resend** from Cloud Functions (no Firebase Trigger Email extension / `mail/` queue). Set secret `RESEND_API_KEY` before deploy.
 - Platform SDK floors for FlutterFire: macOS 10.15, iOS 15.0, Android `minSdk` ≥ 23.
 - Reader TOC bottom sheet: الفهرس / العلامات / الملاحظات tabs rebuild via `StatefulBuilder` (parent `setState` alone did not refresh the modal).
 - Reader selection toolbar: **Remove highlight** when the selection overlaps existing highlights (deletes all overlapping rows; SPEC-010).

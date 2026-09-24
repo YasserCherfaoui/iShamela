@@ -10,7 +10,7 @@ Region: **`europe-west1`**.
 |------|------|
 | `firebase.json` | Functions, Firestore rules/indexes, emulators |
 | `.firebaserc` | Default project id (`ishamela-dev` placeholder) |
-| `firestore.rules` | Deny-by-default; `users/{uid}/**` owner-only; `otps/`, `mail/` locked |
+| `firestore.rules` | Deny-by-default; `users/{uid}/**` owner-only; `otps/` locked |
 | `firestore.indexes.json` | Composite indexes (none required yet) |
 | `functions/` | TypeScript callables: `sendOtp`, `verifyOtp`, `resetPassword`, `deleteAccount` |
 
@@ -91,23 +91,37 @@ Local Node may be newer than 20; Cloud Functions still run on the **Node 20** ru
 (`engines` in `functions/package.json`). The `EBADENGINE` warning during `npm install`
 is safe to ignore.
 
-## Trigger Email extension
+## OTP email (Resend)
 
-OTP delivery writes documents to the `mail/` collection. Install the official extension so those docs become SMTP messages:
+OTP delivery calls the **Resend HTTP API** from `sendOtp` — no Firebase Extensions / `mail/` collection.
+
+1. Create an API key at [resend.com](https://resend.com) and verify your sending domain (e.g. `ishamela.online`).
+2. Store the secret (once per project):
 
 ```bash
-firebase ext:install firebase/firestore-send-email --project <projectId>
+firebase functions:secrets:set RESEND_API_KEY
 ```
 
-Configure SMTP (e.g. Resend or Brevo). Collection path: `mail`. The Functions Admin SDK can write there; clients cannot (`firestore.rules`).
+3. Optional from-address override (default `الشاملة <noreply@ishamela.online>`):
 
-Email templates are plain text/HTML set by `sendOtp` (Arabic subject/body with the 6-digit code).
+```bash
+firebase functions:config:set  # or set param RESEND_FROM in Google Cloud Console
+# Prefer: firebase deploy with .env / params — see defineString('RESEND_FROM')
+```
+
+For local emulators, export `RESEND_API_KEY` before starting, or use a fake key and inspect logs.
+
+Then redeploy functions:
+
+```bash
+cd firebase/functions && npm run deploy
+```
 
 ## Callables (summary)
 
 | Callable | Auth | Behavior |
 |----------|------|----------|
-| `sendOtp({email, purpose})` | optional | Crypto 6-digit → SHA-256 in `otps/{email}_{purpose}`; queue `mail/`; **always** `{ok:true}` |
+| `sendOtp({email, purpose})` | optional | Crypto 6-digit → SHA-256 in `otps/{email}_{purpose}`; **Resend email**; **always** `{ok:true}` |
 | `verifyOtp({email, code, purpose})` | optional | Hash compare; invalidate after 5 fails; `verify` → `emailVerified`; `reset` → `{resetToken}` |
 | `resetPassword({email, resetToken, newPassword})` | optional | Admin password update + `revokeRefreshTokens` |
 | `deleteAccount` | required | Recursive delete `users/{uid}`, then Auth user |
