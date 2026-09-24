@@ -113,6 +113,7 @@ class LibrarySyncRequest {
     required this.installed,
     required this.excluded,
     required this.deferred,
+    required this.held,
     required this.queued,
     required this.remote,
     required this.catalog,
@@ -129,6 +130,9 @@ class LibrarySyncRequest {
   final Set<int> installed;
   final Set<int> excluded;
   final Set<int> deferred;
+
+  /// Books paused locally because the network policy held them (SPEC-025 §3.2).
+  final Set<int> held;
   final Set<int> queued;
   final List<LibraryDoc> remote;
 
@@ -341,16 +345,15 @@ LibrarySyncPlan planLibrarySync(LibrarySyncRequest req) {
       hold.addAll(needsDownload);
     } else {
       enqueue.addAll(needsDownload);
-      clearHolds.addAll(req.queued);
     }
   }
 
+  // Only books we paused for the network policy. Resuming a finished row
+  // sets it back to queued and downloads the file again.
   if (!blockedByNetwork && req.autoDownload) {
-    clearHolds.addAll(
-      req.queued.where((id) => missing.containsKey(id) || req.installed.contains(id)),
-    );
+    clearHolds.addAll(req.held);
   } else if (blockedByNetwork) {
-    hold.addAll(req.queued.where(missing.containsKey));
+    hold.addAll(req.held.where(missing.containsKey));
   }
 
   return LibrarySyncPlan(
@@ -437,6 +440,7 @@ extension on LibrarySyncRequest {
       installed: installed,
       excluded: excluded,
       deferred: deferred,
+      held: held,
       queued: queued,
       remote: remote,
       catalog: catalog,

@@ -39,6 +39,7 @@ LibrarySyncRequest _req({
   Set<int> installed = const {},
   Set<int> excluded = const {},
   Set<int> deferred = const {},
+  Set<int> held = const {},
   Set<int> queued = const {},
   List<LibraryDoc> remote = const [],
   Map<int, CatalogShelfBook?>? catalog,
@@ -59,6 +60,7 @@ LibrarySyncRequest _req({
     installed: installed,
     excluded: excluded,
     deferred: deferred,
+    held: held,
     queued: queued,
     remote: remote,
     catalog: catalog ?? {for (final id in ids) id: _book()},
@@ -193,12 +195,26 @@ void main() {
     final plan = planLibrarySync(
       _req(
         remote: [_doc(1)],
+        held: {1},
         queued: {1},
         link: LibraryLink.wifi,
       ),
     );
     expect(plan.enqueue, isEmpty);
     expect(plan.clearHolds, {1});
+  });
+
+  test('finished and in-progress downloads are not resumed', () {
+    final plan = planLibrarySync(
+      _req(
+        remote: [_doc(1), _doc(2)],
+        installed: {1},
+        queued: {1, 2},
+        link: LibraryLink.wifi,
+      ),
+    );
+    expect(plan.clearHolds, isEmpty);
+    expect(plan.enqueue, isEmpty);
   });
 
   test('insufficient space shows the selection sheet and does not enqueue', () {

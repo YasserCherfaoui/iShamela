@@ -1,5 +1,6 @@
 import 'package:ishamela/core/db/state_database.dart';
 import 'package:ishamela/core/library/library_plan.dart';
+import 'package:ishamela/core/models/models.dart';
 import 'package:ishamela/features/catalog/catalog_service.dart';
 import 'package:ishamela/features/downloads/download_service.dart';
 
@@ -26,8 +27,11 @@ Future<void> applyLibraryPlan({
   }
   for (final id in plan.clearHolds) {
     state.markLibraryHeld(id, on: false);
+    if (state.isInstalled(id)) continue;
     final rows = state.listDownloads().where((r) => r['book_id'] == id);
-    if (rows.isNotEmpty) {
+    if (rows.isEmpty) continue;
+    final status = DownloadStatus.parse(rows.first['status'] as String);
+    if (status == DownloadStatus.paused) {
       await downloads.resume(id);
     }
   }
@@ -103,6 +107,7 @@ LibrarySyncRequest librarySyncRequest({
     installed: installed,
     excluded: state.libraryExclusionIds(),
     deferred: state.libraryDeferredIds(),
+    held: state.libraryHeldIds(),
     queued: queued,
     remote: remote,
     catalog: catalogHits,
