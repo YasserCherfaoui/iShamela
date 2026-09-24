@@ -48,4 +48,88 @@ void main() {
     expect(state.readingPageId(7), 11);
     state.close();
   });
+
+  test('snapshot uploads highlights and a newer removal', () async {
+    final state = await _openTemp();
+    state.insertHighlight(
+      bookId: 3,
+      pageId: 4,
+      start: 1,
+      end: 5,
+      color: 'yellow',
+      createdAt: 10,
+    );
+    var snap = snapshotLocalUserData(state);
+    expect(snap.highlights, hasLength(1));
+    expect(snap.highlights.single['deleted'], isFalse);
+    expect(
+      snap.highlights.single['id'],
+      highlightSyncId(bookId: 3, pageId: 4, start: 1, end: 5, color: 'yellow'),
+    );
+
+    final id = state.highlightsForBook(3).single['id'] as int;
+    state.deleteHighlight(id);
+    snap = snapshotLocalUserData(state);
+    expect(snap.highlights.single['deleted'], isTrue);
+    expect(state.highlightsForBook(3), isEmpty);
+    state.close();
+  });
+
+  test('remote highlight is inserted, and a newer removal wins', () async {
+    final state = await _openTemp();
+    applyPulledReading(
+      state,
+      history: const [],
+      progress: const [],
+      highlights: [
+        {
+          'book_id': 3,
+          'page_id': 4,
+          'start_offset': 1,
+          'end_offset': 5,
+          'color': 'yellow',
+          'deleted': false,
+          'updatedAt': 10,
+        },
+      ],
+    );
+    expect(state.highlightsForBook(3), hasLength(1));
+
+    applyPulledReading(
+      state,
+      history: const [],
+      progress: const [],
+      highlights: [
+        {
+          'book_id': 3,
+          'page_id': 4,
+          'start_offset': 1,
+          'end_offset': 5,
+          'color': 'yellow',
+          'deleted': true,
+          'updatedAt': 20,
+        },
+      ],
+    );
+    expect(state.highlightsForBook(3), isEmpty);
+
+    applyPulledReading(
+      state,
+      history: const [],
+      progress: const [],
+      highlights: [
+        {
+          'book_id': 3,
+          'page_id': 4,
+          'start_offset': 1,
+          'end_offset': 5,
+          'color': 'yellow',
+          'deleted': false,
+          'updatedAt': 15,
+        },
+      ],
+    );
+    expect(state.highlightsForBook(3), isEmpty);
+    state.close();
+  });
 }

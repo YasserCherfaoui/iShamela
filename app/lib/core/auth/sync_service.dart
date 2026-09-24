@@ -51,6 +51,11 @@ class SyncService {
         idKey: 'id',
       );
       await _upsertCollection(
+        db.collection('users').doc(uid).collection('highlights'),
+        local.highlights,
+        idKey: 'id',
+      );
+      await _upsertCollection(
         db.collection('users').doc(uid).collection('progress'),
         local.progress,
         idKey: 'book_id',
@@ -82,7 +87,11 @@ class SyncService {
       final slice = docs.skip(i).take(batchLimit);
       final batch = col.firestore.batch();
       for (final doc in slice) {
-        batch.set(col.doc('${doc.bookId}'), doc.toMap(), SetOptions(merge: true));
+        batch.set(
+          col.doc('${doc.bookId}'),
+          doc.toMap(),
+          SetOptions(merge: true),
+        );
       }
       await batch.commit();
     }
@@ -94,14 +103,13 @@ class SyncService {
   Future<List<Map<String, dynamic>>> fetchProgress(String uid) =>
       _fetchMaps(uid, 'progress');
 
-  Future<List<Map<String, dynamic>>> _fetchMaps(
-    String uid,
-    String name,
-  ) async {
+  Future<List<Map<String, dynamic>>> fetchHighlights(String uid) =>
+      _fetchMaps(uid, 'highlights');
+
+  Future<List<Map<String, dynamic>>> _fetchMaps(String uid, String name) async {
     final db = _db;
     if (db == null) return const [];
-    final snap =
-        await db.collection('users').doc(uid).collection(name).get();
+    final snap = await db.collection('users').doc(uid).collection(name).get();
     return [
       for (final doc in snap.docs) {'id': doc.id, ...doc.data()},
     ];

@@ -7,16 +7,22 @@ class LocalUserDataSnapshot {
     required this.history,
     required this.bookmarks,
     required this.notes,
+    required this.highlights,
     required this.progress,
   });
 
   final List<Map<String, Object?>> history;
   final List<Map<String, Object?>> bookmarks;
   final List<Map<String, Object?>> notes;
+  final List<Map<String, Object?>> highlights;
   final List<Map<String, Object?>> progress;
 
   bool get isEmpty =>
-      history.isEmpty && bookmarks.isEmpty && notes.isEmpty && progress.isEmpty;
+      history.isEmpty &&
+      bookmarks.isEmpty &&
+      notes.isEmpty &&
+      highlights.isEmpty &&
+      progress.isEmpty;
 }
 
 /// Builds a [LocalUserDataSnapshot] from public [StateDatabase] APIs.
@@ -48,6 +54,29 @@ LocalUserDataSnapshot snapshotLocalUserData(
     }
   }
 
+  final highlights = [
+    for (final h in db.listHighlights())
+      _highlightMap(
+        bookId: h['book_id'] as int,
+        pageId: h['page_id'] as int,
+        start: h['start_offset'] as int,
+        end: h['end_offset'] as int,
+        color: h['color'] as String,
+        updatedAt: h['created_at'] as int,
+        deleted: false,
+      ),
+    for (final h in db.listHighlightDeletions())
+      _highlightMap(
+        bookId: h['book_id'] as int,
+        pageId: h['page_id'] as int,
+        start: h['start_offset'] as int,
+        end: h['end_offset'] as int,
+        color: h['color'] as String,
+        updatedAt: h['deleted_at'] as int,
+        deleted: true,
+      ),
+  ];
+
   final progress = [
     for (final row in db.listReadingStates())
       {
@@ -61,9 +90,44 @@ LocalUserDataSnapshot snapshotLocalUserData(
     history: history,
     bookmarks: bookmarks,
     notes: notes,
+    highlights: highlights,
     progress: progress,
   );
 }
+
+/// Stable across devices. Local sqlite ids are not.
+String highlightSyncId({
+  required int bookId,
+  required int pageId,
+  required int start,
+  required int end,
+  required String color,
+}) => '$bookId|$pageId|$start|$end|$color';
+
+Map<String, Object?> _highlightMap({
+  required int bookId,
+  required int pageId,
+  required int start,
+  required int end,
+  required String color,
+  required int updatedAt,
+  required bool deleted,
+}) => {
+  'id': highlightSyncId(
+    bookId: bookId,
+    pageId: pageId,
+    start: start,
+    end: end,
+    color: color,
+  ),
+  'book_id': bookId,
+  'page_id': pageId,
+  'start_offset': start,
+  'end_offset': end,
+  'color': color,
+  'deleted': deleted,
+  'updatedAt': updatedAt,
+};
 
 Map<String, Object?> _historyMap(ReadingHistoryEntry e) => {
   'id': e.id,
@@ -94,11 +158,12 @@ int? _asInt(Object? v) {
   return null;
 }
 
-/// Writes remote history/progress into SQLite when the row is new or newer.
+/// Writes remote history, progress, and highlights into SQLite.
 void applyPulledReading(
   StateDatabase db, {
   required List<Map<String, dynamic>> history,
   required List<Map<String, dynamic>> progress,
+  List<Map<String, dynamic>> highlights = const [],
 }) {
   for (final row in history) {
     final bookId = _asInt(row['book_id']);
@@ -128,6 +193,32 @@ void applyPulledReading(
       printPage: _asInt(row['print_page']),
       part: row['part'] as String?,
       sectionTitle: row['section_title'] as String?,
+    );
+  }
+  for (final row in highlights) {
+    final bookId = _asInt(row['book_id']);
+    final pageId = _asInt(row['page_id']);
+    final start = _asInt(row['start_offset']);
+    final end = _asInt(row['end_offset']);
+    final updated = _asInt(row['updatedAt']);
+    final color = row['color'];
+    if (bookId == null ||
+        pageId == null ||
+        start == null ||
+        end == null ||
+        updated == null ||
+        color is! String ||
+        color.isEmpty) {
+      continue;
+    }
+    db.applyRemoteHighlight(
+      bookId: bookId,
+      pageId: pageId,
+      start: start,
+      end: end,
+      color: color,
+      updatedAt: updated,
+      deleted: row['deleted'] == true,
     );
   }
 }

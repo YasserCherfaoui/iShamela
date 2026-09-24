@@ -77,7 +77,7 @@ All screens are RTL, themed like the rest of the app (Paper `#F8F3E6` / Sepia `#
 
 ## 6. Guest-data merge (first verified sign-in on a device)
 
-1. Snapshot local rows (progress, history, bookmarks, notes) with `updatedAt`, plus the locally installed book list.
+1. Snapshot local rows (progress, history, bookmarks, notes, highlights) with `updatedAt`, plus the locally installed book list. A removed highlight is a newer tombstone so it is not restored from another device.
 2. Pull the user's Firestore subtree; upsert both ways with per-document last-write-wins on `updatedAt` (batched writes, ≤500/batch). Installed books are unioned into `users/{uid}/library/` (SPEC-025 §2/§4).
 3. Hand off to the SPEC-025 auto-download orchestrator, which enqueues any account books missing on this device (network/storage policy and first-setup sheet per SPEC-025 §3).
 4. Runs in background with the SPEC-020 progress snackbar («جارٍ مزامنة بياناتك…»); failure retries on next sync tick — never blocks reading.

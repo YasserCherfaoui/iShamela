@@ -203,6 +203,21 @@ class StateDatabase {
       ''');
       db.execute('PRAGMA user_version = 9');
     }
+    final version10 = db.select('PRAGMA user_version').first.columnAt(0) as int;
+    if (version10 < 10) {
+      db.execute('''
+        CREATE TABLE IF NOT EXISTS highlight_deletions (
+          book_id INTEGER NOT NULL,
+          page_id INTEGER NOT NULL,
+          start_offset INTEGER NOT NULL,
+          end_offset INTEGER NOT NULL,
+          color TEXT NOT NULL,
+          deleted_at INTEGER NOT NULL,
+          PRIMARY KEY (book_id, page_id, start_offset, end_offset, color)
+        )
+      ''');
+      db.execute('PRAGMA user_version = 10');
+    }
     return StateDatabase(db);
   }
 
@@ -516,6 +531,11 @@ class StateDatabase {
     required int createdAt,
   }) {
     _db.execute(
+      'DELETE FROM highlight_deletions WHERE book_id = ? AND page_id = ? '
+      'AND start_offset = ? AND end_offset = ? AND color = ?',
+      [bookId, pageId, start, end, color],
+    );
+    _db.execute(
       'INSERT INTO highlights '
       '(book_id, page_id, start_offset, end_offset, color, created_at) '
       'VALUES (?, ?, ?, ?, ?, ?)',
@@ -525,7 +545,136 @@ class StateDatabase {
   }
 
   void deleteHighlight(int id) {
+    final rows = _db.select(
+      'SELECT book_id, page_id, start_offset, end_offset, color, created_at '
+      'FROM highlights WHERE id = ?',
+      [id],
+    );
+    if (rows.isNotEmpty) {
+      final r = rows.first;
+      final deletedAt = DateTime.now().millisecondsSinceEpoch;
+      final createdAt = r['created_at'] as int;
+      _rememberHighlightDeletion(
+        bookId: r['book_id'] as int,
+        pageId: r['page_id'] as int,
+        start: r['start_offset'] as int,
+        end: r['end_offset'] as int,
+        color: r['color'] as String,
+        deletedAt: deletedAt > createdAt ? deletedAt : createdAt + 1,
+      );
+    }
     _db.execute('DELETE FROM highlights WHERE id = ?', [id]);
+  }
+
+  List<Map<String, Object?>> listHighlights() {
+    return _db
+        .select(
+          'SELECT id, book_id, page_id, start_offset, end_offset, color, '
+          'created_at FROM highlights ORDER BY created_at ASC',
+        )
+        .map((r) => Map<String, Object?>.from(r))
+        .toList();
+  }
+
+  List<Map<String, Object?>> listHighlightDeletions() {
+    return _db
+        .select(
+          'SELECT book_id, page_id, start_offset, end_offset, color, deleted_at '
+          'FROM highlight_deletions ORDER BY deleted_at ASC',
+        )
+        .map((r) => Map<String, Object?>.from(r))
+        .toList();
+  }
+
+  /// Apply one remote highlight. A newer deletion on either side wins.
+  bool applyRemoteHighlight({
+    required int bookId,
+    required int pageId,
+    required int start,
+    required int end,
+    required String color,
+    required int updatedAt,
+    required bool deleted,
+  }) {
+    final tombstone = _highlightDeletionAt(
+      bookId: bookId,
+      pageId: pageId,
+      start: start,
+      end: end,
+      color: color,
+    );
+    final existing = _db.select(
+      'SELECT id, created_at FROM highlights WHERE book_id = ? AND page_id = ? '
+      'AND start_offset = ? AND end_offset = ? AND color = ? LIMIT 1',
+      [bookId, pageId, start, end, color],
+    );
+    if (deleted) {
+      if (tombstone != null && tombstone >= updatedAt) return false;
+      if (existing.isNotEmpty) {
+        final createdAt = existing.first['created_at'] as int;
+        if (createdAt > updatedAt) return false;
+        _db.execute('DELETE FROM highlights WHERE id = ?', [
+          existing.first['id'],
+        ]);
+      }
+      _rememberHighlightDeletion(
+        bookId: bookId,
+        pageId: pageId,
+        start: start,
+        end: end,
+        color: color,
+        deletedAt: updatedAt,
+      );
+      return true;
+    }
+    if (tombstone != null && tombstone >= updatedAt) return false;
+    if (existing.isNotEmpty) return false;
+    insertHighlight(
+      bookId: bookId,
+      pageId: pageId,
+      start: start,
+      end: end,
+      color: color,
+      createdAt: updatedAt,
+    );
+    return true;
+  }
+
+  int? _highlightDeletionAt({
+    required int bookId,
+    required int pageId,
+    required int start,
+    required int end,
+    required String color,
+  }) {
+    final rows = _db.select(
+      'SELECT deleted_at FROM highlight_deletions WHERE book_id = ? '
+      'AND page_id = ? AND start_offset = ? AND end_offset = ? AND color = ?',
+      [bookId, pageId, start, end, color],
+    );
+    if (rows.isEmpty) return null;
+    return rows.first['deleted_at'] as int;
+  }
+
+  void _rememberHighlightDeletion({
+    required int bookId,
+    required int pageId,
+    required int start,
+    required int end,
+    required String color,
+    required int deletedAt,
+  }) {
+    _db.execute(
+      '''
+      INSERT INTO highlight_deletions
+        (book_id, page_id, start_offset, end_offset, color, deleted_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(book_id, page_id, start_offset, end_offset, color)
+      DO UPDATE SET deleted_at = excluded.deleted_at
+      WHERE excluded.deleted_at > highlight_deletions.deleted_at
+      ''',
+      [bookId, pageId, start, end, color, deletedAt],
+    );
   }
 
   List<Map<String, Object?>> notesForPage(int bookId, int pageId) {

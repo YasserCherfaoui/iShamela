@@ -421,6 +421,12 @@ class AuthController extends Notifier<AuthStatus> {
   Future<void> _pullReading(String uid, StateDatabase db) async {
     final history = await _sync.fetchHistory(uid);
     final progress = await _sync.fetchProgress(uid);
-    applyPulledReading(db, history: history, progress: progress);
+    final highlights = await _sync.fetchHighlights(uid);
+    applyPulledReading(
+      db,
+      history: history,
+      progress: progress,
+      highlights: highlights,
+    );
   }
 }
