@@ -10,5 +10,14 @@ if [[ ! -x "$FLUTTER_SDK/bin/flutter" ]]; then
   exit 1
 fi
 
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+"$REPO_ROOT/app/tool/ensure_firebase_config.sh"
+
+if grep -q "webApiKey = '';" "$REPO_ROOT/app/lib/firebase_local_secrets.dart"; then
+  echo "FIREBASE_WEB_API_KEY is not set." >&2
+  echo "Add it in the Vercel project environment variables, then redeploy." >&2
+  exit 1
+fi
+
 cd app
 flutter build web --release --base-href /

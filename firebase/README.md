@@ -51,7 +51,9 @@ cd app
 That copies the examples when a file is missing, and leaves an existing local
 file alone. Put the real keys in those gitignored files. Release CI reads
 `FIREBASE_WEB_API_KEY`, `FIREBASE_ANDROID_API_KEY`, and `FIREBASE_IOS_API_KEY`
-and refuses to build a release until they are set.
+and refuses to build a release until they are set. The Vercel web build reads
+`FIREBASE_WEB_API_KEY` from the Vercel project environment and writes
+`firebase_local_secrets.dart` before `flutter build web`.
 
 ## Emulators
 
