@@ -256,8 +256,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   Future<void> _deleteAccount(StateDatabase state) async {
     final l10n = AppLocalizations.of(context);
     final t = IshamelaTokens.of(context);
+    final needsPassword =
+        ref.read(authProvider).profileOrNull?.hasEmailProvider == true;
     var wipeLocal = false;
+    String? passwordError;
     final confirmCtrl = TextEditingController();
+    final passwordCtrl = TextEditingController();
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -308,6 +312,24 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     ),
                     controlAffinity: ListTileControlAffinity.leading,
                   ),
+                  if (needsPassword) ...[
+                    TextField(
+                      controller: passwordCtrl,
+                      obscureText: true,
+                      keyboardType: TextInputType.visiblePassword,
+                      autofillHints: const [AutofillHints.password],
+                      decoration: InputDecoration(
+                        labelText: l10n.profileCurrentPassword,
+                        errorText: passwordError,
+                      ),
+                      onChanged: (_) {
+                        if (passwordError != null) {
+                          setSheet(() => passwordError = null);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                   TextField(
                     controller: confirmCtrl,
                     decoration: InputDecoration(
@@ -321,6 +343,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       foregroundColor: Colors.white,
                     ),
                     onPressed: () {
+                      if (needsPassword && passwordCtrl.text.isEmpty) {
+                        setSheet(() => passwordError = l10n.authFieldRequired);
+                        return;
+                      }
                       if (confirmCtrl.text.trim() !=
                           l10n.profileDeleteConfirmWord) {
                         return;
@@ -338,11 +364,16 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     );
     final typedOk =
         confirmCtrl.text.trim() == l10n.profileDeleteConfirmWord;
+    final password = passwordCtrl.text;
     confirmCtrl.dispose();
+    passwordCtrl.dispose();
     if (confirmed != true || !typedOk || !mounted) return;
+    if (needsPassword && password.isEmpty) return;
 
     try {
-      await ref.read(authProvider.notifier).reauthenticate();
+      await ref.read(authProvider.notifier).reauthenticate(
+            password: needsPassword ? password : null,
+          );
       await ref.read(authProvider.notifier).deleteAccount(wipeLocal: wipeLocal);
       if (wipeLocal) {
         state.clearReadingHistory();
@@ -353,17 +384,18 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         );
         Navigator.of(context).pop();
       }
-    } on AuthUnavailable {
-      // Requires recent login — password prompt already attempted via reauth.
+    } catch (e) {
       if (mounted) {
+        final wrongPassword =
+            mapAuthErrorToMessageKey(e) == 'authWrongCredentials';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.profileDeleteFailed)),
-        );
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.profileDeleteFailed)),
+          SnackBar(
+            content: Text(
+              wrongPassword
+                  ? l10n.authWrongCredentials
+                  : l10n.profileDeleteFailed,
+            ),
+          ),
         );
       }
     }

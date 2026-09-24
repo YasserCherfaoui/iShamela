@@ -39,3 +39,9 @@ data/audit/cache/
 # Generated decompressions of test fixtures
 app/test/fixtures/book_*.sqlite
 app/test/fixtures/.*.tmp
+
+# Firebase client API keys. Examples live in app/firebase_config/.
+app/lib/firebase_local_secrets.dart
+app/ios/Runner/GoogleService-Info.plist
+app/macos/Runner/GoogleService-Info.plist
+app/android/app/google-services.json

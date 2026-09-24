@@ -36,6 +36,23 @@ firebase use <projectId>
 Current app options use **`shamelaonline`**. That project must exist under the same
 Google account as `firebase login`, and be on the **Blaze** plan for Functions.
 
+## Client API keys
+
+Do not commit Google API keys. `app/lib/firebase_options.dart` keeps the public
+project ids and reads keys from gitignored `app/lib/firebase_local_secrets.dart`.
+iOS/macOS `GoogleService-Info.plist` and Android `google-services.json` are
+gitignored too. Examples (no keys) are in `app/firebase_config/`.
+
+```bash
+cd app
+./tool/ensure_firebase_config.sh
+```
+
+That copies the examples when a file is missing, and leaves an existing local
+file alone. Put the real keys in those gitignored files. Release CI reads
+`FIREBASE_WEB_API_KEY`, `FIREBASE_ANDROID_API_KEY`, and `FIREBASE_IOS_API_KEY`
+and refuses to build a release until they are set.
+
 ## Emulators
 
 From `firebase/`:

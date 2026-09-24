@@ -39,6 +39,10 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Firebase config placeholders
+        shell: bash
+        run: ./tool/ensure_firebase_config.sh
+
       - name: Pub get
         run: flutter pub get
 
@@ -112,6 +116,15 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Firebase config
+        shell: bash
+        env:
+          FIREBASE_WEB_API_KEY: ${{ secrets.FIREBASE_WEB_API_KEY }}
+          FIREBASE_ANDROID_API_KEY: ${{ secrets.FIREBASE_ANDROID_API_KEY }}
+          FIREBASE_IOS_API_KEY: ${{ secrets.FIREBASE_IOS_API_KEY }}
+          REQUIRE_FIREBASE_KEYS: "1"
+        run: ./tool/ensure_firebase_config.sh
+
       - run: flutter pub get
 
       - name: Build release APK
@@ -147,6 +160,15 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
+
+      - name: Firebase config
+        shell: bash
+        env:
+          FIREBASE_WEB_API_KEY: ${{ secrets.FIREBASE_WEB_API_KEY }}
+          FIREBASE_ANDROID_API_KEY: ${{ secrets.FIREBASE_ANDROID_API_KEY }}
+          FIREBASE_IOS_API_KEY: ${{ secrets.FIREBASE_IOS_API_KEY }}
+          REQUIRE_FIREBASE_KEYS: "1"
+        run: ./tool/ensure_firebase_config.sh
 
       - run: flutter pub get
 
@@ -202,6 +224,15 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Firebase config
+        shell: bash
+        env:
+          FIREBASE_WEB_API_KEY: ${{ secrets.FIREBASE_WEB_API_KEY }}
+          FIREBASE_ANDROID_API_KEY: ${{ secrets.FIREBASE_ANDROID_API_KEY }}
+          FIREBASE_IOS_API_KEY: ${{ secrets.FIREBASE_IOS_API_KEY }}
+          REQUIRE_FIREBASE_KEYS: "1"
+        run: ./tool/ensure_firebase_config.sh
+
       - run: flutter pub get
 
       - name: CocoaPods
@@ -246,6 +277,15 @@ jobs:
           cache: true
 
       - run: flutter config --enable-windows-desktop
+
+      - name: Firebase config
+        shell: bash
+        env:
+          FIREBASE_WEB_API_KEY: ${{ secrets.FIREBASE_WEB_API_KEY }}
+          FIREBASE_ANDROID_API_KEY: ${{ secrets.FIREBASE_ANDROID_API_KEY }}
+          FIREBASE_IOS_API_KEY: ${{ secrets.FIREBASE_IOS_API_KEY }}
+          REQUIRE_FIREBASE_KEYS: "1"
+        run: ./tool/ensure_firebase_config.sh
 
       - run: flutter pub get
 
