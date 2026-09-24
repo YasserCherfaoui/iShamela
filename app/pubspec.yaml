@@ -26,10 +26,11 @@ dependencies:
   url_launcher: ^6.3.2
   share_plus: ^12.0.2
   hijri: ^3.0.0
-  firebase_core: ^4.15.0
-  firebase_auth: ^6.7.0
-  cloud_firestore: ^6.10.0
-  cloud_functions: ^6.5.0
+  # Flutter 3.32: stay on pre-Swift FlutterFire (4.14+/6.6+ need UIScene APIs).
+  firebase_core: ">=4.13.0 <4.14.0"
+  firebase_auth: ">=6.5.0 <6.6.0"
+  cloud_firestore: ">=6.8.0 <6.9.0"
+  cloud_functions: ">=6.3.6 <6.4.0"
   google_sign_in: ^6.3.0
   sign_in_with_apple: ^6.1.4
   pin_code_fields: ^8.0.1

@@ -1206,57 +1206,57 @@ PODS:
   - BoringSSL-GRPC/Implementation (0.0.37):
     - BoringSSL-GRPC/Interface (= 0.0.37)
   - BoringSSL-GRPC/Interface (0.0.37)
-  - cloud_firestore (6.10.0):
-    - Firebase/Firestore (= 12.19.0)
+  - cloud_firestore (6.8.0):
+    - Firebase/Firestore (= 12.17.0)
     - firebase_core
     - Flutter
-  - cloud_functions (6.5.0):
-    - Firebase/Functions (= 12.19.0)
+  - cloud_functions (6.3.6):
+    - Firebase/Functions (= 12.17.0)
     - firebase_core
     - Flutter
-  - Firebase/Auth (12.19.0):
+  - Firebase/Auth (12.17.0):
     - Firebase/CoreOnly
-    - FirebaseAuth (~> 12.19.0)
-  - Firebase/CoreOnly (12.19.0):
-    - FirebaseCore (~> 12.19.0)
-  - Firebase/Firestore (12.19.0):
+    - FirebaseAuth (~> 12.17.0)
+  - Firebase/CoreOnly (12.17.0):
+    - FirebaseCore (~> 12.17.0)
+  - Firebase/Firestore (12.17.0):
     - Firebase/CoreOnly
-    - FirebaseFirestore (~> 12.19.0)
-  - Firebase/Functions (12.19.0):
+    - FirebaseFirestore (~> 12.17.0)
+  - Firebase/Functions (12.17.0):
     - Firebase/CoreOnly
-    - FirebaseFunctions (~> 12.19.0)
-  - firebase_auth (6.7.0):
-    - Firebase/Auth (= 12.19.0)
+    - FirebaseFunctions (~> 12.17.0)
+  - firebase_auth (6.5.7):
+    - Firebase/Auth (= 12.17.0)
     - firebase_core
     - Flutter
-  - firebase_core (4.15.0):
-    - Firebase/CoreOnly (= 12.19.0)
+  - firebase_core (4.13.0):
+    - Firebase/CoreOnly (= 12.17.0)
     - Flutter
-  - FirebaseAppCheckInterop (12.19.0)
-  - FirebaseAuth (12.19.0):
-    - FirebaseAppCheckInterop (~> 12.19.0)
-    - FirebaseAuthInterop (~> 12.19.0)
-    - FirebaseCore (~> 12.19.0)
-    - FirebaseCoreExtension (~> 12.19.0)
+  - FirebaseAppCheckInterop (12.17.0)
+  - FirebaseAuth (12.17.0):
+    - FirebaseAppCheckInterop (~> 12.17.0)
+    - FirebaseAuthInterop (~> 12.17.0)
+    - FirebaseCore (~> 12.17.0)
+    - FirebaseCoreExtension (~> 12.17.0)
     - GoogleUtilities/AppDelegateSwizzler (~> 8.1)
     - GoogleUtilities/Environment (~> 8.1)
     - GTMSessionFetcher/Core (< 6.0, >= 3.4)
     - RecaptchaInterop (~> 101.0)
-  - FirebaseAuthInterop (12.19.0)
-  - FirebaseCore (12.19.0):
-    - FirebaseCoreInternal (~> 12.19.0)
+  - FirebaseAuthInterop (12.17.0)
+  - FirebaseCore (12.17.0):
+    - FirebaseCoreInternal (~> 12.17.0)
     - GoogleUtilities/Environment (~> 8.1)
     - GoogleUtilities/Logger (~> 8.1)
-  - FirebaseCoreExtension (12.19.0):
-    - FirebaseCore (~> 12.19.0)
-  - FirebaseCoreInternal (12.19.0):
+  - FirebaseCoreExtension (12.17.0):
+    - FirebaseCore (~> 12.17.0)
+  - FirebaseCoreInternal (12.17.0):
     - "GoogleUtilities/NSData+zlib (~> 8.1)"
-  - FirebaseFirestore (12.19.0):
-    - FirebaseCore (~> 12.19.0)
-    - FirebaseCoreExtension (~> 12.19.0)
-    - FirebaseFirestoreInternal (~> 12.19.0)
-    - FirebaseSharedSwift (~> 12.19.0)
-  - FirebaseFirestoreInternal (12.19.0):
+  - FirebaseFirestore (12.17.0):
+    - FirebaseCore (~> 12.17.0)
+    - FirebaseCoreExtension (~> 12.17.0)
+    - FirebaseFirestoreInternal (~> 12.17.0)
+    - FirebaseSharedSwift (~> 12.17.0)
+  - FirebaseFirestoreInternal (12.17.0):
     - abseil/algorithm (~> 1.20240722.0)
     - abseil/base (~> 1.20240722.0)
     - abseil/container/flat_hash_map (~> 1.20240722.0)
@@ -1265,22 +1265,22 @@ PODS:
     - abseil/strings/strings (~> 1.20240722.0)
     - abseil/time (~> 1.20240722.0)
     - abseil/types (~> 1.20240722.0)
-    - FirebaseAppCheckInterop (~> 12.19.0)
-    - FirebaseCore (~> 12.19.0)
+    - FirebaseAppCheckInterop (~> 12.17.0)
+    - FirebaseCore (~> 12.17.0)
     - "gRPC-C++ (~> 1.69.0)"
     - gRPC-Core (~> 1.69.0)
     - leveldb-library (~> 1.22)
     - nanopb (~> 3.30910.0)
-  - FirebaseFunctions (12.19.0):
-    - FirebaseAppCheckInterop (~> 12.19.0)
-    - FirebaseAuthInterop (~> 12.19.0)
-    - FirebaseCore (~> 12.19.0)
-    - FirebaseCoreExtension (~> 12.19.0)
-    - FirebaseMessagingInterop (~> 12.19.0)
-    - FirebaseSharedSwift (~> 12.19.0)
+  - FirebaseFunctions (12.17.0):
+    - FirebaseAppCheckInterop (~> 12.17.0)
+    - FirebaseAuthInterop (~> 12.17.0)
+    - FirebaseCore (~> 12.17.0)
+    - FirebaseCoreExtension (~> 12.17.0)
+    - FirebaseMessagingInterop (~> 12.17.0)
+    - FirebaseSharedSwift (~> 12.17.0)
     - GTMSessionFetcher/Core (< 6.0, >= 3.4)
-  - FirebaseMessagingInterop (12.19.0)
-  - FirebaseSharedSwift (12.19.0)
+  - FirebaseMessagingInterop (12.17.0)
+  - FirebaseSharedSwift (12.17.0)
   - Flutter (1.0.0)
   - flutter_native_splash (2.4.3):
     - Flutter
@@ -1550,22 +1550,22 @@ SPEC CHECKSUMS:
   AppAuth: d4f13a8fe0baf391b2108511793e4b479691fb73
   AppCheckCore: be8fce5469f68d7f6a29aa94b25f097409ff7fdc
   BoringSSL-GRPC: dded2a44897e45f28f08ae87a55ee4bcd19bc508
-  cloud_firestore: 6b15358b9c83dac187833d1e294b8597c68d3f3b
-  cloud_functions: 1743624e495a24ffbe58ce4ef9500fbf0d2ac5f4
-  Firebase: 7ca191e43724142f79fae653547b3382c45413cc
-  firebase_auth: 36fa0bc88f7ea4c0ad5c543d117674d05be29799
-  firebase_core: 7ed66bd750bf2b7a29268b21d63eec7bc6799ee8
-  FirebaseAppCheckInterop: bd4b791ffaed7ae719304af6369d243ddee5e4a0
-  FirebaseAuth: 8c38236f67e5e3dd6aacf3e0c46b3eed31e9c820
-  FirebaseAuthInterop: f1ad187a0052276ad49a990538accfdf36fc595d
-  FirebaseCore: c990214798d7c568ad436a15ba7da25c7a278c9a
-  FirebaseCoreExtension: 201c78d7491a273d61d8afbf491214276a951e6d
-  FirebaseCoreInternal: 656b1c2fd5a1c5976183dc54b73deda78fb26ee3
-  FirebaseFirestore: 311722a65983b64e912ef1aa5ab8933cefbbf6d8
-  FirebaseFirestoreInternal: c5fe347a024926551b8cb6d6b3ba78f19a7b525e
-  FirebaseFunctions: 5b5ae19d3cd261b74802d54780ac79db152562cd
-  FirebaseMessagingInterop: 8befe363c0f23eaff7b1807dbc76a0546d79f00c
-  FirebaseSharedSwift: c91f36aeaa566e12b682caacc40d34c8303c3124
+  cloud_firestore: 8ec052fea1b55e4220796318c1d50f42861bafc0
+  cloud_functions: 20c6ee2c8f5f58c38529e748d604e069a631ca01
+  Firebase: e8400c058702940d53f31fc0653e4e7a06332326
+  firebase_auth: d64d4df42bb1ea03adef6a6706cd78da264e4c73
+  firebase_core: ed4af79ed27e2ce1b00d110a13d53dd27ce3cf8a
+  FirebaseAppCheckInterop: 6d4cd7b9df8047da8cfc98c3fef4618bab2a8e0d
+  FirebaseAuth: d27d2fc54508c3af9db2f617300fcf3042328d80
+  FirebaseAuthInterop: 1679f5a45921270225b7eabf1ad4ebff8790fe82
+  FirebaseCore: 52d4512296984a44a8c8870c6494870fc7aeee2f
+  FirebaseCoreExtension: be2d62bfcf339c7dd94646d43d910aaf37fe17c1
+  FirebaseCoreInternal: 3b310521b34a51ce3a6c605e4618b9aef8f6c112
+  FirebaseFirestore: dfebd53ce603c93a8514102c9a0b688d2be2bfc2
+  FirebaseFirestoreInternal: 99cccc955349efee1652cbe132cf206915e6923d
+  FirebaseFunctions: e2eb75689fe581f80f4a834cb9658b94e97d24a0
+  FirebaseMessagingInterop: d4e6a61aae51b00e5964bd1361cc1848c7bdad05
+  FirebaseSharedSwift: 983820e9aa55d2acd6af77f9a1f252ba0afb3150
   Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
   flutter_native_splash: df59bb2e1421aa0282cb2e95618af4dcb0c56c29
   google_sign_in_ios: 7411fab6948df90490dc4620ecbcabdc3ca04017

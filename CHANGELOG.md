@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Fixed
 
+- iOS build: pin FlutterFire to pre-Swift set (`firebase_core` 4.13.x, `firebase_auth` 6.5.x, etc.) for Flutter 3.32 — newer packages need `FlutterSceneLifeCycleDelegate`.
 - macOS auth: Debug/Profile signed with the development team so Google Sign-In keychain + Sign in with Apple entitlements work; Google `serverClientId` (web OAuth client) so Firebase gets an ID token; richer auth error console logs.
 
 ### Added
