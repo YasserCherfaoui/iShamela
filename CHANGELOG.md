@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Fixed
 
+- macOS release CI no longer requires a Mac App Development provisioning profile. The GitHub artifact is unsigned; local signing is unchanged.
 - Library sync no longer resumes finished downloads. Only books paused for the network policy are released when Wi-Fi returns.
 - iOS reader: honorific ligatures (ﷺ and the U+FD40–U+FD4F forms) fall back to Scheherazade New so they no longer render as squares. Amiri does not include those glyphs, and iOS does not substitute them the way macOS does.
 - macOS auth: Debug/Profile signed with the development team so Google Sign-In keychain + Sign in with Apple entitlements work; Google `serverClientId` (web OAuth client) so Firebase gets an ID token; richer auth error console logs.

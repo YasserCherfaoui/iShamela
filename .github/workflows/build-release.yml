@@ -4,6 +4,7 @@
 #
 # PRs: analyze + test only (no release).
 # iOS App Store / signed IPA is out of scope here (needs Apple cert secrets).
+# macOS CI artifacts are unsigned for the same reason. Local Xcode signing is unchanged.
 
 name: Build & Release
 
@@ -240,6 +241,14 @@ jobs:
         run: pod install
 
       - name: Build macOS
+        # FLUTTER_XCODE_* is forwarded to xcodebuild. The runner has no
+        # Mac App Development profile for org.ishamela.ishamela.
+        env:
+          FLUTTER_XCODE_CODE_SIGN_STYLE: Manual
+          FLUTTER_XCODE_CODE_SIGN_IDENTITY: "-"
+          FLUTTER_XCODE_CODE_SIGNING_REQUIRED: "NO"
+          FLUTTER_XCODE_CODE_SIGNING_ALLOWED: "NO"
+          FLUTTER_XCODE_DEVELOPMENT_TEAM: ""
         run: |
           flutter build macos --release \
             --build-name="${{ needs.version.outputs.version }}" \
