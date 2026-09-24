@@ -12,7 +12,20 @@
           "package_name": "org.ishamela.ishamela"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "940987204287-05mer02npo5b9t0i8c901j6aitooincf.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "org.ishamela.ishamela",
+            "certificate_hash": "c8eba7551cc1c0823a53cf9dbd1af6f8c82456d1"
+          }
+        },
+        {
+          "client_id": "940987204287-i32s08v3mlpngvn98v58q133m2h5kpt3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyC5w5DkPmLYBhxN6VjD74Uqj_USNuljjik"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "940987204287-i32s08v3mlpngvn98v58q133m2h5kpt3.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "940987204287-638kvo2uo56bj712ospf2cso3prhfvpq.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "org.ishamela.ishamela"
+              }
+            }
+          ]
         }
       }
     }

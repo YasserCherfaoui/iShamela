@@ -28,6 +28,20 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<!-- Google Sign-In (CLIENT_ID from GoogleService-Info.plist) -->
+	<key>GIDClientID</key>
+	<string>940987204287-638kvo2uo56bj712ospf2cso3prhfvpq.apps.googleusercontent.com</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.940987204287-638kvo2uo56bj712ospf2cso3prhfvpq</string>
+			</array>
+		</dict>
+	</array>
 	<!-- Local E2E: cleartext HTTP to 127.0.0.1 (CATALOG_BASE_URL). -->
 	<key>NSAppTransportSecurity</key>
 	<dict>

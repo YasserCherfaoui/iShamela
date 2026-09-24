@@ -1,9 +1,20 @@
 import 'package:ishamela/l10n/app_localizations.dart';
+import 'package:flutter/foundation.dart';
 
 import 'package:ishamela/core/auth/auth_errors.dart';
 
 /// Resolves [mapAuthErrorToMessageKey] against generated l10n.
 String localizeAuthError(AppLocalizations l10n, Object error) {
+  debugPrint('Auth error: $error');
+  try {
+    final dynamic e = error;
+    final code = e.code;
+    final details = e.details;
+    final message = e.message;
+    if (code != null || details != null || message != null) {
+      debugPrint('Auth error detail: code=$code message=$message details=$details');
+    }
+  } catch (_) {}
   switch (mapAuthErrorToMessageKey(error)) {
     case 'authWrongCredentials':
       return l10n.authWrongCredentials;

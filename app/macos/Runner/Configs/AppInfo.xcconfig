@@ -10,9 +10,8 @@ PRODUCT_NAME = ishamela
 // The application's bundle identifier
 PRODUCT_BUNDLE_IDENTIFIER = org.ishamela.ishamela
 
-// Team for Release / notarized builds that include Sign in with Apple.
-// Debug uses ad-hoc signing (no restricted entitlements) so `flutter run -d macos`
-// works without a provisioning profile.
+// Team for all configs: Google Sign-In needs keychain-access-groups and
+// Sign in with Apple needs its entitlement — both require a development cert.
 DEVELOPMENT_TEAM = 26LDVL6V8N
 
 // The copyright displayed in application information

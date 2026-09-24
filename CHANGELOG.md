@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Fixed
+
+- macOS auth: Debug/Profile signed with the development team so Google Sign-In keychain + Sign in with Apple entitlements work; Google `serverClientId` (web OAuth client) so Firebase gets an ID token; richer auth error console logs.
+
 ### Added
 
 - Home screen (SPEC-023): first tab «الرئيسية» with greeting + Hijri/Gregorian date, continue-reading card, weekly streak/minutes/pages chips, recent history, bookmarks/notes quick actions, and guest sync banner. Shell tab order is Home · Library · Catalog · Settings (Downloads reachable from Settings).

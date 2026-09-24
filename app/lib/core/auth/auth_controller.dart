@@ -125,13 +125,29 @@ class AuthController extends Notifier<AuthStatus> {
       await _auth.signInWithPopup(provider);
       return;
     }
-    _google ??= GoogleSignIn();
+    // iOS/macOS CLIENT_ID from GoogleService-Info (GIDClientID). Web client
+    // (type 3) as serverClientId so Google returns an idToken Firebase accepts.
+    const iosClientId =
+        '940987204287-638kvo2uo56bj712ospf2cso3prhfvpq.apps.googleusercontent.com';
+    const webClientId =
+        '940987204287-i32s08v3mlpngvn98v58q133m2h5kpt3.apps.googleusercontent.com';
+    final applePlatform = defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS;
+    _google ??= GoogleSignIn(
+      clientId: applePlatform ? iosClientId : null,
+      serverClientId: applePlatform ? webClientId : null,
+      scopes: const ['email', 'profile'],
+    );
     final account = await _google!.signIn();
     if (account == null) return; // user cancelled
     final googleAuth = await account.authentication;
+    final idToken = googleAuth.idToken;
+    if (idToken == null) {
+      throw AuthUnavailable('Google Sign-In did not return an ID token');
+    }
     final credential = GoogleAuthProvider.credential(
       accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
+      idToken: idToken,
     );
     await _auth.signInWithCredential(credential);
   }
