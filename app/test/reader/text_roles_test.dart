@@ -78,4 +78,10 @@ void main() {
     expect(merged.font, ReaderFont.scheherazade);
     expect(merged.fontSize, 24);
   });
+
+  test('Amiri and system fall back to Scheherazade for honorific ligatures', () {
+    expect(ReaderFont.amiri.glyphFallback, ['ScheherazadeNew']);
+    expect(ReaderFont.system.glyphFallback, ['ScheherazadeNew']);
+    expect(ReaderFont.scheherazade.glyphFallback, isNull);
+  });
 }

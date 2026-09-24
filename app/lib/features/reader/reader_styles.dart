@@ -24,6 +24,20 @@ enum ReaderFont {
     }
   }
 
+  /// Amiri and the iOS system font lack the Shamela honorific ligatures
+  /// (U+FD40–U+FD4F, U+FDFE, U+FDFF). Scheherazade New has them. macOS
+  /// substitutes those glyphs from the system; iOS shows tofu unless we
+  /// name an explicit fallback.
+  List<String>? get glyphFallback {
+    switch (this) {
+      case ReaderFont.scheherazade:
+        return null;
+      case ReaderFont.system:
+      case ReaderFont.amiri:
+        return const ['ScheherazadeNew'];
+    }
+  }
+
   static ReaderFont fromId(String? raw) {
     switch (raw) {
       case 'system':

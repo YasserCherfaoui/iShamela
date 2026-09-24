@@ -6,7 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Fixed
 
-- iOS build: pin FlutterFire to pre-Swift set (`firebase_core` 4.13.x, `firebase_auth` 6.5.x, etc.) for Flutter 3.32 — newer packages need `FlutterSceneLifeCycleDelegate`.
+- iOS reader: honorific ligatures (ﷺ and the U+FD40–U+FD4F forms) fall back to Scheherazade New so they no longer render as squares. Amiri does not include those glyphs, and iOS does not substitute them the way macOS does.
 - macOS auth: Debug/Profile signed with the development team so Google Sign-In keychain + Sign in with Apple entitlements work; Google `serverClientId` (web OAuth client) so Firebase gets an ID token; richer auth error console logs.
 
 ### Added

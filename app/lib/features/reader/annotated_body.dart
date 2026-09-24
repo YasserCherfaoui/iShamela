@@ -124,6 +124,7 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
         fontSize: styles.fontSize,
         height: 1.9,
         fontFamily: styles.font.familyName,
+        fontFamilyFallback: styles.font.glyphFallback,
       );
 
   (int, int)? _selectionToBody(TextSelection sel) {
@@ -368,12 +369,14 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
         fontSize: fontSize,
         height: 1.9,
         fontFamily: styles.font.familyName,
+        fontFamilyFallback: styles.font.glyphFallback,
         color: reader.body,
       ),
       strutStyle: StrutStyle(
         fontSize: fontSize,
         height: 1.9,
         fontFamily: styles.font.familyName,
+        fontFamilyFallback: styles.font.glyphFallback,
         forceStrutHeight: true,
       ),
       onSelectionChanged: _onSelectionChanged,
