@@ -193,6 +193,29 @@ class StateDatabase {
       );
       db.execute('PRAGMA user_version = 8');
     }
+    final version9 =
+        db.select('PRAGMA user_version').first.columnAt(0) as int;
+    if (version9 < 9) {
+      // SPEC-025: library exclusions + auto-download toggle.
+      try {
+        db.execute(
+          'ALTER TABLE sync_state ADD COLUMN auto_download INTEGER NOT NULL DEFAULT 1',
+        );
+      } catch (_) {}
+      db.execute(
+        'CREATE TABLE IF NOT EXISTS library_exclusions (book_id INTEGER PRIMARY KEY)',
+      );
+      db.execute('''
+        CREATE TABLE IF NOT EXISTS library_marks (
+          book_id INTEGER PRIMARY KEY,
+          deferred INTEGER NOT NULL DEFAULT 0,
+          held INTEGER NOT NULL DEFAULT 0,
+          unavailable INTEGER NOT NULL DEFAULT 0,
+          auto_sync INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
+      db.execute('PRAGMA user_version = 9');
+    }
     return StateDatabase(db);
   }
 
@@ -278,6 +301,15 @@ class StateDatabase {
     );
     if (rows.isEmpty) return null;
     return rows.first['installed_size_bytes'] as int?;
+  }
+
+  int? installedAt(int bookId) {
+    final rows = _db.select(
+      'SELECT installed_at FROM installed_books WHERE book_id = ? LIMIT 1',
+      [bookId],
+    );
+    if (rows.isEmpty) return null;
+    return rows.first['installed_at'] as int?;
   }
 
   void setInstalledSizeBytes(int bookId, int bytes) {
@@ -741,16 +773,18 @@ class StateDatabase {
 
   SyncState getSyncState() {
     final rows = _db.select(
-      'SELECT last_synced_at, last_error, cellular_allowed FROM sync_state WHERE id = 1',
+      'SELECT last_synced_at, last_error, cellular_allowed, auto_download '
+      'FROM sync_state WHERE id = 1',
     );
     if (rows.isEmpty) {
-      return const SyncState(cellularAllowed: true);
+      return const SyncState(cellularAllowed: true, autoDownload: true);
     }
     final r = rows.first;
     return SyncState(
       lastSyncedAt: r['last_synced_at'] as int?,
       lastError: r['last_error'] as String?,
       cellularAllowed: (r['cellular_allowed'] as int?) == 1,
+      autoDownload: (r['auto_download'] as int?) != 0,
     );
   }
 
@@ -758,22 +792,26 @@ class StateDatabase {
     int? lastSyncedAt,
     String? lastError,
     bool? cellularAllowed,
+    bool? autoDownload,
     bool clearError = false,
   }) {
     final cur = getSyncState();
     _db.execute(
       '''
-      INSERT INTO sync_state (id, last_synced_at, last_error, cellular_allowed)
-      VALUES (1, ?, ?, ?)
+      INSERT INTO sync_state
+        (id, last_synced_at, last_error, cellular_allowed, auto_download)
+      VALUES (1, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         last_synced_at = excluded.last_synced_at,
         last_error = excluded.last_error,
-        cellular_allowed = excluded.cellular_allowed
+        cellular_allowed = excluded.cellular_allowed,
+        auto_download = excluded.auto_download
       ''',
       [
         lastSyncedAt ?? cur.lastSyncedAt,
         clearError ? null : (lastError ?? cur.lastError),
         (cellularAllowed ?? cur.cellularAllowed) ? 1 : 0,
+        (autoDownload ?? cur.autoDownload) ? 1 : 0,
       ],
     );
   }
@@ -782,6 +820,136 @@ class StateDatabase {
   String? getPref(String key) => setting(key);
 
   void setPref(String key, String value) => setSetting(key, value);
+
+  static const librarySetupPref = 'library_setup_done';
+
+  bool get librarySetupDone => getPref(librarySetupPref) == '1';
+
+  void setLibrarySetupDone(bool done) =>
+      setPref(librarySetupPref, done ? '1' : '0');
+
+  Set<int> libraryExclusionIds() => _idSet(
+        'SELECT book_id FROM library_exclusions',
+      );
+
+  void addLibraryExclusion(int bookId) {
+    _db.execute(
+      'INSERT OR IGNORE INTO library_exclusions (book_id) VALUES (?)',
+      [bookId],
+    );
+  }
+
+  void clearLibraryExclusion(int bookId) {
+    _db.execute('DELETE FROM library_exclusions WHERE book_id = ?', [bookId]);
+  }
+
+  Set<int> libraryDeferredIds() =>
+      _markIds('deferred');
+
+  Set<int> libraryHeldIds() => _markIds('held');
+
+  Set<int> libraryUnavailableIds() => _markIds('unavailable');
+
+  Set<int> libraryAutoIds() => _markIds('auto_sync');
+
+  void markLibraryDeferred(int bookId, {required bool on}) =>
+      _setMark(bookId, 'deferred', on);
+
+  void markLibraryHeld(int bookId, {required bool on}) =>
+      _setMark(bookId, 'held', on);
+
+  void markLibraryUnavailable(int bookId, {required bool on}) =>
+      _setMark(bookId, 'unavailable', on);
+
+  void markLibraryAuto(int bookId, {required bool on}) =>
+      _setMark(bookId, 'auto_sync', on);
+
+  Set<int> _markIds(String column) {
+    return _idSet(
+      'SELECT book_id FROM library_marks WHERE $column = 1',
+    );
+  }
+
+  void _setMark(int bookId, String column, bool on) {
+    _db.execute(
+      'INSERT OR IGNORE INTO library_marks (book_id) VALUES (?)',
+      [bookId],
+    );
+    _db.execute(
+      'UPDATE library_marks SET $column = ? WHERE book_id = ?',
+      [on ? 1 : 0, bookId],
+    );
+  }
+
+  Set<int> _idSet(String sql) {
+    return _db.select(sql).map((r) => r['book_id'] as int).toSet();
+  }
+
+  /// Insert a history row pulled from another device when this open is new.
+  void importSyncedHistory({
+    required int bookId,
+    required int pageId,
+    required int openedAt,
+    String? part,
+    int? printPage,
+    String? sectionTitle,
+    int? closedAt,
+    int? durationSeconds,
+  }) {
+    final existing = _db.select(
+      'SELECT 1 FROM reading_history WHERE book_id = ? AND opened_at = ? LIMIT 1',
+      [bookId, openedAt],
+    );
+    if (existing.isNotEmpty) return;
+    _db.execute(
+      '''
+      INSERT INTO reading_history
+        (book_id, part, page_id, print_page, section_title, opened_at, closed_at,
+         duration_seconds)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ''',
+      [
+        bookId,
+        part,
+        pageId,
+        printPage,
+        sectionTitle,
+        openedAt,
+        closedAt,
+        durationSeconds,
+      ],
+    );
+  }
+
+  /// Apply a remote progress doc when it is newer than the local row.
+  bool applyRemoteProgress({
+    required int bookId,
+    required int pageId,
+    required int updatedAt,
+    int? printPage,
+    String? part,
+    String? sectionTitle,
+  }) {
+    final rows = _db.select(
+      'SELECT updated_at FROM reading_state WHERE book_id = ? LIMIT 1',
+      [bookId],
+    );
+    if (rows.isNotEmpty) {
+      final local = rows.first['updated_at'] as int;
+      if (local >= updatedAt) return false;
+    }
+    upsertReadingState(bookId: bookId, pageId: pageId, updatedAt: updatedAt);
+    importSyncedHistory(
+      bookId: bookId,
+      pageId: pageId,
+      openedAt: updatedAt,
+      printPage: printPage,
+      part: part,
+      sectionTitle: sectionTitle,
+      closedAt: updatedAt,
+    );
+    return true;
+  }
 
   List<Bookmark> bookmarksForBook(int bookId) {
     return _db

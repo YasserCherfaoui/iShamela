@@ -448,6 +448,31 @@
   "profileSyncNow": "Synchroniser",
   "profileSyncing": "Synchronisation en cours…",
   "profileSyncCellular": "Sync via données mobiles",
+  "profileAutoDownload": "Télécharger ma bibliothèque automatiquement",
+  "librarySyncSection": "Sync de la bibliothèque",
+  "libraryWaitingWifi": "En attente du Wi-Fi",
+  "librarySetupTitle": "Télécharger votre bibliothèque",
+  "librarySetupBody": "{count} livres · {size}",
+  "@librarySetupBody": {
+    "placeholders": {
+      "count": {"type": "String"},
+      "size": {"type": "String"}
+    }
+  },
+  "libraryDownloadAll": "Tout télécharger",
+  "libraryChoose": "Choisir",
+  "libraryLater": "Plus tard",
+  "libraryStorageShort": "Espace insuffisant pour télécharger votre bibliothèque ({size} requis)",
+  "@libraryStorageShort": {
+    "placeholders": {
+      "size": {"type": "String"}
+    }
+  },
+  "libraryChooseBooks": "Choisir les livres",
+  "libraryManageStorage": "Gérer le stockage",
+  "libraryRemoveDevice": "Retirer de cet appareil",
+  "libraryRemoveAll": "Retirer de tous les appareils",
+  "libraryUnavailable": "Indisponible pour le moment",
   "profileSyncError": "Échec de la sync — réessayez",
   "profileShortcutStorage": "Gérer le stockage",
   "profileShortcutHistory": "Historique de lecture",

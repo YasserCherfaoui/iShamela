@@ -164,11 +164,15 @@ class SyncState {
     this.lastSyncedAt,
     this.lastError,
     this.cellularAllowed = true,
+    this.autoDownload = true,
   });
 
   final int? lastSyncedAt;
   final String? lastError;
   final bool cellularAllowed;
+
+  /// SPEC-025: download the account bookshelf automatically on this device.
+  final bool autoDownload;
 }
 
 /// SPEC-014 page bookmark.

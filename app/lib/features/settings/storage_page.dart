@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ishamela/l10n/app_localizations.dart';
 
+import 'package:ishamela/core/auth/auth_state.dart';
 import 'package:ishamela/core/format_bytes.dart';
 import 'package:ishamela/core/models/models.dart';
 import 'package:ishamela/core/providers.dart';
 import 'package:ishamela/core/storage_size.dart';
 import 'package:ishamela/features/catalog/author_page.dart';
+import 'package:ishamela/features/library/library_sync_sheets.dart';
 import 'package:ishamela/features/reader/reader_page.dart';
 import 'package:ishamela/ui/book_card.dart';
 import 'package:ishamela/ui/empty_state.dart';
@@ -129,11 +131,37 @@ class _StoragePageState extends ConsumerState<StoragePage> {
                           ),
                         );
                         if (ok != true || !context.mounted) return;
+                        final signedIn = ref.read(authProvider).isVerified;
+                        final choice = await showBookRemovalSheet(
+                          context,
+                          signedIn: signedIn,
+                        );
+                        if (choice == null || !context.mounted) return;
                         final svc = downloadsAsync.maybeWhen(
                           data: (s) => s,
                           orElse: () => null,
                         );
-                        await svc?.deleteInstalledMany(_selected);
+                        final db = ref.read(stateDatabaseProvider).maybeWhen(
+                              data: (s) => s,
+                              orElse: () => null,
+                            );
+                        if (svc != null && db != null) {
+                          for (final id in _selected.toList()) {
+                            await applyBookRemoval(
+                              choice: choice,
+                              signedIn: signedIn,
+                              bookId: id,
+                              title: '',
+                              sizeBytes: 0,
+                              catalogVersion: 0,
+                              state: db,
+                              downloads: svc,
+                              pushRemoved: (docs) => ref
+                                  .read(authProvider.notifier)
+                                  .pushLibrary(docs),
+                            );
+                          }
+                        }
                         if (!mounted) return;
                         setState(() {
                           _selected.clear();
@@ -290,44 +318,15 @@ class _StoragePageState extends ConsumerState<StoragePage> {
                                               if (v == 'uninstall') {
                                                 final messenger =
                                                     ScaffoldMessenger.of(context);
-                                                final ok =
-                                                    await showDialog<bool>(
-                                                  context: context,
-                                                  builder: (ctx) => AlertDialog(
-                                                    title: Text(l10n.delete),
-                                                    content: Text(
-                                                      l10n.uninstallConfirmSize(
-                                                        sizeLabel,
-                                                      ),
-                                                    ),
-                                                    actions: [
-                                                      TextButton(
-                                                        onPressed: () =>
-                                                            Navigator.pop(
-                                                          ctx,
-                                                          false,
-                                                        ),
-                                                        child: Text(l10n.cancel),
-                                                      ),
-                                                      TextButton(
-                                                        onPressed: () =>
-                                                            Navigator.pop(
-                                                          ctx,
-                                                          true,
-                                                        ),
-                                                        child: Text(
-                                                          l10n.confirm,
-                                                          style: TextStyle(
-                                                            color: Theme.of(ctx)
-                                                                .colorScheme
-                                                                .error,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
+                                                final signedIn = ref
+                                                    .read(authProvider)
+                                                    .isVerified;
+                                                final choice =
+                                                    await showBookRemovalSheet(
+                                                  context,
+                                                  signedIn: signedIn,
                                                 );
-                                                if (ok != true || !mounted) {
+                                                if (choice == null || !mounted) {
                                                   return;
                                                 }
                                                 final svc =
@@ -335,8 +334,28 @@ class _StoragePageState extends ConsumerState<StoragePage> {
                                                   data: (s) => s,
                                                   orElse: () => null,
                                                 );
-                                                await svc
-                                                    ?.deleteInstalled(row.bookId);
+                                                final db = ref
+                                                    .read(stateDatabaseProvider)
+                                                    .maybeWhen(
+                                                      data: (s) => s,
+                                                      orElse: () => null,
+                                                    );
+                                                if (svc != null && db != null) {
+                                                  await applyBookRemoval(
+                                                    choice: choice,
+                                                    signedIn: signedIn,
+                                                    bookId: row.bookId,
+                                                    title: title,
+                                                    sizeBytes: row.sizeBytes ?? 0,
+                                                    catalogVersion: 0,
+                                                    state: db,
+                                                    downloads: svc,
+                                                    pushRemoved: (docs) => ref
+                                                        .read(authProvider
+                                                            .notifier)
+                                                        .pushLibrary(docs),
+                                                  );
+                                                }
                                                 if (!mounted) return;
                                                 setState(() => _tick++);
                                                 messenger.showSnackBar(

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:ishamela/core/auth/firebase_bootstrap.dart';
 import 'package:ishamela/core/auth/merge_local_data.dart';
+import 'package:ishamela/core/library/library_plan.dart';
 
 /// ARB key shown while merge/sync runs (SPEC-022 §6 / SPEC-020 snack style).
 const kSyncProgressMessageKey = 'authSyncInProgress';
@@ -59,6 +60,51 @@ class SyncService {
       onFailure?.call(kSyncFailedMessageKey);
       return false;
     }
+  }
+
+  Future<List<LibraryDoc>> fetchLibrary(String uid) async {
+    final rows = await _fetchMaps(uid, 'library');
+    final docs = <LibraryDoc>[];
+    for (final row in rows) {
+      final id = '${row['id']}';
+      final doc = LibraryDoc.parse(id, row);
+      if (doc != null) docs.add(doc);
+    }
+    return docs;
+  }
+
+  Future<void> upsertLibrary(String uid, List<LibraryDoc> docs) async {
+    final db = _db;
+    if (db == null || docs.isEmpty) return;
+    final col = db.collection('users').doc(uid).collection('library');
+    const batchLimit = 500;
+    for (var i = 0; i < docs.length; i += batchLimit) {
+      final slice = docs.skip(i).take(batchLimit);
+      final batch = col.firestore.batch();
+      for (final doc in slice) {
+        batch.set(col.doc('${doc.bookId}'), doc.toMap(), SetOptions(merge: true));
+      }
+      await batch.commit();
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchHistory(String uid) =>
+      _fetchMaps(uid, 'history');
+
+  Future<List<Map<String, dynamic>>> fetchProgress(String uid) =>
+      _fetchMaps(uid, 'progress');
+
+  Future<List<Map<String, dynamic>>> _fetchMaps(
+    String uid,
+    String name,
+  ) async {
+    final db = _db;
+    if (db == null) return const [];
+    final snap =
+        await db.collection('users').doc(uid).collection(name).get();
+    return [
+      for (final doc in snap.docs) {'id': doc.id, ...doc.data()},
+    ];
   }
 
   Future<void> _upsertCollection(

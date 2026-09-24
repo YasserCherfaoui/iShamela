@@ -95,6 +95,37 @@ class DownloadService {
     unawaited(_pump());
   }
 
+  /// Enqueue without starting the pump (SPEC-025 cellular / offline hold).
+  Future<EnqueueResult> enqueuePaused(int bookId) async {
+    final book = catalog.bookById(bookId);
+    if (book == null || !book.canInstallOnDevice) {
+      return EnqueueResult.rejected;
+    }
+    if (state.isInstalled(bookId)) {
+      return EnqueueResult.alreadyInstalled;
+    }
+    final existing = state.listDownloads().where((r) => r['book_id'] == bookId);
+    if (existing.isNotEmpty) {
+      final status = DownloadStatus.parse(existing.first['status'] as String);
+      if (status == DownloadStatus.paused) {
+        return EnqueueResult.alreadyQueued;
+      }
+      if (isActiveOrQueued(status)) {
+        await pause(bookId);
+        return EnqueueResult.alreadyQueued;
+      }
+    }
+    state.upsertDownload(
+      bookId: bookId,
+      status: DownloadStatus.paused.name,
+      bytesDone: 0,
+      bytesTotal: null,
+      updatedAt: nowMs(),
+    );
+    _notify();
+    return EnqueueResult.started;
+  }
+
   /// Enqueue is idempotent (SPEC-020 DL-03/04).
   Future<EnqueueResult> enqueue(int bookId) async {
     final book = catalog.bookById(bookId);

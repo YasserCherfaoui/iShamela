@@ -448,6 +448,31 @@
   "profileSyncNow": "Sync now",
   "profileSyncing": "Syncing your data…",
   "profileSyncCellular": "Sync over mobile data",
+  "profileAutoDownload": "Automatically download my library",
+  "librarySyncSection": "Library sync",
+  "libraryWaitingWifi": "Waiting for Wi-Fi",
+  "librarySetupTitle": "Download your library",
+  "librarySetupBody": "{count} books · {size}",
+  "@librarySetupBody": {
+    "placeholders": {
+      "count": {"type": "String"},
+      "size": {"type": "String"}
+    }
+  },
+  "libraryDownloadAll": "Download all",
+  "libraryChoose": "Choose",
+  "libraryLater": "Later",
+  "libraryStorageShort": "Not enough space to download your library ({size} required)",
+  "@libraryStorageShort": {
+    "placeholders": {
+      "size": {"type": "String"}
+    }
+  },
+  "libraryChooseBooks": "Choose books",
+  "libraryManageStorage": "Manage storage",
+  "libraryRemoveDevice": "Remove from this device",
+  "libraryRemoveAll": "Remove from all devices",
+  "libraryUnavailable": "Currently unavailable",
   "profileSyncError": "Sync failed — try again",
   "profileShortcutStorage": "Manage storage",
   "profileShortcutHistory": "Reading history",

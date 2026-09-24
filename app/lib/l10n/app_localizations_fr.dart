@@ -802,6 +802,53 @@ class AppLocalizationsFr extends AppLocalizations {
   String get profileSyncCellular => 'Sync via données mobiles';
 
   @override
+  String get profileAutoDownload =>
+      'Télécharger ma bibliothèque automatiquement';
+
+  @override
+  String get librarySyncSection => 'Sync de la bibliothèque';
+
+  @override
+  String get libraryWaitingWifi => 'En attente du Wi-Fi';
+
+  @override
+  String get librarySetupTitle => 'Télécharger votre bibliothèque';
+
+  @override
+  String librarySetupBody(String count, String size) {
+    return '$count livres · $size';
+  }
+
+  @override
+  String get libraryDownloadAll => 'Tout télécharger';
+
+  @override
+  String get libraryChoose => 'Choisir';
+
+  @override
+  String get libraryLater => 'Plus tard';
+
+  @override
+  String libraryStorageShort(String size) {
+    return 'Espace insuffisant pour télécharger votre bibliothèque ($size requis)';
+  }
+
+  @override
+  String get libraryChooseBooks => 'Choisir les livres';
+
+  @override
+  String get libraryManageStorage => 'Gérer le stockage';
+
+  @override
+  String get libraryRemoveDevice => 'Retirer de cet appareil';
+
+  @override
+  String get libraryRemoveAll => 'Retirer de tous les appareils';
+
+  @override
+  String get libraryUnavailable => 'Indisponible pour le moment';
+
+  @override
   String get profileSyncError => 'Échec de la sync — réessayez';
 
   @override

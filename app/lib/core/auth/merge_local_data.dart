@@ -90,3 +90,47 @@ Map<String, Object?> _bookmarkMap(Bookmark b) => {
       'label': b.label,
       'updatedAt': b.createdAt,
     };
+
+int? _asInt(Object? v) {
+  if (v is int) return v;
+  if (v is num) return v.toInt();
+  return null;
+}
+
+/// Writes remote history/progress into SQLite when the row is new or newer.
+void applyPulledReading(
+  StateDatabase db, {
+  required List<Map<String, dynamic>> history,
+  required List<Map<String, dynamic>> progress,
+}) {
+  for (final row in history) {
+    final bookId = _asInt(row['book_id']);
+    final pageId = _asInt(row['page_id']);
+    final opened = _asInt(row['opened_at']) ?? _asInt(row['updatedAt']);
+    if (bookId == null || pageId == null || opened == null) continue;
+    db.importSyncedHistory(
+      bookId: bookId,
+      pageId: pageId,
+      openedAt: opened,
+      part: row['part'] as String?,
+      printPage: _asInt(row['print_page']),
+      sectionTitle: row['section_title'] as String?,
+      closedAt: _asInt(row['closed_at']),
+      durationSeconds: _asInt(row['duration_seconds']),
+    );
+  }
+  for (final row in progress) {
+    final bookId = _asInt(row['book_id']) ?? _asInt(row['id']);
+    final pageId = _asInt(row['page_id']);
+    final updated = _asInt(row['updatedAt']);
+    if (bookId == null || pageId == null || updated == null) continue;
+    db.applyRemoteProgress(
+      bookId: bookId,
+      pageId: pageId,
+      updatedAt: updated,
+      printPage: _asInt(row['print_page']),
+      part: row['part'] as String?,
+      sectionTitle: row['section_title'] as String?,
+    );
+  }
+}

@@ -10,6 +10,7 @@ import 'package:ishamela/features/downloads/download_snack_host.dart';
 import 'package:ishamela/features/downloads/download_tabs.dart';
 import 'package:ishamela/features/home/home_page.dart';
 import 'package:ishamela/features/library/library_page.dart';
+import 'package:ishamela/features/library/library_sync_host.dart';
 import 'package:ishamela/features/settings/settings_page.dart';
 import 'package:ishamela/features/splash/startup_splash.dart';
 import 'package:ishamela/ui/app_bottom_nav.dart';
@@ -39,9 +40,11 @@ class IshamelaApp extends ConsumerWidget {
       ],
       theme: buildIshamelaTheme(atmosphere),
       // SP-06: catalog sync is background; splash only awaits local DB.
-      builder: (context, child) {
+        builder: (context, child) {
         return StartupSplashGate(
-          child: DownloadSnackHost(child: child ?? const SizedBox.shrink()),
+          child: DownloadSnackHost(
+            child: LibrarySyncHost(child: child ?? const SizedBox.shrink()),
+          ),
         );
       },
       home: const HomeShell(),

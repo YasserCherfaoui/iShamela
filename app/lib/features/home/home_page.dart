@@ -12,6 +12,7 @@ import 'package:ishamela/core/models/models.dart';
 import 'package:ishamela/core/providers.dart';
 import 'package:ishamela/features/auth/auth_welcome_screen.dart';
 import 'package:ishamela/features/catalog/catalog_service.dart';
+import 'package:ishamela/features/downloads/downloads_page.dart';
 import 'package:ishamela/features/home/home_stats_dao.dart';
 import 'package:ishamela/features/library/bookmarks_page.dart';
 import 'package:ishamela/features/library/history_page.dart';
@@ -81,6 +82,22 @@ class _HomePageState extends ConsumerState<HomePage> {
       return;
     }
     if (!mounted) return;
+    final svc = await ref.read(downloadServiceProvider.future);
+    final running = svc.listTasks().any(
+          (t) =>
+              t.bookId == entry.bookId &&
+              t.status != DownloadStatus.done &&
+              t.status != DownloadStatus.error,
+        );
+    if (!mounted) return;
+    if (running) {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => DownloadsPage(focusBookId: entry.bookId),
+        ),
+      );
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(l10n.homeBookNotDownloaded),

@@ -1502,6 +1502,90 @@ abstract class AppLocalizations {
   /// **'المزامنة عبر بيانات الهاتف'**
   String get profileSyncCellular;
 
+  /// No description provided for @profileAutoDownload.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنزيل كتب مكتبتي تلقائيًا'**
+  String get profileAutoDownload;
+
+  /// No description provided for @librarySyncSection.
+  ///
+  /// In ar, this message translates to:
+  /// **'مزامنة المكتبة'**
+  String get librarySyncSection;
+
+  /// No description provided for @libraryWaitingWifi.
+  ///
+  /// In ar, this message translates to:
+  /// **'بانتظار شبكة Wi-Fi'**
+  String get libraryWaitingWifi;
+
+  /// No description provided for @librarySetupTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنزيل مكتبتك'**
+  String get librarySetupTitle;
+
+  /// No description provided for @librarySetupBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count} كتابًا · {size}'**
+  String librarySetupBody(String count, String size);
+
+  /// No description provided for @libraryDownloadAll.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنزيل الكل'**
+  String get libraryDownloadAll;
+
+  /// No description provided for @libraryChoose.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختيار'**
+  String get libraryChoose;
+
+  /// No description provided for @libraryLater.
+  ///
+  /// In ar, this message translates to:
+  /// **'لاحقًا'**
+  String get libraryLater;
+
+  /// No description provided for @libraryStorageShort.
+  ///
+  /// In ar, this message translates to:
+  /// **'المساحة غير كافية لتنزيل مكتبتك ({size} مطلوبة)'**
+  String libraryStorageShort(String size);
+
+  /// No description provided for @libraryChooseBooks.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختيار الكتب'**
+  String get libraryChooseBooks;
+
+  /// No description provided for @libraryManageStorage.
+  ///
+  /// In ar, this message translates to:
+  /// **'إدارة التخزين'**
+  String get libraryManageStorage;
+
+  /// No description provided for @libraryRemoveDevice.
+  ///
+  /// In ar, this message translates to:
+  /// **'إزالة من هذا الجهاز'**
+  String get libraryRemoveDevice;
+
+  /// No description provided for @libraryRemoveAll.
+  ///
+  /// In ar, this message translates to:
+  /// **'إزالة من كل الأجهزة'**
+  String get libraryRemoveAll;
+
+  /// No description provided for @libraryUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'غير متوفر حاليًا'**
+  String get libraryUnavailable;
+
   /// No description provided for @profileSyncError.
   ///
   /// In ar, this message translates to:

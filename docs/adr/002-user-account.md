@@ -23,7 +23,7 @@ Adopt **Firebase** as the accounts + user-data backend, with authentication stri
 
 1. **Offline-first is preserved.** Every feature except sync works signed-out. The app never blocks on auth; «متابعة بدون حساب» (continue as guest) is always available. Local SQLite remains the source of truth on-device; the cloud is a replica for sync.
 2. **Firebase Authentication** provides Sign in with Apple, Google sign-in, and email + password, with first-class Flutter support (FlutterFire) and the same SDK on web. Native email verification and password reset are **link-based**; since the product requires **6-digit OTP screens**, verification and reset codes are implemented with a small **Cloud Functions** pair (`sendOtp` / `verifyOtp`, see SPEC-022 §5) — a well-trodden pattern.
-3. **Cloud Firestore** stores only *user* data under `users/{uid}` (profile doc + `history`, `bookmarks`, `notes`, `progress` subcollections). Security rules: `request.auth.uid == uid` on the whole subtree. Row volume per user is tiny (KBs).
+3. **Cloud Firestore** stores only *user* data under `users/{uid}` (profile doc + `history`, `bookmarks`, `notes`, `progress`, and `library` — the installed-bookshelf manifest, SPEC-025 — subcollections). Security rules: `request.auth.uid == uid` on the whole subtree. Row volume per user is tiny (KBs). **Book content itself never transits the backend:** the `library` manifest only names books; devices download the files from HuggingFace as always.
 4. **Sync model:** per-document last-write-wins on an `updatedAt` field, pushed opportunistically (app foreground/background, after a reading session ends, manual "sync now"). First sign-in on a device **merges local guest data up** — never wipes it. Firestore's built-in offline cache is a bonus, not the mechanism: SQLite stays canonical.
 5. **Web app** (app.ishamela.online) uses the same Firebase project via the JS SDK.
 
@@ -35,7 +35,7 @@ Adopt **Firebase** as the accounts + user-data backend, with authentication stri
 
 ## Consequences
 
-- **Billing plan:** Cloud Functions and outbound email require the **Blaze** (pay-as-you-go) plan. At current scale this rounds to ~$0; set a budget alert anyway. OTP emails are sent **directly from Cloud Functions via the Resend HTTP API** (`RESEND_API_KEY` secret) — not Firebase Auth’s link emails and not Firebase Extensions (Extensions sunset March 2027).
+- **Billing plan:** Cloud Functions and outbound email require the **Blaze** (pay-as-you-go) plan. At current scale this rounds to ~$0; set a budget alert anyway. OTP emails go out via the **Trigger Email** Firebase extension (SMTP — e.g. Resend/Brevo free tier).
 - **App Store compliance:** offering Google sign-in on iOS **requires** Sign in with Apple (guideline 4.8) — included. In-app **account deletion** is mandatory (guideline 5.1.1(v)) — a callable `deleteAccount` Function (SPEC-024 §4).
 - **Privacy:** update the ishamela.online policy (SPEC-021) for accounts, stored user data, and deletion; App Store privacy labels gain "Identifiers" and "Usage Data (reading activity)". Disable Firebase Analytics collection unless explicitly wanted.
 - **New repo surface:** `firebase/` folder — `firestore.rules`, `firestore.indexes.json`, `functions/` (TypeScript: `sendOtp`, `verifyOtp`, `deleteAccount`), `firebase.json`; config via `flutterfire configure` (the generated `firebase_options.dart` is safe to commit; API keys are not secrets, rules are the security boundary).

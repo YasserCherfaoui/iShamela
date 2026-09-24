@@ -410,6 +410,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   state.setSyncState(cellularAllowed: v);
                   setState(() => _tick++);
                 },
+                onAutoDownloadChanged: (v) {
+                  state.setSyncState(autoDownload: v);
+                  setState(() => _tick++);
+                },
               ),
             ],
             const SizedBox(height: 20),
@@ -747,12 +751,14 @@ class _SyncSection extends StatelessWidget {
     required this.syncing,
     required this.onSyncNow,
     required this.onCellularChanged,
+    required this.onAutoDownloadChanged,
   });
 
   final SyncState sync;
   final bool syncing;
   final VoidCallback onSyncNow;
   final ValueChanged<bool> onCellularChanged;
+  final ValueChanged<bool> onAutoDownloadChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -814,6 +820,11 @@ class _SyncSection extends StatelessWidget {
             title: Text(l10n.profileSyncCellular),
             value: sync.cellularAllowed,
             onChanged: onCellularChanged,
+          ),
+          SwitchListTile(
+            title: Text(l10n.profileAutoDownload),
+            value: sync.autoDownload,
+            onChanged: onAutoDownloadChanged,
           ),
         ],
       ),

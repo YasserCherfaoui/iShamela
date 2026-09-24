@@ -796,6 +796,52 @@ class AppLocalizationsAr extends AppLocalizations {
   String get profileSyncCellular => 'المزامنة عبر بيانات الهاتف';
 
   @override
+  String get profileAutoDownload => 'تنزيل كتب مكتبتي تلقائيًا';
+
+  @override
+  String get librarySyncSection => 'مزامنة المكتبة';
+
+  @override
+  String get libraryWaitingWifi => 'بانتظار شبكة Wi-Fi';
+
+  @override
+  String get librarySetupTitle => 'تنزيل مكتبتك';
+
+  @override
+  String librarySetupBody(String count, String size) {
+    return '$count كتابًا · $size';
+  }
+
+  @override
+  String get libraryDownloadAll => 'تنزيل الكل';
+
+  @override
+  String get libraryChoose => 'اختيار';
+
+  @override
+  String get libraryLater => 'لاحقًا';
+
+  @override
+  String libraryStorageShort(String size) {
+    return 'المساحة غير كافية لتنزيل مكتبتك ($size مطلوبة)';
+  }
+
+  @override
+  String get libraryChooseBooks => 'اختيار الكتب';
+
+  @override
+  String get libraryManageStorage => 'إدارة التخزين';
+
+  @override
+  String get libraryRemoveDevice => 'إزالة من هذا الجهاز';
+
+  @override
+  String get libraryRemoveAll => 'إزالة من كل الأجهزة';
+
+  @override
+  String get libraryUnavailable => 'غير متوفر حاليًا';
+
+  @override
   String get profileSyncError => 'تعذّرت المزامنة — أعد المحاولة';
 
   @override

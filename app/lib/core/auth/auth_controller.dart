@@ -15,6 +15,7 @@ import 'package:ishamela/core/auth/merge_local_data.dart';
 import 'package:ishamela/core/auth/sync_service.dart';
 import 'package:ishamela/core/auth/user_profile.dart';
 import 'package:ishamela/core/db/state_database.dart';
+import 'package:ishamela/core/library/library_plan.dart';
 
 /// Apple Sign In is available on iOS, macOS, and web — hidden on Android.
 bool get supportsAppleSignIn =>
@@ -329,12 +330,13 @@ class AuthController extends Notifier<AuthStatus> {
         onProgress: onProgress,
         onFailure: onFailure,
       );
+      await _pullReading(status.profile.uid, db);
     } catch (_) {
       onFailure?.call(kSyncFailedMessageKey);
     }
   }
 
-  /// Manual two-way sync from Profile (SPEC-024 §3.3).
+  /// Manual two-way sync from Profile (SPEC-024 §3.3 / SPEC-025).
   Future<void> syncNow(
     StateDatabase db, {
     void Function(String messageKey)? onProgress,
@@ -357,7 +359,8 @@ class AuthController extends Notifier<AuthStatus> {
         onProgress: onProgress,
         onFailure: onFailure,
       );
-      if (ok) {
+      await _pullReading(status.profile.uid, db);
+      if (ok || snap.isEmpty) {
         db.setSyncState(
           lastSyncedAt: DateTime.now().millisecondsSinceEpoch,
           clearError: true,
@@ -371,5 +374,23 @@ class AuthController extends Notifier<AuthStatus> {
       onFailure?.call(kSyncFailedMessageKey);
       rethrow;
     }
+  }
+
+  Future<List<LibraryDoc>> pullLibrary() async {
+    final status = state;
+    if (status is! AuthSignedIn) return const [];
+    return _sync.fetchLibrary(status.profile.uid);
+  }
+
+  Future<void> pushLibrary(List<LibraryDoc> docs) async {
+    final status = state;
+    if (status is! AuthSignedIn || docs.isEmpty) return;
+    await _sync.upsertLibrary(status.profile.uid, docs);
+  }
+
+  Future<void> _pullReading(String uid, StateDatabase db) async {
+    final history = await _sync.fetchHistory(uid);
+    final progress = await _sync.fetchProgress(uid);
+    applyPulledReading(db, history: history, progress: progress);
   }
 }

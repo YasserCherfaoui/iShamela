@@ -1,6 +1,6 @@
 # SPEC-024 — User Profile Screen (الملف الشخصي)
 
-- **Status:** Implemented
+- **Status:** Draft
 - **Depends on:** SPEC-022 (auth), SPEC-023 (stats DAO reused), SPEC-015 (storage manager link), DESIGN-001 tokens
 - **Placement:** avatar button in the Home header (top-left) and Settings → الحساب both push `/profile`.
 
@@ -25,6 +25,7 @@ One place for identity, lifetime reading stats, sync status, and account managem
 ### 3.3 Sync section («المزامنة»)
 - Status row: «آخر مزامنة: قبل ٥ دقائق» / «لم تتم المزامنة بعد» + trailing «مزامنة الآن» button → triggers the SPEC-022 §5 job with the SPEC-020 progress snackbar.
 - Toggle: «المزامنة عبر بيانات الهاتف» (default on; off = Wi-Fi only).
+- Toggle: «تنزيل كتب مكتبتي تلقائيًا» (default on) — governs SPEC-025 auto-downloads on this device; off keeps the library manifest syncing but makes downloads manual.
 - Error state (last attempt failed): amber note line with retry.
 
 ### 3.4 Shortcuts

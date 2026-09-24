@@ -799,6 +799,52 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileSyncCellular => 'Sync over mobile data';
 
   @override
+  String get profileAutoDownload => 'Automatically download my library';
+
+  @override
+  String get librarySyncSection => 'Library sync';
+
+  @override
+  String get libraryWaitingWifi => 'Waiting for Wi-Fi';
+
+  @override
+  String get librarySetupTitle => 'Download your library';
+
+  @override
+  String librarySetupBody(String count, String size) {
+    return '$count books · $size';
+  }
+
+  @override
+  String get libraryDownloadAll => 'Download all';
+
+  @override
+  String get libraryChoose => 'Choose';
+
+  @override
+  String get libraryLater => 'Later';
+
+  @override
+  String libraryStorageShort(String size) {
+    return 'Not enough space to download your library ($size required)';
+  }
+
+  @override
+  String get libraryChooseBooks => 'Choose books';
+
+  @override
+  String get libraryManageStorage => 'Manage storage';
+
+  @override
+  String get libraryRemoveDevice => 'Remove from this device';
+
+  @override
+  String get libraryRemoveAll => 'Remove from all devices';
+
+  @override
+  String get libraryUnavailable => 'Currently unavailable';
+
+  @override
   String get profileSyncError => 'Sync failed — try again';
 
   @override

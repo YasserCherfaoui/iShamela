@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ishamela/l10n/app_localizations.dart';
 
+import 'package:ishamela/core/auth/auth_state.dart';
 import 'package:ishamela/core/author_line.dart';
 import 'package:ishamela/core/models/models.dart';
 import 'package:ishamela/core/providers.dart';
@@ -15,6 +16,7 @@ import 'package:ishamela/features/downloads/download_service.dart';
 import 'package:ishamela/features/downloads/downloads_page.dart';
 import 'package:ishamela/features/library/history_page.dart';
 import 'package:ishamela/features/library/library_search_service.dart';
+import 'package:ishamela/features/library/library_sync_sheets.dart';
 import 'package:ishamela/features/reader/export_sheet.dart';
 import 'package:ishamela/features/reader/reader_page.dart';
 import 'package:ishamela/ui/app_search_field.dart';
@@ -431,7 +433,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
                                   onPressed: _selected.isEmpty
                                       ? null
                                       : () =>
-                                          _bulkDelete(l10n, downloadsAsync),
+                                          _bulkDelete(downloadsAsync),
                                 ),
                                 IconButton(
                                   tooltip: l10n.cancel,
@@ -1012,7 +1014,29 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
                       data: (s) => s,
                       orElse: () => null,
                     );
-                    await svc?.deleteInstalled(book.bookId);
+                    final db = ref.read(stateDatabaseProvider).maybeWhen(
+                          data: (s) => s,
+                          orElse: () => null,
+                        );
+                    final signedIn = ref.read(authProvider).isVerified;
+                    final choice = await showBookRemovalSheet(
+                      context,
+                      signedIn: signedIn,
+                    );
+                    if (choice != null && svc != null && db != null) {
+                      await applyBookRemoval(
+                        choice: choice,
+                        signedIn: signedIn,
+                        bookId: book.bookId,
+                        title: book.title,
+                        sizeBytes: book.sqliteBytes,
+                        catalogVersion: 0,
+                        state: db,
+                        downloads: svc,
+                        pushRemoved: (docs) =>
+                            ref.read(authProvider.notifier).pushLibrary(docs),
+                      );
+                    }
                     _categories = null;
                     _authors = null;
                     _allBooks = null;
@@ -1061,32 +1085,33 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
   }
 
   Future<void> _bulkDelete(
-    AppLocalizations l10n,
     AsyncValue<DownloadService> downloadsAsync,
   ) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.delete),
-        content: Text(l10n.confirmBulkDelete),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.confirm),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
+    final signedIn = ref.read(authProvider).isVerified;
+    final choice = await showBookRemovalSheet(context, signedIn: signedIn);
+    if (choice == null) return;
     final svc = downloadsAsync.maybeWhen(
       data: (s) => s,
       orElse: () => null,
     );
-    await svc?.deleteInstalledMany(_selected);
+    final db = ref.read(stateDatabaseProvider).maybeWhen(
+          data: (s) => s,
+          orElse: () => null,
+        );
+    if (svc == null || db == null) return;
+    for (final id in _selected.toList()) {
+      await applyBookRemoval(
+        choice: choice,
+        signedIn: signedIn,
+        bookId: id,
+        title: '',
+        sizeBytes: 0,
+        catalogVersion: 0,
+        state: db,
+        downloads: svc,
+        pushRemoved: (docs) => ref.read(authProvider.notifier).pushLibrary(docs),
+      );
+    }
     _categories = null;
     _authors = null;
     _allBooks = null;

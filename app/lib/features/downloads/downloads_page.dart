@@ -17,7 +17,9 @@ import 'package:ishamela/ui/theme/ishamela_tokens.dart';
 import 'package:ishamela/ui/tonal_icon_button.dart';
 
 class DownloadsPage extends ConsumerStatefulWidget {
-  const DownloadsPage({super.key});
+  const DownloadsPage({super.key, this.focusBookId});
+
+  final int? focusBookId;
 
   @override
   ConsumerState<DownloadsPage> createState() => _DownloadsPageState();
@@ -71,8 +73,24 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
             final all = svc.listTasks();
             final active =
                 filterDownloadTasks(all, DownloadsTab.active).length;
+            final held = ref.watch(stateDatabaseProvider).maybeWhen(
+                  data: (db) => db.libraryHeldIds(),
+                  orElse: () => <int>{},
+                );
             return Column(
               children: [
+                if (held.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                    child: Text(
+                      l10n.libraryWaitingWifi,
+                      style: TextStyle(
+                        fontFamily: kFontUi,
+                        fontSize: 13,
+                        color: t.muted,
+                      ),
+                    ),
+                  ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
                   child: Column(
@@ -394,7 +412,14 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
 
       return Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        child: DownloadCard(
+        child: DecoratedBox(
+          decoration: widget.focusBookId == task.bookId
+              ? BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: tokens.gold, width: 1.5),
+                )
+              : const BoxDecoration(),
+          child: DownloadCard(
           title: title,
           statusLabel: _statusLabel(l10n, task.status),
           tone: tone,
@@ -425,19 +450,41 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
             _selecting = true;
             _selected.add(task.bookId);
           }),
+          ),
         ),
       );
     }
 
+    final db = ref.watch(stateDatabaseProvider).maybeWhen(
+          data: (d) => d,
+          orElse: () => null,
+        );
+    final auto = db?.libraryAutoIds() ?? const <int>{};
+    final unavailable = db?.libraryUnavailableIds() ?? const <int>{};
+    final syncTasks = rest.where((t) => auto.contains(t.bookId)).toList();
+    final other = rest.where((t) => !auto.contains(t.bookId)).toList();
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       children: [
+        if (syncTasks.isNotEmpty) ...[
+          SectionLabel(label: l10n.librarySyncSection),
+          for (final t in syncTasks) cardFor(t),
+        ],
+        for (final id in unavailable)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              '${catalog?.bookById(id)?.title ?? id} — ${l10n.libraryUnavailable}',
+              style: TextStyle(fontFamily: kFontUi, color: IshamelaTokens.of(context).muted),
+            ),
+          ),
         if (todayDone.isNotEmpty) ...[
           SectionLabel(label: l10n.completedToday),
           for (final t in todayDone) cardFor(t),
-          if (rest.isNotEmpty) const SizedBox(height: 8),
+          if (other.isNotEmpty) const SizedBox(height: 8),
         ],
-        for (final t in rest) cardFor(t),
+        for (final t in other) cardFor(t),
       ],
     );
   }

@@ -448,6 +448,31 @@
   "profileSyncNow": "مزامنة الآن",
   "profileSyncing": "جارٍ مزامنة بياناتك…",
   "profileSyncCellular": "المزامنة عبر بيانات الهاتف",
+  "profileAutoDownload": "تنزيل كتب مكتبتي تلقائيًا",
+  "librarySyncSection": "مزامنة المكتبة",
+  "libraryWaitingWifi": "بانتظار شبكة Wi-Fi",
+  "librarySetupTitle": "تنزيل مكتبتك",
+  "librarySetupBody": "{count} كتابًا · {size}",
+  "@librarySetupBody": {
+    "placeholders": {
+      "count": {"type": "String"},
+      "size": {"type": "String"}
+    }
+  },
+  "libraryDownloadAll": "تنزيل الكل",
+  "libraryChoose": "اختيار",
+  "libraryLater": "لاحقًا",
+  "libraryStorageShort": "المساحة غير كافية لتنزيل مكتبتك ({size} مطلوبة)",
+  "@libraryStorageShort": {
+    "placeholders": {
+      "size": {"type": "String"}
+    }
+  },
+  "libraryChooseBooks": "اختيار الكتب",
+  "libraryManageStorage": "إدارة التخزين",
+  "libraryRemoveDevice": "إزالة من هذا الجهاز",
+  "libraryRemoveAll": "إزالة من كل الأجهزة",
+  "libraryUnavailable": "غير متوفر حاليًا",
   "profileSyncError": "تعذّرت المزامنة — أعد المحاولة",
   "profileShortcutStorage": "إدارة التخزين",
   "profileShortcutHistory": "سجل القراءة",

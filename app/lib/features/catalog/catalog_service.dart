@@ -175,6 +175,20 @@ class CatalogRepository {
     }
   }
 
+  int? get catalogVersion {
+    if (!hasCatalog) return null;
+    final db = openReadonlySqlite(paths.catalogSqlite);
+    try {
+      final rows = db.select(
+        "SELECT value FROM meta WHERE key = 'catalog_version' LIMIT 1",
+      );
+      if (rows.isEmpty) return null;
+      return int.tryParse('${rows.first['value']}');
+    } finally {
+      db.dispose();
+    }
+  }
+
   String? get generatedAt {
     if (!hasCatalog) return null;
     final db = openReadonlySqlite(paths.catalogSqlite);
