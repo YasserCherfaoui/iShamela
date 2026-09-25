@@ -25,9 +25,9 @@ class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
 
   static Future<void> open(BuildContext context) {
-    return Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const ProfilePage()),
-    );
+    return Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const ProfilePage()));
   }
 
   @override
@@ -41,9 +41,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   Future<void> _syncNow(StateDatabase state, UserProfile profile) async {
     final l10n = AppLocalizations.of(context);
     setState(() => _syncing = true);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.profileSyncing)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.profileSyncing)));
     try {
       await ref.read(authProvider.notifier).syncNow(state);
     } catch (_) {
@@ -60,74 +60,35 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   Future<void> _editDisplayName(UserProfile profile) async {
     final l10n = AppLocalizations.of(context);
     final t = IshamelaTokens.of(context);
-    final ctrl = TextEditingController(text: profile.displayName ?? '');
-    final saved = await showModalBottomSheet<bool>(
+    final name = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
       backgroundColor: t.card,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.fromLTRB(
-            20,
-            16,
-            20,
-            16 + MediaQuery.viewInsetsOf(ctx).bottom,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                l10n.profileEditName,
-                style: TextStyle(
-                  fontFamily: kFontAmiri,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 20,
-                  color: t.ink,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: ctrl,
-                autofocus: true,
-                maxLength: 40,
-                decoration: InputDecoration(labelText: l10n.profileEditNameHint),
-              ),
-              const SizedBox(height: 8),
-              FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text(l10n.profileEditNameSave),
-              ),
-            ],
-          ),
-        );
-      },
+      builder: (ctx) => _NameSheet(initial: profile.displayName ?? ''),
     );
-    final name = ctrl.text.trim();
-    ctrl.dispose();
-    if (saved != true || !mounted) return;
+    if (name == null || !mounted) return;
     if (name.isEmpty || name.length > 40) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.profileEditNameInvalid)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.profileEditNameInvalid)));
       return;
     }
     try {
       await ref.read(authProvider.notifier).updateDisplayName(name);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.profileEditNameSaved)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.profileEditNameSaved)));
         setState(() => _tick++);
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.profileEditNameInvalid)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.profileEditNameInvalid)));
       }
     }
   }
@@ -135,95 +96,39 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   Future<void> _changePassword() async {
     final l10n = AppLocalizations.of(context);
     final t = IshamelaTokens.of(context);
-    final current = TextEditingController();
-    final next = TextEditingController();
-    final confirm = TextEditingController();
-    final ok = await showModalBottomSheet<bool>(
+    final entered = await showModalBottomSheet<_PasswordEntry>(
       context: context,
       isScrollControlled: true,
       backgroundColor: t.card,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.fromLTRB(
-            20,
-            16,
-            20,
-            16 + MediaQuery.viewInsetsOf(ctx).bottom,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                l10n.profileChangePassword,
-                style: TextStyle(
-                  fontFamily: kFontAmiri,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 20,
-                  color: t.ink,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: current,
-                obscureText: true,
-                decoration:
-                    InputDecoration(labelText: l10n.profileCurrentPassword),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: next,
-                obscureText: true,
-                decoration: InputDecoration(labelText: l10n.profileNewPassword),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: confirm,
-                obscureText: true,
-                decoration:
-                    InputDecoration(labelText: l10n.profileConfirmPassword),
-              ),
-              const SizedBox(height: 12),
-              FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text(l10n.confirm),
-              ),
-            ],
-          ),
-        );
-      },
+      builder: (ctx) => const _PasswordSheet(),
     );
-    final cur = current.text;
-    final neu = next.text;
-    final conf = confirm.text;
-    current.dispose();
-    next.dispose();
-    confirm.dispose();
-    if (ok != true || !mounted) return;
+    if (entered == null || !mounted) return;
+    final cur = entered.current;
+    final neu = entered.next;
+    final conf = entered.confirm;
     if (neu != conf || neu.length < 8) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.profilePasswordMismatch)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.profilePasswordMismatch)));
       return;
     }
     try {
-      await ref.read(authProvider.notifier).changePassword(
-            currentPassword: cur,
-            newPassword: neu,
-          );
+      await ref
+          .read(authProvider.notifier)
+          .changePassword(currentPassword: cur, newPassword: neu);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.profilePasswordChanged)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.profilePasswordChanged)));
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.profilePasswordMismatch)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.profilePasswordMismatch)));
       }
     }
   }
@@ -258,130 +163,32 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final t = IshamelaTokens.of(context);
     final needsPassword =
         ref.read(authProvider).profileOrNull?.hasEmailProvider == true;
-    var wipeLocal = false;
-    String? passwordError;
-    final confirmCtrl = TextEditingController();
-    final passwordCtrl = TextEditingController();
-    final confirmed = await showModalBottomSheet<bool>(
+    final confirmed = await showModalBottomSheet<_DeleteAccountEntry>(
       context: context,
       isScrollControlled: true,
       backgroundColor: t.card,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setSheet) {
-            return Padding(
-              padding: EdgeInsets.fromLTRB(
-                20,
-                16,
-                20,
-                16 + MediaQuery.viewInsetsOf(ctx).bottom,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    l10n.profileDeleteAccount,
-                    style: TextStyle(
-                      fontFamily: kFontAmiri,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 20,
-                      color: t.danger,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    l10n.profileDeleteExplain,
-                    style: TextStyle(
-                      fontFamily: kFontUi,
-                      fontSize: 13,
-                      color: t.muted,
-                      height: 1.45,
-                    ),
-                  ),
-                  CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    value: wipeLocal,
-                    onChanged: (v) => setSheet(() => wipeLocal = v ?? false),
-                    title: Text(
-                      l10n.profileDeleteWipeLocal,
-                      style: TextStyle(fontFamily: kFontUi, fontSize: 13),
-                    ),
-                    controlAffinity: ListTileControlAffinity.leading,
-                  ),
-                  if (needsPassword) ...[
-                    TextField(
-                      controller: passwordCtrl,
-                      obscureText: true,
-                      keyboardType: TextInputType.visiblePassword,
-                      autofillHints: const [AutofillHints.password],
-                      decoration: InputDecoration(
-                        labelText: l10n.profileCurrentPassword,
-                        errorText: passwordError,
-                      ),
-                      onChanged: (_) {
-                        if (passwordError != null) {
-                          setSheet(() => passwordError = null);
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                  TextField(
-                    controller: confirmCtrl,
-                    decoration: InputDecoration(
-                      labelText: l10n.profileDeleteTypeConfirm,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: t.danger,
-                      foregroundColor: Colors.white,
-                    ),
-                    onPressed: () {
-                      if (needsPassword && passwordCtrl.text.isEmpty) {
-                        setSheet(() => passwordError = l10n.authFieldRequired);
-                        return;
-                      }
-                      if (confirmCtrl.text.trim() !=
-                          l10n.profileDeleteConfirmWord) {
-                        return;
-                      }
-                      Navigator.pop(ctx, true);
-                    },
-                    child: Text(l10n.profileDeleteAccount),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+      builder: (ctx) => _DeleteAccountSheet(needsPassword: needsPassword),
     );
-    final typedOk =
-        confirmCtrl.text.trim() == l10n.profileDeleteConfirmWord;
-    final password = passwordCtrl.text;
-    confirmCtrl.dispose();
-    passwordCtrl.dispose();
-    if (confirmed != true || !typedOk || !mounted) return;
+    if (confirmed == null || !mounted) return;
+    final wipeLocal = confirmed.wipeLocal;
+    final password = confirmed.password;
     if (needsPassword && password.isEmpty) return;
 
     try {
-      await ref.read(authProvider.notifier).reauthenticate(
-            password: needsPassword ? password : null,
-          );
+      await ref
+          .read(authProvider.notifier)
+          .reauthenticate(password: needsPassword ? password : null);
       await ref.read(authProvider.notifier).deleteAccount(wipeLocal: wipeLocal);
       if (wipeLocal) {
         state.clearReadingHistory();
       }
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.profileDeleteDone)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.profileDeleteDone)));
         Navigator.of(context).pop();
       }
     } catch (e) {
@@ -626,7 +433,11 @@ class _IdentityCard extends StatelessWidget {
                       IconButton(
                         tooltip: AppLocalizations.of(context).profileEditName,
                         onPressed: onEditName,
-                        icon: Icon(Icons.edit_outlined, color: t.muted, size: 20),
+                        icon: Icon(
+                          Icons.edit_outlined,
+                          color: t.muted,
+                          size: 20,
+                        ),
                       ),
                     ],
                   ),
@@ -828,8 +639,7 @@ class _SyncSection extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
               child: Row(
                 children: [
-                  Icon(Icons.warning_amber_rounded,
-                      size: 16, color: t.gold),
+                  Icon(Icons.warning_amber_rounded, size: 16, color: t.gold),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
@@ -884,10 +694,10 @@ class _ShortcutsCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final t = IshamelaTokens.of(context);
     Widget row(String label, VoidCallback onTap) => ListTile(
-          title: Text(label),
-          trailing: Icon(Icons.chevron_left, color: t.muted),
-          onTap: onTap,
-        );
+      title: Text(label),
+      trailing: Icon(Icons.chevron_left, color: t.muted),
+      onTap: onTap,
+    );
     return Material(
       color: t.card,
       shape: RoundedRectangleBorder(
@@ -944,10 +754,7 @@ class _AccountCard extends StatelessWidget {
             ),
             const Divider(height: 1),
           ],
-          ListTile(
-            title: Text(l10n.profileSignOut),
-            onTap: onSignOut,
-          ),
+          ListTile(title: Text(l10n.profileSignOut), onTap: onSignOut),
           const Divider(height: 1),
           ListTile(
             title: Text(
@@ -955,6 +762,291 @@ class _AccountCard extends StatelessWidget {
               style: TextStyle(color: t.danger, fontWeight: FontWeight.w600),
             ),
             onTap: onDelete,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PasswordEntry {
+  const _PasswordEntry({
+    required this.current,
+    required this.next,
+    required this.confirm,
+  });
+
+  final String current;
+  final String next;
+  final String confirm;
+}
+
+class _DeleteAccountEntry {
+  const _DeleteAccountEntry({required this.wipeLocal, required this.password});
+
+  final bool wipeLocal;
+  final String password;
+}
+
+class _NameSheet extends StatefulWidget {
+  const _NameSheet({required this.initial});
+
+  final String initial;
+
+  @override
+  State<_NameSheet> createState() => _NameSheetState();
+}
+
+class _NameSheetState extends State<_NameSheet> {
+  late final TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: widget.initial);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final t = IshamelaTokens.of(context);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        16,
+        20,
+        16 + MediaQuery.viewInsetsOf(context).bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.profileEditName,
+            style: TextStyle(
+              fontFamily: kFontAmiri,
+              fontWeight: FontWeight.w700,
+              fontSize: 20,
+              color: t.ink,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _ctrl,
+            autofocus: true,
+            maxLength: 40,
+            decoration: InputDecoration(labelText: l10n.profileEditNameHint),
+          ),
+          const SizedBox(height: 8),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, _ctrl.text.trim()),
+            child: Text(l10n.profileEditNameSave),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PasswordSheet extends StatefulWidget {
+  const _PasswordSheet();
+
+  @override
+  State<_PasswordSheet> createState() => _PasswordSheetState();
+}
+
+class _PasswordSheetState extends State<_PasswordSheet> {
+  final _current = TextEditingController();
+  final _next = TextEditingController();
+  final _confirm = TextEditingController();
+
+  @override
+  void dispose() {
+    _current.dispose();
+    _next.dispose();
+    _confirm.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final t = IshamelaTokens.of(context);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        16,
+        20,
+        16 + MediaQuery.viewInsetsOf(context).bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.profileChangePassword,
+            style: TextStyle(
+              fontFamily: kFontAmiri,
+              fontWeight: FontWeight.w700,
+              fontSize: 20,
+              color: t.ink,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _current,
+            obscureText: true,
+            decoration: InputDecoration(labelText: l10n.profileCurrentPassword),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _next,
+            obscureText: true,
+            decoration: InputDecoration(labelText: l10n.profileNewPassword),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _confirm,
+            obscureText: true,
+            decoration: InputDecoration(labelText: l10n.profileConfirmPassword),
+          ),
+          const SizedBox(height: 12),
+          FilledButton(
+            onPressed: () => Navigator.pop(
+              context,
+              _PasswordEntry(
+                current: _current.text,
+                next: _next.text,
+                confirm: _confirm.text,
+              ),
+            ),
+            child: Text(l10n.confirm),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DeleteAccountSheet extends StatefulWidget {
+  const _DeleteAccountSheet({required this.needsPassword});
+
+  final bool needsPassword;
+
+  @override
+  State<_DeleteAccountSheet> createState() => _DeleteAccountSheetState();
+}
+
+class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
+  final _confirm = TextEditingController();
+  final _password = TextEditingController();
+  var _wipeLocal = false;
+  String? _passwordError;
+
+  @override
+  void dispose() {
+    _confirm.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final t = IshamelaTokens.of(context);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        16,
+        20,
+        16 + MediaQuery.viewInsetsOf(context).bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.profileDeleteAccount,
+            style: TextStyle(
+              fontFamily: kFontAmiri,
+              fontWeight: FontWeight.w700,
+              fontSize: 20,
+              color: t.danger,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l10n.profileDeleteExplain,
+            style: TextStyle(
+              fontFamily: kFontUi,
+              fontSize: 13,
+              color: t.muted,
+              height: 1.45,
+            ),
+          ),
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _wipeLocal,
+            onChanged: (v) => setState(() => _wipeLocal = v ?? false),
+            title: Text(
+              l10n.profileDeleteWipeLocal,
+              style: const TextStyle(fontFamily: kFontUi, fontSize: 13),
+            ),
+            controlAffinity: ListTileControlAffinity.leading,
+          ),
+          if (widget.needsPassword) ...[
+            TextField(
+              controller: _password,
+              obscureText: true,
+              keyboardType: TextInputType.visiblePassword,
+              autofillHints: const [AutofillHints.password],
+              decoration: InputDecoration(
+                labelText: l10n.profileCurrentPassword,
+                errorText: _passwordError,
+              ),
+              onChanged: (_) {
+                if (_passwordError != null) {
+                  setState(() => _passwordError = null);
+                }
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+          TextField(
+            controller: _confirm,
+            decoration: InputDecoration(
+              labelText: l10n.profileDeleteTypeConfirm,
+            ),
+          ),
+          const SizedBox(height: 12),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: t.danger,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              if (widget.needsPassword && _password.text.isEmpty) {
+                setState(() => _passwordError = l10n.authFieldRequired);
+                return;
+              }
+              if (_confirm.text.trim() != l10n.profileDeleteConfirmWord) {
+                return;
+              }
+              Navigator.pop(
+                context,
+                _DeleteAccountEntry(
+                  wipeLocal: _wipeLocal,
+                  password: _password.text,
+                ),
+              );
+            },
+            child: Text(l10n.profileDeleteAccount),
           ),
         ],
       ),
