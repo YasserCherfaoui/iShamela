@@ -9,6 +9,7 @@ All notable changes to this project are documented in this file.
 - Reading progress syncs when a book is closed, and is pulled when the app opens or the home screen is pulled down. Every saved book position is uploaded, not only the latest one.
 - Removing an account no longer crashes: the confirmation fields stay alive until the sheet has finished closing.
 - Highlights sync with the account (`users/{uid}/highlights`), including removals. The same span and color are one document on every device.
+- The reader turns pages by volume (`part`), then print page (`page_num`), then `sequence_num` (`pages.id`), so a `pages.jsonl` that is not stored in that order still reads correctly.
 - Closing a book no longer throws when uploading progress. The sync action is kept from the last frame, because Riverpod forbids `ref` during dispose.
 - Home header has a sync button beside the avatar. Its sheet shows the last sync and any reading positions that differ from the account, then runs a two-way sync.
 - macOS release CI no longer requires a Mac App Development provisioning profile. The GitHub artifact is unsigned; local signing is unchanged.

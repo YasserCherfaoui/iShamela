@@ -75,7 +75,7 @@ CREATE TABLE toc (
 
 Notes for the implementer:
 
-- **Contentless FTS5** means snippets are built by the app: it fetches `pages.body` by rowid and highlights by re-running the query-side normalizer with offset mapping — that app-side part is SPEC-005/009, *not* this spec. This spec only guarantees correct rowid alignment.
+- `pages.id` stays the upstream `sequence_num` (duplicate values get the next free id). The reader does **not** walk `ORDER BY id`. It orders by `part` (empty first; all-digit labels as integers so 2 precedes 10), then `page_number`, then `id`.
 - `remove_diacritics 0` because diacritics are already gone in `body_norm` (SPEC-001); don't double-process.
 - Build inside a temp file, `VACUUM`, then `PRAGMA optimize` before compressing.
 - TOC / `source_page_id` / optional `meta.betaka`: see [`SPEC-009-shamela-reader-ux.md`](SPEC-009-shamela-reader-ux.md). `footnotes` column: see [`SPEC-012-reader-chrome-footnotes.md`](SPEC-012-reader-chrome-footnotes.md). `SCHEMA_VERSION` `1`/`2` bundles remain readable; new builds emit `3`.

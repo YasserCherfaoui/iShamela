@@ -148,6 +148,26 @@ int _expandWordsRight(String body, int index, int words) {
 bool _isSpace(int c) =>
     c == 0x20 || c == 0x09 || c == 0x0A || c == 0x0D || c == 0x00A0;
 
+/// Reading order for an installed book.
+///
+/// `pages.id` stays `sequence_num` (SPEC-002). Some `pages.jsonl` files are
+/// not stored in volume order, so the reader sorts by part, then print page,
+/// then that id.
+String pagesReadingOrderSql([String table = '']) {
+  final p = table.isEmpty ? '' : '$table.';
+  return '''
+    CASE WHEN ${p}part IS NULL OR ${p}part = '' THEN 0 ELSE 1 END,
+    CASE
+      WHEN ${p}part GLOB '[0-9]*' AND ${p}part NOT GLOB '*[^0-9]*'
+      THEN CAST(${p}part AS INTEGER)
+      ELSE 2147483647
+    END,
+    ${p}part,
+    ${p}page_number,
+    ${p}id
+  ''';
+}
+
 /// Read-only access to an installed book SQLite file.
 class BookDatabase {
   BookDatabase._(this._db, this.bookId);
@@ -166,17 +186,16 @@ class BookDatabase {
   void close() => _db.dispose();
 
   String? meta(String key) {
-    final rows = _db.select(
-      'SELECT value FROM meta WHERE key = ? LIMIT 1',
-      [key],
-    );
+    final rows = _db.select('SELECT value FROM meta WHERE key = ? LIMIT 1', [
+      key,
+    ]);
     if (rows.isEmpty) return null;
     return rows.first['value'] as String;
   }
 
   List<int> pageIds() {
     return _db
-        .select('SELECT id FROM pages ORDER BY id')
+        .select('SELECT id FROM pages ORDER BY ${pagesReadingOrderSql()}')
         .map((r) => r['id'] as int)
         .toList();
   }
@@ -204,7 +223,7 @@ class BookDatabase {
     try {
       final rows = _db.select(
         'SELECT id, part, page_number, body, footnotes FROM pages '
-        'WHERE page_number = ? ORDER BY id LIMIT 1',
+        'WHERE page_number = ? ORDER BY ${pagesReadingOrderSql()} LIMIT 1',
         [pageNumber],
       );
       if (rows.isEmpty) return null;
@@ -212,7 +231,7 @@ class BookDatabase {
     } catch (_) {
       final rows = _db.select(
         'SELECT id, part, page_number, body FROM pages '
-        'WHERE page_number = ? ORDER BY id LIMIT 1',
+        'WHERE page_number = ? ORDER BY ${pagesReadingOrderSql()} LIMIT 1',
         [pageNumber],
       );
       if (rows.isEmpty) return null;
@@ -305,7 +324,7 @@ class BookDatabase {
         FROM pages_fts
         JOIN pages p ON p.id = pages_fts.rowid
         WHERE pages_fts MATCH ?
-        ORDER BY p.id
+        ORDER BY ${pagesReadingOrderSql('p')}
         LIMIT ?
         ''',
         [match, hitCap],
@@ -313,10 +332,10 @@ class BookDatabase {
       final tokens = exactPhrase
           ? (cleanedPhrase.isEmpty ? <String>[] : [cleanedPhrase])
           : q
-              .split(RegExp(r'\s+'))
-              .map((t) => t.replaceAll(RegExp(r'["*\^:(){}]'), '').trim())
-              .where((t) => t.isNotEmpty)
-              .toList();
+                .split(RegExp(r'\s+'))
+                .map((t) => t.replaceAll(RegExp(r'["*\^:(){}]'), '').trim())
+                .where((t) => t.isNotEmpty)
+                .toList();
       final hits = rows.map((r) {
         final body = r['body'] as String;
         final nr = normalizeWithMap(body);
