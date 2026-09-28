@@ -707,12 +707,17 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     required bool showCard,
   }) {
     final chromeVisible = _chrome.visible;
+    final viewPad = MediaQuery.viewPaddingOf(context);
     final topClearance = glassOn && chromeVisible
-        ? readerGlassTopClearance(
-            MediaQuery.viewPaddingOf(context).top,
-            searchHits: _hits.isNotEmpty,
-          )
+        ? readerGlassTopClearance(viewPad.top, searchHits: _hits.isNotEmpty)
         : 0.0;
+    // Full-bleed pages (glass, or chrome hidden) keep the system insets only.
+    // Manuscript chrome already occupies the status bar and the home indicator.
+    final fullBleed = glassOn || !chromeVisible;
+    final pagePadding = EdgeInsets.only(
+      top: fullBleed ? viewPad.top : 0,
+      bottom: fullBleed ? viewPad.bottom : 0,
+    );
     Widget pane(Widget child) => Padding(
       padding: EdgeInsets.only(top: topClearance),
       child: child,
@@ -727,12 +732,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
             : l10n.showReaderControls,
         onTap: _toggleChromeFromSemantics,
         child: Padding(
-          padding: chromeVisible
-              ? EdgeInsets.zero
-              : EdgeInsets.only(
-                  top: MediaQuery.viewPaddingOf(context).top,
-                  bottom: MediaQuery.viewPaddingOf(context).bottom,
-                ),
+          padding: pagePadding,
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 660),
