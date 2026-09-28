@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ishamela/l10n/app_localizations.dart';
@@ -12,6 +13,7 @@ import 'package:ishamela/features/reader/role_color.dart';
 import 'package:ishamela/features/reader/text_roles.dart';
 import 'package:ishamela/features/settings/about_page.dart';
 import 'package:ishamela/features/settings/storage_page.dart';
+import 'package:ishamela/ui/glass/interface_style.dart';
 import 'package:ishamela/ui/theme/ishamela_theme.dart';
 import 'package:ishamela/ui/theme/ishamela_tokens.dart';
 import 'package:ishamela/ui/theme/reader_theme_tokens.dart';
@@ -83,6 +85,36 @@ class SettingsPage extends ConsumerWidget {
             ],
           ],
         ),
+        const SizedBox(height: 20),
+        Text(
+          l10n.interfaceStyle,
+          style: TextStyle(
+            fontFamily: kFontUi,
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
+            color: t.emphasis,
+          ),
+        ),
+        const SizedBox(height: 8),
+        _InterfaceStylePicker(
+          style: ref.watch(interfaceStyleProvider),
+          onChanged: (next) =>
+              ref.read(interfaceStyleProvider.notifier).save(next),
+        ),
+        if (!kIsWeb &&
+            (defaultTargetPlatform == TargetPlatform.iOS ||
+                defaultTargetPlatform == TargetPlatform.macOS))
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              l10n.interfaceStyleAppleHint,
+              style: TextStyle(
+                fontFamily: kFontUi,
+                fontSize: 12,
+                color: t.muted,
+              ),
+            ),
+          ),
         const SizedBox(height: 24),
         Material(
           color: t.card,
@@ -251,6 +283,81 @@ class SettingsPage extends ConsumerWidget {
       case TextRole.punctuation:
         return l10n.rolePunctuation;
     }
+  }
+}
+
+class _InterfaceStylePicker extends StatelessWidget {
+  const _InterfaceStylePicker({
+    required this.style,
+    required this.onChanged,
+  });
+
+  final InterfaceStyle style;
+  final ValueChanged<InterfaceStyle> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Row(
+      children: [
+        for (final option in InterfaceStyle.values) ...[
+          Expanded(
+            child: _StyleTile(
+              label: option == InterfaceStyle.manuscript
+                  ? l10n.interfaceStyleManuscript
+                  : l10n.interfaceStyleGlass,
+              selected: style == option,
+              onTap: () => onChanged(option),
+            ),
+          ),
+          if (option != InterfaceStyle.liquidGlass) const SizedBox(width: 8),
+        ],
+      ],
+    );
+  }
+}
+
+class _StyleTile extends StatelessWidget {
+  const _StyleTile({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = IshamelaTokens.of(context);
+    return Material(
+      color: t.card,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: selected ? t.green700 : t.hairline,
+          width: selected ? 2 : 1,
+        ),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: kFontUi,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: selected ? t.emphasis : t.ink,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

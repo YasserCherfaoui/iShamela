@@ -46,6 +46,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     ).showSnackBar(SnackBar(content: Text(l10n.profileSyncing)));
     try {
       await ref.read(authProvider.notifier).syncNow(state);
+      await ref.read(interfaceStyleProvider.notifier).syncWithAccount();
     } catch (_) {
       // syncNow already records lastError on StateDatabase.
     }

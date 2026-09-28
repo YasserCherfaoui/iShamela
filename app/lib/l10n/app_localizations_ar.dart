@@ -341,6 +341,22 @@ class AppLocalizationsAr extends AppLocalizations {
   String get readingTheme => 'سمة القراءة';
 
   @override
+  String get interfaceStyle => 'نمط الواجهة';
+
+  @override
+  String get interfaceStyleManuscript => 'المخطوطة';
+
+  @override
+  String get interfaceStyleGlass => 'الزجاج';
+
+  @override
+  String get interfaceStyleAppleHint =>
+      'على iOS وmacOS يُستخدم زجاج النظام الأصلي';
+
+  @override
+  String get glassSimplifiedNotice => 'تم تبسيط الزجاج للحفاظ على سلاسة التصفح';
+
+  @override
   String get atmospherePaper => 'ورق';
 
   @override

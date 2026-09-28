@@ -10,6 +10,8 @@ import 'package:ishamela/features/downloads/download_tabs.dart';
 import 'package:ishamela/features/reader/reader_page.dart';
 import 'package:ishamela/ui/download_card.dart';
 import 'package:ishamela/ui/empty_state.dart';
+import 'package:ishamela/ui/glass/drawn/drawn_glass_surface.dart';
+import 'package:ishamela/ui/glass/glass_surface.dart';
 import 'package:ishamela/ui/section_label.dart';
 import 'package:ishamela/ui/segmented_pills.dart';
 import 'package:ishamela/ui/theme/ishamela_theme.dart';
@@ -153,7 +155,9 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
                           ),
                         ),
                       const SizedBox(height: 12),
-                      SegmentedPills(
+                      GlassCluster(
+                        shape: const GlassShape.pill(),
+                        child: SegmentedPills(
                         labels: [
                           l10n.downloadsActive,
                           l10n.downloadsFailed,
@@ -165,6 +169,7 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
                           _selected.clear();
                           _selecting = false;
                         }),
+                      ),
                       ),
                     ],
                   ),

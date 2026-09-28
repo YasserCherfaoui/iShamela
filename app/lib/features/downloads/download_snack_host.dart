@@ -11,6 +11,8 @@ import 'package:ishamela/features/downloads/download_snack_state.dart';
 import 'package:ishamela/features/downloads/downloads_page.dart';
 import 'package:ishamela/features/downloads/enqueue_result.dart';
 import 'package:ishamela/features/reader/reader_page.dart';
+import 'package:ishamela/ui/glass/drawn/drawn_glass_surface.dart';
+import 'package:ishamela/ui/glass/glass_surface.dart';
 import 'package:ishamela/ui/theme/ishamela_theme.dart';
 import 'package:ishamela/ui/theme/ishamela_tokens.dart';
 import 'package:ishamela/ui/theme/reader_theme_tokens.dart';
@@ -257,8 +259,13 @@ class _DownloadSnackBar extends ConsumerWidget {
         ),
     };
 
-    final bar = Material(
-      color: bg,
+    final bar = GlassCluster(
+      shape: const GlassShape.bar(),
+      tintOverride: bg.withValues(alpha: 0.78),
+      child: Material(
+      color: GlassStyleScope.maybeOf(context)?.liquid == true
+          ? const Color(0x00000000)
+          : bg,
       borderRadius: BorderRadius.circular(14),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
@@ -319,6 +326,7 @@ class _DownloadSnackBar extends ConsumerWidget {
             ],
           ],
         ),
+      ),
       ),
     );
 

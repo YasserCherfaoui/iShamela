@@ -51,4 +51,8 @@ post_install do |installer|
       end
     end
   end
+
+  # Unsigned release builds cannot use the data-protection keychain.
+  load File.expand_path('scripts/patch_firebase_auth_keychain.rb', __dir__)
+  patch_firebase_auth_keychain(installer)
 end

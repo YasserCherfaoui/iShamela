@@ -20,6 +20,9 @@ import 'package:ishamela/features/library/library_sync_sheets.dart';
 import 'package:ishamela/features/reader/export_sheet.dart';
 import 'package:ishamela/features/reader/reader_page.dart';
 import 'package:ishamela/ui/app_search_field.dart';
+import 'package:ishamela/ui/glass/chrome/glass_filter_chip.dart';
+import 'package:ishamela/ui/glass/drawn/drawn_glass_surface.dart';
+import 'package:ishamela/ui/glass/glass_surface.dart';
 import 'package:ishamela/ui/book_card.dart';
 import 'package:ishamela/ui/book_spine.dart';
 import 'package:ishamela/ui/empty_state.dart';
@@ -464,7 +467,10 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
                           ),
                           if (_query.trim().isNotEmpty) ...[
                             const SizedBox(height: 8),
-                            SegmentedPills(
+                            GlassCluster(
+                              shape: const GlassShape.pill(),
+                              useBackdrop: false,
+                              child: SegmentedPills(
                               labels: [
                                 l10n.searchScopeTitles,
                                 l10n.searchScopeTexts,
@@ -479,17 +485,22 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
                                 if (i == 1) _startTextSearch();
                               },
                             ),
+                            ),
                             if (_searchScope == 1) ...[
                               const SizedBox(height: 8),
                               Align(
                                 alignment: AlignmentDirectional.centerStart,
-                                child: FilterChip(
-                                  label: Text(l10n.exactPhrase),
-                                  selected: _exactPhrase,
-                                  onSelected: (v) {
-                                    setState(() => _exactPhrase = v);
-                                    _startTextSearch();
-                                  },
+                                child: GlassCluster(
+                                  shape: const GlassShape.pill(),
+                                  useBackdrop: false,
+                                  child: GlassFilterChip(
+                                    label: Text(l10n.exactPhrase),
+                                    selected: _exactPhrase,
+                                    onSelected: (v) {
+                                      setState(() => _exactPhrase = v);
+                                      _startTextSearch();
+                                    },
+                                  ),
                                 ),
                               ),
                               if (_textSearching)

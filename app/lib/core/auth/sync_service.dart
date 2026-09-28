@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ishamela/core/auth/firebase_bootstrap.dart';
 import 'package:ishamela/core/auth/merge_local_data.dart';
 import 'package:ishamela/core/library/library_plan.dart';
+import 'package:ishamela/ui/glass/appearance_prefs.dart';
+import 'package:ishamela/ui/glass/interface_style.dart';
 
 /// ARB key shown while merge/sync runs (SPEC-022 §6 / SPEC-020 snack style).
 const kSyncProgressMessageKey = 'authSyncInProgress';
@@ -140,6 +142,35 @@ class SyncService {
       }
       await batch.commit();
     }
+  }
+
+  /// LWW merge of `users/{uid}/preferences/appearance` (SPEC-027 §2 / §8).
+  Future<AppearancePref> mergeAppearance({
+    required String uid,
+    required AppearancePref local,
+  }) async {
+    final db = _db;
+    if (db == null) return local;
+    final ref =
+        db.collection('users').doc(uid).collection('preferences').doc('appearance');
+    final snap = await ref.get();
+    AppearancePref? remote;
+    if (snap.exists) {
+      final data = snap.data();
+      remote = AppearancePref(
+        style: InterfaceStyle.fromId(data?['interfaceStyle'] as String?),
+        updatedAt: _asInt(data?['updatedAt']) ?? 0,
+      );
+    }
+    final merged = chooseAppearance(local: local, remote: remote);
+    final remoteAt = remote?.updatedAt ?? -1;
+    if (merged.updatedAt > remoteAt) {
+      await ref.set({
+        'interfaceStyle': merged.style.id,
+        'updatedAt': merged.updatedAt,
+      }, SetOptions(merge: true));
+    }
+    return merged;
   }
 
   int? _asInt(Object? v) {

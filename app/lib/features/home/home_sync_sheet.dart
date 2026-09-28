@@ -9,12 +9,13 @@ import 'package:ishamela/core/models/models.dart';
 import 'package:ishamela/core/providers.dart';
 import 'package:ishamela/features/auth/auth_welcome_screen.dart';
 import 'package:ishamela/features/library/history_page.dart';
+import 'package:ishamela/ui/glass/chrome/glass_sheet.dart';
 import 'package:ishamela/ui/theme/ishamela_theme.dart';
 import 'package:ishamela/ui/theme/ishamela_tokens.dart';
 
 Future<void> showHomeSyncSheet(BuildContext context) {
   final t = IshamelaTokens.of(context);
-  return showModalBottomSheet<void>(
+  return showGlassSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: t.card,
@@ -91,6 +92,7 @@ class _HomeSyncSheetState extends ConsumerState<_HomeSyncSheet> {
     try {
       final db = await ref.read(stateDatabaseProvider.future);
       await ref.read(authProvider.notifier).syncNow(db);
+      await ref.read(interfaceStyleProvider.notifier).syncWithAccount();
       ref.read(readingSyncRevisionProvider.notifier).bump();
     } catch (_) {
       // syncNow records the error on the local sync row.

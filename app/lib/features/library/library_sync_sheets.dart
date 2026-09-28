@@ -5,6 +5,7 @@ import 'package:ishamela/core/arabic_digits.dart';
 import 'package:ishamela/core/db/state_database.dart';
 import 'package:ishamela/core/library/library_plan.dart';
 import 'package:ishamela/features/downloads/download_service.dart';
+import 'package:ishamela/ui/glass/chrome/glass_sheet.dart';
 import 'package:ishamela/ui/theme/ishamela_theme.dart';
 import 'package:ishamela/ui/theme/ishamela_tokens.dart';
 
@@ -48,7 +49,7 @@ Future<BookRemovalChoice?> showBookRemovalSheet(
       ),
     );
   }
-  return showModalBottomSheet<BookRemovalChoice>(
+  return showGlassSheet<BookRemovalChoice>(
     context: context,
     backgroundColor: t.card,
     builder: (ctx) => SafeArea(
@@ -129,7 +130,7 @@ Future<LibrarySetupResult?> showLibrarySetupSheet(
   final arabic = Localizations.localeOf(context).languageCode == 'ar';
   final count = arabic ? toArabicIndicDigits(bookCount) : '$bookCount';
   final size = libraryByteLabel(bytes, arabic: arabic);
-  return showModalBottomSheet<LibrarySetupResult>(
+  return showGlassSheet<LibrarySetupResult>(
     context: context,
     isScrollControlled: true,
     backgroundColor: t.card,
@@ -195,7 +196,7 @@ Future<Set<int>?> showLibraryStorageSheet(
   final t = IshamelaTokens.of(context);
   final arabic = Localizations.localeOf(context).languageCode == 'ar';
   final size = libraryByteLabel(requiredBytes, arabic: arabic);
-  return showModalBottomSheet<Set<int>>(
+  return showGlassSheet<Set<int>>(
     context: context,
     backgroundColor: t.card,
     builder: (ctx) => SafeArea(

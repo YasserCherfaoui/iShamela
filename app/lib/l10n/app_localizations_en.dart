@@ -342,6 +342,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get readingTheme => 'Reading theme';
 
   @override
+  String get interfaceStyle => 'Interface style';
+
+  @override
+  String get interfaceStyleManuscript => 'Manuscript';
+
+  @override
+  String get interfaceStyleGlass => 'Glass';
+
+  @override
+  String get interfaceStyleAppleHint =>
+      'On iOS and macOS, the system glass is used';
+
+  @override
+  String get glassSimplifiedNotice =>
+      'Glass was simplified to keep browsing smooth';
+
+  @override
   String get atmospherePaper => 'Paper';
 
   @override

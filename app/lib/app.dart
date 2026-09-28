@@ -14,6 +14,9 @@ import 'package:ishamela/features/library/library_sync_host.dart';
 import 'package:ishamela/features/settings/settings_page.dart';
 import 'package:ishamela/features/splash/startup_splash.dart';
 import 'package:ishamela/ui/app_bottom_nav.dart';
+import 'package:ishamela/ui/glass/chrome/glass_tab_bar.dart';
+import 'package:ishamela/ui/glass/glass_runtime.dart';
+import 'package:ishamela/ui/glass/interface_style.dart';
 import 'package:ishamela/ui/theme/ishamela_theme.dart';
 
 class IshamelaApp extends ConsumerWidget {
@@ -41,9 +44,11 @@ class IshamelaApp extends ConsumerWidget {
       theme: buildIshamelaTheme(atmosphere),
       // SP-06: catalog sync is background; splash only awaits local DB.
         builder: (context, child) {
-        return StartupSplashGate(
-          child: DownloadSnackHost(
-            child: LibrarySyncHost(child: child ?? const SizedBox.shrink()),
+        return GlassRuntime(
+          child: StartupSplashGate(
+            child: DownloadSnackHost(
+              child: LibrarySyncHost(child: child ?? const SizedBox.shrink()),
+            ),
           ),
         );
       },
@@ -98,6 +103,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final wide = MediaQuery.sizeOf(context).width >= 800;
+    final glass =
+        ref.watch(interfaceStyleProvider) == InterfaceStyle.liquidGlass;
     final index = ref.watch(homeTabIndexProvider);
     final locale = ref.watch(appLocaleProvider);
     final textDir =
@@ -176,12 +183,36 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     return Directionality(
       textDirection: textDir,
       child: Scaffold(
-        body: body,
-        bottomNavigationBar: AppBottomNav(
-          destinations: destinations,
-          selectedIndex: index,
-          onDestinationSelected: _select,
-        ),
+        extendBody: glass,
+        body: glass
+            ? MediaQuery(
+                data: MediaQuery.of(context).copyWith(
+                  padding: MediaQuery.paddingOf(context).copyWith(
+                    bottom: MediaQuery.viewPaddingOf(context).bottom + 86,
+                  ),
+                ),
+                child: body,
+              )
+            : body,
+        bottomNavigationBar: glass
+            ? Padding(
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  0,
+                  16,
+                  MediaQuery.viewPaddingOf(context).bottom + 22,
+                ),
+                child: GlassTabBar(
+                  destinations: destinations,
+                  selectedIndex: index,
+                  onDestinationSelected: _select,
+                ),
+              )
+            : AppBottomNav(
+                destinations: destinations,
+                selectedIndex: index,
+                onDestinationSelected: _select,
+              ),
       ),
     );
   }

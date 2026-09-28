@@ -242,7 +242,9 @@ jobs:
 
       - name: Build macOS
         # FLUTTER_XCODE_* is forwarded to xcodebuild. The runner has no
-        # Mac App Development profile for org.ishamela.ishamela.
+        # Mac App Development profile for org.ishamela.ishamela, so the
+        # artifact stays unsigned. Sign-in still works: the Podfile patch
+        # falls back from the data-protection keychain to the login keychain.
         env:
           FLUTTER_XCODE_CODE_SIGN_STYLE: Manual
           FLUTTER_XCODE_CODE_SIGN_IDENTITY: "-"

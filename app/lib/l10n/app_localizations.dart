@@ -728,6 +728,36 @@ abstract class AppLocalizations {
   /// **'سمة القراءة'**
   String get readingTheme;
 
+  /// No description provided for @interfaceStyle.
+  ///
+  /// In ar, this message translates to:
+  /// **'نمط الواجهة'**
+  String get interfaceStyle;
+
+  /// No description provided for @interfaceStyleManuscript.
+  ///
+  /// In ar, this message translates to:
+  /// **'المخطوطة'**
+  String get interfaceStyleManuscript;
+
+  /// No description provided for @interfaceStyleGlass.
+  ///
+  /// In ar, this message translates to:
+  /// **'الزجاج'**
+  String get interfaceStyleGlass;
+
+  /// No description provided for @interfaceStyleAppleHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'على iOS وmacOS يُستخدم زجاج النظام الأصلي'**
+  String get interfaceStyleAppleHint;
+
+  /// No description provided for @glassSimplifiedNotice.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تبسيط الزجاج للحفاظ على سلاسة التصفح'**
+  String get glassSimplifiedNotice;
+
   /// No description provided for @atmospherePaper.
   ///
   /// In ar, this message translates to:

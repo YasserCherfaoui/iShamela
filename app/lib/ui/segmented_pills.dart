@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:ishamela/ui/glass/glass_surface.dart';
 import 'package:ishamela/ui/theme/ishamela_tokens.dart';
 import 'package:ishamela/ui/theme/ishamela_theme.dart';
 
@@ -19,11 +20,13 @@ class SegmentedPills extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = IshamelaTokens.of(context);
+    final glass = glassChromeTokens(context);
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: t.segmentTrack,
+        color: glass == null ? t.segmentTrack : glass.activeCapsule.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(999),
+        border: glass == null ? null : Border.all(color: glass.stroke),
       ),
       child: Row(
         children: [
@@ -55,10 +58,17 @@ class _Segment extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = IshamelaTokens.of(context);
+    final glass = glassChromeTokens(context);
+    final selectedColor = glass?.activeCapsule ?? t.card;
+    final labelColor = glass == null
+        ? (selected ? t.emphasis : t.muted)
+        : (selected ? glass.foregroundAccent : glass.foregroundInk);
     return Material(
-      color: selected ? t.card : Colors.transparent,
+      color: selected ? selectedColor : const Color(0x00000000),
       shape: StadiumBorder(
-        side: selected ? BorderSide(color: t.hairline) : BorderSide.none,
+        side: selected && glass == null
+            ? BorderSide(color: t.hairline)
+            : BorderSide.none,
       ),
       child: InkWell(
         onTap: onTap,
@@ -74,7 +84,7 @@ class _Segment extends StatelessWidget {
               fontFamily: kFontUi,
               fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
               fontSize: 13,
-              color: selected ? t.emphasis : t.muted,
+              color: labelColor,
             ),
           ),
         ),

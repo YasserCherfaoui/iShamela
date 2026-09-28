@@ -14,6 +14,10 @@ import 'package:ishamela/features/downloads/book_affordance.dart';
 import 'package:ishamela/features/downloads/download_service.dart';
 import 'package:ishamela/features/downloads/download_snack_host.dart';
 import 'package:ishamela/features/reader/reader_page.dart';
+import 'package:ishamela/ui/glass/chrome/glass_filter_chip.dart';
+import 'package:ishamela/ui/glass/chrome/glass_sheet.dart';
+import 'package:ishamela/ui/glass/drawn/drawn_glass_surface.dart';
+import 'package:ishamela/ui/glass/glass_surface.dart';
 import 'package:ishamela/ui/book_card.dart';
 import 'package:ishamela/ui/empty_state.dart';
 import 'package:ishamela/ui/highlighted_text.dart';
@@ -133,63 +137,67 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        CatalogSearchField(
-                          hintText: l10n.searchHint,
-                          initialQuery: _query,
-                          onChanged: (v) => setState(() => _query = v),
-                        ),
-                        if (showStale) ...[
-                          const SizedBox(height: 12),
-                          _StaleBanner(
-                            message: l10n.catalogStaleDays(staleDays),
-                            action: l10n.catalogStaleAction,
-                            onAction: _refresh,
-                          ),
-                        ],
-                        if (searching) ...[
-                          const SizedBox(height: 12),
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: [
-                                for (final s in CatalogSearchScope.values)
-                                  Padding(
-                                    padding: const EdgeInsetsDirectional.only(
-                                      end: 8,
-                                    ),
-                                    child: FilterChip(
-                                      label: Text(_scopeLabel(l10n, s)),
-                                      selected: _scope == s,
-                                      selectedColor: t.green700,
-                                      checkmarkColor: Colors.white,
-                                      labelStyle: TextStyle(
-                                        fontFamily: kFontUi,
-                                        fontWeight: FontWeight.w600,
-                                        color: _scope == s
-                                            ? Colors.white
-                                            : t.ink,
-                                      ),
-                                      side: BorderSide(
-                                        color: _scope == s
-                                            ? t.green700
-                                            : t.hairline,
-                                      ),
-                                      onSelected: (_) =>
-                                          setState(() => _scope = s),
-                                    ),
-                                  ),
+                        GlassCluster(
+                          shape: const GlassShape.bar(),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              CatalogSearchField(
+                                hintText: l10n.searchHint,
+                                initialQuery: _query,
+                                onChanged: (v) => setState(() => _query = v),
+                              ),
+                              if (showStale) ...[
+                                const SizedBox(height: 12),
+                                _StaleBanner(
+                                  message: l10n.catalogStaleDays(staleDays),
+                                  action: l10n.catalogStaleAction,
+                                  onAction: _refresh,
+                                ),
                               ],
-                            ),
+                              if (searching) ...[
+                                const SizedBox(height: 12),
+                                SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: Row(
+                                    children: [
+                                      for (final s in CatalogSearchScope.values)
+                                        Padding(
+                                          padding: const EdgeInsetsDirectional.only(
+                                            end: 8,
+                                          ),
+                                          child: GlassFilterChip(
+                                            label: Text(_scopeLabel(l10n, s)),
+                                            selected: _scope == s,
+                                            selectedColor: t.green700,
+                                            checkmarkColor: Colors.white,
+                                            labelColor: _scope == s
+                                                ? Colors.white
+                                                : t.ink,
+                                            side: BorderSide(
+                                              color: _scope == s
+                                                  ? t.green700
+                                                  : t.hairline,
+                                            ),
+                                            onSelected: (_) =>
+                                                setState(() => _scope = s),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ] else ...[
+                                const SizedBox(height: 16),
+                                SegmentedPills(
+                                  labels: [l10n.categories, l10n.authors],
+                                  selectedIndex: _browseIndex,
+                                  onChanged: (i) =>
+                                      setState(() => _browseIndex = i),
+                                ),
+                              ],
+                            ],
                           ),
-                        ] else ...[
-                          const SizedBox(height: 16),
-                          SegmentedPills(
-                            labels: [l10n.categories, l10n.authors],
-                            selectedIndex: _browseIndex,
-                            onChanged: (i) =>
-                                setState(() => _browseIndex = i),
-                          ),
-                        ],
+                        ),
                       ],
                     ),
                   ),
@@ -553,7 +561,7 @@ class _BookListPageState extends ConsumerState<BookListPage> {
       return;
     }
     final t = IshamelaTokens.of(context);
-    final ok = await showModalBottomSheet<bool>(
+    final ok = await showGlassSheet<bool>(
       context: context,
       backgroundColor: t.card,
       shape: const RoundedRectangleBorder(

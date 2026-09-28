@@ -20,6 +20,12 @@ import 'package:ishamela/features/reader/book_database.dart';
 import 'package:ishamela/features/reader/export_sheet.dart';
 import 'package:ishamela/features/reader/sticky_toc.dart';
 import 'package:ishamela/ui/app_search_field.dart';
+import 'package:ishamela/ui/glass/glass_surface.dart';
+import 'package:ishamela/ui/glass/chrome/glass_app_bar.dart';
+import 'package:ishamela/ui/glass/chrome/glass_filter_chip.dart';
+import 'package:ishamela/ui/glass/chrome/glass_sheet.dart';
+import 'package:ishamela/ui/glass/chrome/glass_toolbar.dart';
+import 'package:ishamela/ui/theme/glass_tokens.dart';
 import 'package:ishamela/ui/jump_sheet.dart';
 import 'package:ishamela/ui/page_pill.dart';
 import 'package:ishamela/ui/rosette_divider.dart';
@@ -461,20 +467,44 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     final part = page?.part;
 
     final chromeVisible = _db == null || _chrome.visible;
+    final glassOn = GlassStyleScope.maybeOf(context)?.liquid ?? false;
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: reader.ground,
-        body: Column(
+        body: _GlassOrColumn(
+          glass: glassOn,
           children: [
             _AnimatedChrome(
               visible: chromeVisible,
               alignment: Alignment.topCenter,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AppBar(
-                    backgroundColor: reader.raised,
+              child: _MaybeGlassBar(
+                enabled: glassOn,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AppBar(
+                      primary: !glassOn,
+                      backgroundColor: glassOn
+                          ? const Color(0x00000000)
+                          : reader.raised,
+                      elevation: glassOn ? 0 : null,
+                      scrolledUnderElevation: glassOn ? 0 : null,
+                      surfaceTintColor: glassOn
+                          ? const Color(0x00000000)
+                          : null,
+                      shadowColor: glassOn ? const Color(0x00000000) : null,
+                      shape: glassOn ? const RoundedRectangleBorder() : null,
+                      foregroundColor: glassOn
+                          ? GlassTokens.forAtmosphere(reader.atmosphere)
+                              .foregroundInk
+                          : null,
+                      iconTheme: glassOn
+                          ? IconThemeData(
+                              color: GlassTokens.forAtmosphere(reader.atmosphere)
+                                  .foregroundAccent,
+                            )
+                          : null,
                     title: Column(
                       children: [
                         Text(
@@ -485,7 +515,10 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                             fontFamily: 'Amiri',
                             fontWeight: FontWeight.w700,
                             fontSize: 18,
-                            color: reader.body,
+                            color: glassOn
+                                ? GlassTokens.forAtmosphere(reader.atmosphere)
+                                    .foregroundInk
+                                : reader.body,
                           ),
                         ),
                         if (_db != null)
@@ -493,7 +526,14 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                             part != null && part.isNotEmpty
                                 ? 'ج$part · ص$printNo'
                                 : 'ص$printNo',
-                            style: TextStyle(fontSize: 11, color: reader.muted),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: glassOn
+                                  ? GlassTokens.forAtmosphere(reader.atmosphere)
+                                      .foregroundInk
+                                      .withValues(alpha: 0.72)
+                                  : reader.muted,
+                            ),
                           ),
                       ],
                     ),
@@ -524,6 +564,14 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                       _bookmarkToggleButton(l10n, page),
                       if (wide)
                         TextButton(
+                          style: glassOn
+                              ? TextButton.styleFrom(
+                                  foregroundColor:
+                                      GlassTokens.forAtmosphere(
+                                        reader.atmosphere,
+                                      ).foregroundAccent,
+                                )
+                              : null,
                           onPressed: () => setState(() => _showToc = !_showToc),
                           child: Text(l10n.toc),
                         )
@@ -535,6 +583,14 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                         ),
                       if (wide)
                         TextButton(
+                          style: glassOn
+                              ? TextButton.styleFrom(
+                                  foregroundColor:
+                                      GlassTokens.forAtmosphere(
+                                        reader.atmosphere,
+                                      ).foregroundAccent,
+                                )
+                              : null,
                           onPressed: () =>
                               setState(() => _showCard = !_showCard),
                           child: Text(l10n.bookCard),
@@ -631,6 +687,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                 ],
               ),
             ),
+            ),
             Expanded(
               child: _error != null
                   ? Center(child: Text('$_error'))
@@ -684,7 +741,10 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
               _AnimatedChrome(
                 visible: _chrome.visible,
                 alignment: Alignment.bottomCenter,
-                child: _bottomNavBar(l10n),
+                child: _MaybeGlassPill(
+                  enabled: glassOn,
+                  child: _bottomNavBar(l10n, glass: glassOn),
+                ),
               ),
           ],
         ),
@@ -694,7 +754,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
 
   Future<void> _openSearchSheet(AppLocalizations l10n) async {
     final t = IshamelaTokens.of(context);
-    await showModalBottomSheet<void>(
+    await showGlassSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: t.card,
@@ -729,7 +789,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        FilterChip(
+                        GlassFilterChip(
                           label: Text(l10n.exactPhrase),
                           selected: _exactPhrase,
                           onSelected: (v) {
@@ -809,7 +869,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     );
   }
 
-  Widget _bottomNavBar(AppLocalizations l10n) {
+  Widget _bottomNavBar(AppLocalizations l10n, {bool glass = false}) {
     if (_ids.isEmpty || _db == null) return const SizedBox.shrink();
     final reader = ReaderThemeTokens.of(context);
     final t = IshamelaTokens.of(context);
@@ -825,14 +885,17 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     ].join(' · ');
 
     return Material(
-      color: reader.raised,
+      color: glass ? const Color(0x00000000) : reader.raised,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: reader.hairline)),
-          color: reader.raised,
+          border: glass
+              ? null
+              : Border(top: BorderSide(color: reader.hairline)),
+          color: glass ? const Color(0x00000000) : reader.raised,
         ),
         child: SafeArea(
           top: false,
+          bottom: !glass,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
             child: Column(
@@ -849,7 +912,13 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                         overlayRadius: 14,
                       ),
                       activeTrackColor: reader.progressFill,
-                      inactiveTrackColor: t.segmentTrack,
+                      inactiveTrackColor: glass
+                          ? GlassTokens.forAtmosphere(reader.atmosphere).stroke
+                          : t.segmentTrack,
+                      thumbColor: glass
+                          ? GlassTokens.forAtmosphere(reader.atmosphere)
+                              .foregroundGold
+                          : null,
                     ),
                     child: Slider(
                       value: _index.toDouble(),
@@ -937,7 +1006,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
           pageId: page.id,
           part: page.part,
         );
-    final gold = IshamelaTokens.of(context).goldSoft;
+    final glass = glassChromeTokens(context);
+    final gold = glass?.foregroundGold ?? IshamelaTokens.of(context).goldSoft;
+    final idle = glass?.foregroundInk ?? IshamelaTokens.of(context).muted;
     final reduce = MediaQuery.disableAnimationsOf(context);
     return SizedBox(
       width: 38,
@@ -951,7 +1022,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
           curve: Curves.easeOut,
           child: Icon(
             marked ? Icons.bookmark : Icons.bookmark_border,
-            color: marked ? gold : IshamelaTokens.of(context).muted,
+            color: marked ? gold : idle,
             size: 22,
           ),
         ),
@@ -1480,7 +1551,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   }
 
   void _openTocSheet(BuildContext context, AppLocalizations l10n) {
-    showModalBottomSheet<void>(
+    showGlassSheet<void>(
       context: context,
       builder: (_) => Directionality(
         textDirection: TextDirection.rtl,
@@ -1502,7 +1573,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     AppLocalizations l10n,
     String title,
   ) {
-    showModalBottomSheet<void>(
+    showGlassSheet<void>(
       context: context,
       builder: (_) => Directionality(
         textDirection: TextDirection.rtl,
@@ -1564,6 +1635,65 @@ class _FootnotesBlock extends StatelessWidget {
 }
 
 /// SPEC-026: collapses the reader bars so the page grows into their space.
+class _MaybeGlassBar extends StatelessWidget {
+  const _MaybeGlassBar({required this.enabled, required this.child});
+
+  final bool enabled;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!enabled) return child;
+    return GlassAppBar(child: child);
+  }
+}
+
+class _MaybeGlassPill extends StatelessWidget {
+  const _MaybeGlassPill({required this.enabled, required this.child});
+
+  final bool enabled;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!enabled) return child;
+    return GlassToolbar(child: child);
+  }
+}
+
+class _GlassOrColumn extends StatelessWidget {
+  const _GlassOrColumn({required this.glass, required this.children});
+
+  final bool glass;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!glass) return Column(children: children);
+    Widget? top;
+    Widget? middle;
+    Widget? bottom;
+    for (final child in children) {
+      if (child is Expanded) {
+        middle = child.child;
+      } else if (middle == null) {
+        top = child;
+      } else {
+        bottom = child;
+      }
+    }
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (middle != null) Positioned.fill(child: middle),
+        if (top != null) Positioned(top: 0, left: 0, right: 0, child: top),
+        if (bottom != null)
+          Positioned(left: 0, right: 0, bottom: 0, child: bottom),
+      ],
+    );
+  }
+}
+
 class _AnimatedChrome extends StatelessWidget {
   const _AnimatedChrome({
     required this.visible,

@@ -17,6 +17,7 @@ import 'package:ishamela/core/auth/sync_service.dart';
 import 'package:ishamela/core/auth/user_profile.dart';
 import 'package:ishamela/core/db/state_database.dart';
 import 'package:ishamela/core/library/library_plan.dart';
+import 'package:ishamela/ui/glass/appearance_prefs.dart';
 
 /// Apple Sign In is available on iOS, macOS, and web — hidden on Android.
 bool get supportsAppleSignIn =>
@@ -408,6 +409,17 @@ class AuthController extends Notifier<AuthStatus> {
     try {
       await _pullReading(status.profile.uid, db);
     } catch (_) {}
+  }
+
+  /// Appearance style LWW (SPEC-027 §8). Guests keep [local].
+  Future<AppearancePref> syncAppearance(AppearancePref local) async {
+    final status = state;
+    if (status is! AuthSignedIn) return local;
+    try {
+      return await _sync.mergeAppearance(uid: status.profile.uid, local: local);
+    } catch (_) {
+      return local;
+    }
   }
 
   Set<int> _syncBookIds(StateDatabase db) {

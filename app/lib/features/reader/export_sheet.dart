@@ -9,6 +9,7 @@ import 'package:ishamela/core/providers.dart';
 import 'package:ishamela/features/reader/annotations_export.dart';
 import 'package:ishamela/features/reader/book_database.dart';
 import 'package:ishamela/ui/segmented_pills.dart';
+import 'package:ishamela/ui/glass/chrome/glass_sheet.dart';
 import 'package:ishamela/ui/theme/ishamela_theme.dart';
 import 'package:ishamela/ui/theme/ishamela_tokens.dart';
 
@@ -26,7 +27,7 @@ Future<void> showAnnotationsExportSheet(
   if (!context.mounted) return;
   if (highlights.isEmpty && notes.isEmpty) return;
 
-  await showModalBottomSheet<void>(
+  await showGlassSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: IshamelaTokens.of(context).card,

@@ -21,6 +21,8 @@ import 'package:ishamela/features/library/notes_list_page.dart';
 import 'package:ishamela/features/profile/profile_page.dart';
 import 'package:ishamela/features/reader/reader_page.dart';
 import 'package:ishamela/ui/book_spine.dart';
+import 'package:ishamela/ui/glass/drawn/drawn_glass_surface.dart';
+import 'package:ishamela/ui/glass/glass_surface.dart';
 import 'package:ishamela/ui/rosette_divider.dart';
 import 'package:ishamela/ui/theme/ishamela_theme.dart';
 import 'package:ishamela/ui/theme/ishamela_tokens.dart';
@@ -203,8 +205,10 @@ class _HomePageState extends ConsumerState<HomePage> {
             children: [
               _HomeHeader(auth: auth, locale: locale),
               const SizedBox(height: 16),
-              _ContinueCard(
-                entry: latest,
+              GlassCluster(
+                shape: const GlassShape.bar(),
+                child: _ContinueCard(
+                  entry: latest,
                 book: book,
                 installed: installed,
                 progress: progress,
@@ -214,6 +218,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   book: book,
                   installed: installed,
                 ),
+              ),
               ),
               const SizedBox(height: 16),
               _WeeklyStatsStrip(stats: stats, locale: locale),
@@ -400,7 +405,14 @@ class _HomeHeader extends ConsumerWidget {
         const SizedBox(width: 4),
         _SyncButton(onTap: () => showHomeSyncSheet(context)),
         const SizedBox(width: 4),
-        _AvatarButton(profile: profile, onTap: () => ProfilePage.open(context)),
+        GlassCluster(
+          shape: const GlassShape.pill(),
+          useBackdrop: false,
+          child: _AvatarButton(
+            profile: profile,
+            onTap: () => ProfilePage.open(context),
+          ),
+        ),
       ],
     );
   }
@@ -509,14 +521,17 @@ class _ContinueCard extends StatelessWidget {
       entry.printPage?.toString() ?? '—',
     );
 
+    final glass = GlassStyleScope.maybeOf(context)?.liquid ?? false;
     return Semantics(
       button: true,
       label: a11y,
       child: Material(
-        color: t.card,
+        color: glass ? const Color(0x00000000) : t.card,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: t.hairline),
+          side: BorderSide(
+            color: glass ? const Color(0x00000000) : t.hairline,
+          ),
         ),
         child: InkWell(
           onTap: onTap,

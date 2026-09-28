@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Fixed
 
+- macOS release builds can sign in again. The downloaded app is unsigned, so Firebase Auth could not store the session and every Google, Apple, and email sign-in ended with “Something went wrong” after the account picker closed.
 - Reading progress syncs when a book is closed, and is pulled when the app opens or the home screen is pulled down. Every saved book position is uploaded, not only the latest one.
 - Removing an account no longer crashes: the confirmation fields stay alive until the sheet has finished closing.
 - Highlights sync with the account (`users/{uid}/highlights`), including removals. The same span and color are one document on every device.
@@ -18,6 +19,8 @@ All notable changes to this project are documented in this file.
 - macOS auth: Debug/Profile signed with the development team so Google Sign-In keychain + Sign in with Apple entitlements work; Google `serverClientId` (web OAuth client) so Firebase gets an ID token; richer auth error console logs.
 
 ### Added
+
+- Liquid Glass interface style (SPEC-027): Settings → نمط الواجهة switches chrome between Warm Manuscript and glass. Manuscript stays the default. iOS 26 and macOS 26 use a native glass view when the OS provides it; every other platform uses the drawn recipe. Reduce Transparency, battery saver, and a frame-time governor fall back to frosted chrome. The choice is stored locally and synced with the account (last write wins on `updatedAt`).
 
 - Reader chrome hides while reading (SPEC-026): a tap on the page shows or hides the bars, and turning a page hides them.
 - Library sync (SPEC-025): account bookshelf in `users/{uid}/library`, per-device exclusions, auto-download on Wi-Fi (cellular respects the data toggle), first-sign-in sheet over 150 MB, storage preflight, and «إزالة من كل الأجهزة».

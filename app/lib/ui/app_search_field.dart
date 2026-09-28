@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:ishamela/ui/glass/chrome/glass_search_field.dart';
 import 'package:ishamela/ui/theme/ishamela_tokens.dart';
 import 'package:ishamela/ui/theme/ishamela_theme.dart';
 
@@ -60,7 +61,7 @@ class _AppSearchFieldState extends State<AppSearchField> {
   Widget build(BuildContext context) {
     final t = IshamelaTokens.of(context);
     final focused = _focus.hasFocus;
-    return TextField(
+    final field = TextField(
       controller: _ctrl,
       focusNode: _focus,
       autofocus: widget.autofocus,
@@ -69,7 +70,9 @@ class _AppSearchFieldState extends State<AppSearchField> {
         fontWeight: FontWeight.w500,
         fontSize: 14,
       ),
-      decoration: InputDecoration(
+      decoration: glassSearchDecoration(
+        context: context,
+        manuscript: InputDecoration(
         hintText: widget.hintText,
         prefixIcon: Icon(Icons.search, color: t.muted),
         filled: true,
@@ -104,6 +107,7 @@ class _AppSearchFieldState extends State<AppSearchField> {
                   _focus.requestFocus();
                 },
         ),
+        ),
       ),
       textInputAction: TextInputAction.search,
       onChanged: (v) {
@@ -112,5 +116,6 @@ class _AppSearchFieldState extends State<AppSearchField> {
       },
       onSubmitted: widget.onSubmitted,
     );
+    return GlassSearchField(child: field);
   }
 }

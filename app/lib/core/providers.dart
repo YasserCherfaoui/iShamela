@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -12,6 +13,11 @@ import 'package:ishamela/core/net/net.dart';
 import 'package:ishamela/features/catalog/catalog_service.dart';
 import 'package:ishamela/features/downloads/download_service.dart';
 import 'package:ishamela/features/reader/reader_styles.dart';
+import 'package:ishamela/ui/glass/appearance_prefs.dart';
+import 'package:ishamela/ui/glass/glass_capability.dart';
+import 'package:ishamela/ui/glass/glass_governor.dart';
+import 'package:ishamela/ui/glass/interface_style.dart';
+import 'package:ishamela/ui/glass/native/native_glass_channel.dart';
 import 'package:ishamela/ui/theme/reader_theme_tokens.dart';
 
 /// SPEC-022 auth session (guest when Firebase is unavailable).
@@ -246,3 +252,142 @@ class ReaderTextStylesNotifier extends Notifier<ReaderTextStyles> {
 
   Future<void> reset() => save(ReaderTextStyles.defaults());
 }
+
+class GlassSheetDepthNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void enter() => state++;
+
+  void leave() {
+    if (state > 0) state--;
+  }
+}
+
+final glassSheetDepthProvider = NotifierProvider<GlassSheetDepthNotifier, int>(
+  GlassSheetDepthNotifier.new,
+);
+
+class GlassGovernorSnapshot {
+  const GlassGovernorSnapshot({
+    this.tripped = false,
+    this.noticeVisible = false,
+  });
+
+  final bool tripped;
+  final bool noticeVisible;
+}
+
+class GlassGovernorNotifier extends Notifier<GlassGovernorSnapshot> {
+  final GlassFrameGovernor _governor = GlassFrameGovernor();
+
+  @override
+  GlassGovernorSnapshot build() => const GlassGovernorSnapshot();
+
+  bool record(Duration frame, {required bool highRefreshRate}) {
+    if (state.tripped) return false;
+    final tripped = _governor.record(
+      frame,
+      budget: GlassFrameGovernor.budgetFor(highRefreshRate: highRefreshRate),
+    );
+    if (tripped) {
+      state = const GlassGovernorSnapshot(tripped: true, noticeVisible: true);
+    }
+    return tripped;
+  }
+
+  void dismissNotice() {
+    state = GlassGovernorSnapshot(tripped: state.tripped, noticeVisible: false);
+  }
+
+  void resetSession() {
+    _governor.reset();
+    state = const GlassGovernorSnapshot();
+  }
+}
+
+final glassGovernorProvider =
+    NotifierProvider<GlassGovernorNotifier, GlassGovernorSnapshot>(
+  GlassGovernorNotifier.new,
+);
+
+final glassPlatformStatusProvider = FutureProvider<GlassPlatformStatus>((ref) {
+  return NativeGlassChannel.instance.query();
+});
+
+final glassCapabilityProvider = Provider<GlassCapability>((ref) {
+  final style = ref.watch(interfaceStyleProvider);
+  final status = ref.watch(glassPlatformStatusProvider).maybeWhen(
+        data: (value) => value,
+        orElse: () => GlassPlatformStatus.unavailable,
+      );
+  final tripped = ref.watch(glassGovernorProvider).tripped;
+  return resolveGlassCapability(
+    GlassCapabilityInput(
+      style: style,
+      applePlatform: _applePlatform,
+      nativeAvailable: status.available,
+      reduceTransparency: status.reduceTransparency,
+      batterySaver: status.powerSave,
+      governorTripped: tripped,
+    ),
+  );
+});
+
+bool get _applePlatform {
+  return defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.macOS;
+}
+
+class InterfaceStyleNotifier extends Notifier<InterfaceStyle> {
+  int _updatedAt = 0;
+  String? _syncedUid;
+
+  @override
+  InterfaceStyle build() {
+    ref.listen(authProvider, (prev, next) {
+      if (next is AuthSignedIn && prev is! AuthSignedIn) {
+        _syncedUid = null;
+        Future.microtask(syncWithAccount);
+      }
+    });
+    final async = ref.watch(stateDatabaseProvider);
+    if (!async.hasValue) return InterfaceStyle.manuscript;
+    final db = async.requireValue;
+    _updatedAt = int.tryParse(db.setting(InterfaceStyle.updatedAtKey) ?? '') ?? 0;
+    final style = InterfaceStyle.fromId(db.setting(InterfaceStyle.settingsKey));
+    final auth = ref.read(authProvider);
+    if (auth is AuthSignedIn && _syncedUid != auth.profile.uid) {
+      _syncedUid = auth.profile.uid;
+      Future.microtask(syncWithAccount);
+    }
+    return style;
+  }
+
+  Future<void> save(InterfaceStyle style) async {
+    final db = await ref.read(stateDatabaseProvider.future);
+    _updatedAt = DateTime.now().millisecondsSinceEpoch;
+    db.setSetting(InterfaceStyle.settingsKey, style.id);
+    db.setSetting(InterfaceStyle.updatedAtKey, '$_updatedAt');
+    state = style;
+    ref.read(glassGovernorProvider.notifier).resetSession();
+    await syncWithAccount();
+  }
+
+  /// Pulls the account appearance doc and keeps the newer `updatedAt`.
+  Future<void> syncWithAccount() async {
+    final local = AppearancePref(style: state, updatedAt: _updatedAt);
+    final merged = await ref.read(authProvider.notifier).syncAppearance(local);
+    if (merged.style == state && merged.updatedAt == _updatedAt) return;
+    final db = await ref.read(stateDatabaseProvider.future);
+    db.setSetting(InterfaceStyle.settingsKey, merged.style.id);
+    db.setSetting(InterfaceStyle.updatedAtKey, '${merged.updatedAt}');
+    _updatedAt = merged.updatedAt;
+    state = merged.style;
+  }
+}
+
+final interfaceStyleProvider =
+    NotifierProvider<InterfaceStyleNotifier, InterfaceStyle>(
+  InterfaceStyleNotifier.new,
+);
