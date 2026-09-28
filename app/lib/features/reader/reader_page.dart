@@ -68,14 +68,6 @@ bool readerSidePaneVisible({
   required bool open,
 }) => chromeVisible && wide && open;
 
-/// Space the floating reader bar occupies, so side panes start below it.
-double readerGlassTopClearance(
-  double viewPaddingTop, {
-  bool searchHits = false,
-}) {
-  return viewPaddingTop + 8 + kToolbarHeight + 12 + (searchHits ? 48 : 0);
-}
-
 /// SPEC-005 / SPEC-009 / SPEC-026 reader: TOC, HTML body, modes, بطاقة, in-book search, immersive chrome.
 class ReaderPage extends ConsumerStatefulWidget {
   const ReaderPage({
@@ -161,6 +153,10 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
 
   /// Prevents multi-page jumps from a single overscroll gesture.
   bool _edgePageLock = false;
+
+  /// Page index reached from the previous/next buttons. That turn keeps
+  /// chrome up; a swipe still hides it.
+  int? _keepChromeForPage;
 
   /// SPEC-026. Starts visible; not persisted.
   final _chrome = ReaderChromeController();
@@ -347,7 +343,11 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
 
   void _onPage(int i) {
     final from = _index;
-    final hid = _chrome.onPageIndexChanged(from: from, to: i);
+    final keepChrome = _keepChromeForPage == i;
+    if (keepChrome) _keepChromeForPage = null;
+    final hid = keepChrome
+        ? false
+        : _chrome.onPageIndexChanged(from: from, to: i);
     setState(() {
       _index = i;
       _syncJumpField();
@@ -366,15 +366,28 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     }
   }
 
-  void _goRelative(int delta) {
+  void _goRelative(int delta, {bool keepChrome = false}) {
     final next = _index + delta;
     if (next < 0 || next >= _ids.length) return;
-    if (_mode == ReadingMode.continuousV) {
-      _onPage(next);
-    } else {
-      _pageController?.jumpToPage(next);
-      _onPage(next);
+    if (keepChrome) _keepChromeForPage = next;
+    _onPage(next);
+    if (_mode == ReadingMode.continuousV) return;
+    _jumpReaderTo(next);
+  }
+
+  /// [PageView.jumpToPage] during the same frame as a chrome rebuild is
+  /// dropped on web. Jump now, and again after the frame, if the view
+  /// is still on the old page.
+  void _jumpReaderTo(int page) {
+    void jump() {
+      final controller = _pageController;
+      if (!mounted || controller == null || !controller.hasClients) return;
+      if (controller.page?.round() == page) return;
+      controller.jumpToPage(page);
     }
+
+    jump();
+    WidgetsBinding.instance.addPostFrameCallback((_) => jump());
   }
 
   void _jumpToId(int pageId) {
@@ -708,19 +721,12 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   }) {
     final chromeVisible = _chrome.visible;
     final viewPad = MediaQuery.viewPaddingOf(context);
-    final topClearance = glassOn && chromeVisible
-        ? readerGlassTopClearance(viewPad.top, searchHits: _hits.isNotEmpty)
-        : 0.0;
     // Full-bleed pages (glass, or chrome hidden) keep the system insets only.
     // Manuscript chrome already occupies the status bar and the home indicator.
     final fullBleed = glassOn || !chromeVisible;
     final pagePadding = EdgeInsets.only(
       top: fullBleed ? viewPad.top : 0,
       bottom: fullBleed ? viewPad.bottom : 0,
-    );
-    Widget pane(Widget child) => Padding(
-      padding: EdgeInsets.only(top: topClearance),
-      child: child,
     );
     final page = Listener(
       onPointerDown: _onBodyPointerDown,
@@ -757,11 +763,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         if (showToc)
           SizedBox(
             width: 300,
-            child: pane(
-              _sideIndexPane(
-                l10n,
-                onClose: () => setState(() => _showToc = false),
-              ),
+            child: _sideIndexPane(
+              l10n,
+              onClose: () => setState(() => _showToc = false),
             ),
           ),
         if (showToc) const VerticalDivider(width: 1),
@@ -774,7 +778,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                     Positioned.fill(child: page),
                     if (wide && chromeVisible && !showToc)
                       PositionedDirectional(
-                        top: topClearance + 8,
+                        top: viewPad.top + 8,
                         start: 4,
                         child: _PaneEdgeButton(
                           tooltip: l10n.toc,
@@ -784,7 +788,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                       ),
                     if (wide && chromeVisible && !showCard)
                       PositionedDirectional(
-                        top: topClearance + 8,
+                        top: viewPad.top + 8,
                         end: 4,
                         child: _PaneEdgeButton(
                           tooltip: l10n.bookCard,
@@ -805,12 +809,10 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         if (showCard)
           SizedBox(
             width: 300,
-            child: pane(
-              _cardPane(
-                l10n,
-                title,
-                onClose: () => setState(() => _showCard = false),
-              ),
+            child: _cardPane(
+              l10n,
+              title,
+              onClose: () => setState(() => _showCard = false),
             ),
           ),
       ],
@@ -1006,12 +1008,14 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                     ),
                   ),
                 Row(
+                  textDirection: TextDirection.rtl,
                   children: [
                     TonalIconButton(
                       tooltip: l10n.previousPage,
                       icon: Icons.chevron_right,
+                      iconTextDirection: TextDirection.ltr,
                       enabled: canPrev,
-                      onPressed: () => _goRelative(-1),
+                      onPressed: () => _goRelative(-1, keepChrome: true),
                     ),
                     Expanded(
                       child: Center(
@@ -1048,8 +1052,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                     TonalIconButton(
                       tooltip: l10n.nextPage,
                       icon: Icons.chevron_left,
+                      iconTextDirection: TextDirection.ltr,
                       enabled: canNext,
-                      onPressed: () => _goRelative(1),
+                      onPressed: () => _goRelative(1, keepChrome: true),
                     ),
                   ],
                 ),
@@ -1150,24 +1155,28 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         : l10n.notesTab;
     return Column(
       children: [
-        if (onClose != null)
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: IconButton(
-              tooltip: l10n.cancel,
-              icon: const Icon(Icons.close),
-              onPressed: onClose,
-            ),
-          ),
         Padding(
           padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
-          child: SegmentedPills(
-            labels: [l10n.toc, bookmarkLabel, notesLabel],
-            selectedIndex: _paneTab,
-            onChanged: (i) {
-              setState(() => _paneTab = i);
-              onSheetTick?.call();
-            },
+          child: Row(
+            children: [
+              Expanded(
+                child: SegmentedPills(
+                  labels: [l10n.toc, bookmarkLabel, notesLabel],
+                  selectedIndex: _paneTab,
+                  onChanged: (i) {
+                    setState(() => _paneTab = i);
+                    onSheetTick?.call();
+                  },
+                ),
+              ),
+              if (onClose != null)
+                IconButton(
+                  tooltip: l10n.cancel,
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.close, size: 18),
+                  onPressed: onClose,
+                ),
+            ],
           ),
         ),
         Expanded(

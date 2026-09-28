@@ -10,12 +10,17 @@ class TonalIconButton extends StatelessWidget {
     required this.onPressed,
     this.tooltip,
     this.enabled = true,
+    this.iconTextDirection,
   });
 
   final IconData icon;
   final VoidCallback? onPressed;
   final String? tooltip;
   final bool enabled;
+
+  /// Forces the glyph direction. Chevron icons mirror with the locale, which
+  /// points reader previous/next the wrong way in Arabic.
+  final TextDirection? iconTextDirection;
 
   @override
   Widget build(BuildContext context) {
@@ -29,10 +34,12 @@ class TonalIconButton extends StatelessWidget {
           foregroundColor: t.emphasis,
           disabledForegroundColor: t.muted.withValues(alpha: 0.4),
           backgroundColor: enabled ? t.green100 : t.segmentTrack,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           minimumSize: const Size(44, 44),
         ),
-        icon: Icon(icon, size: 22),
+        icon: Icon(icon, size: 22, textDirection: iconTextDirection),
       );
     }
     return IconButton(
@@ -43,14 +50,16 @@ class TonalIconButton extends StatelessWidget {
             ? glass.foregroundAccent
             : glass.foregroundInk.withValues(alpha: 0.4),
         disabledForegroundColor: glass.foregroundInk.withValues(alpha: 0.4),
-        backgroundColor: enabled ? glass.activeCapsule : const Color(0x00000000),
+        backgroundColor: enabled
+            ? glass.activeCapsule
+            : const Color(0x00000000),
         side: BorderSide(
           color: enabled ? glass.stroke : glass.stroke.withValues(alpha: 0.4),
         ),
         shape: const CircleBorder(),
         minimumSize: const Size(44, 44),
       ),
-      icon: Icon(icon, size: 22),
+      icon: Icon(icon, size: 22, textDirection: iconTextDirection),
     );
   }
 }

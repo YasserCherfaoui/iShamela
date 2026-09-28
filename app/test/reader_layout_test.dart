@@ -20,14 +20,6 @@ void main() {
     );
   });
 
-  test('side panes clear the floating glass bar', () {
-    expect(readerGlassTopClearance(0), kToolbarHeight + 20);
-    expect(
-      readerGlassTopClearance(24, searchHits: true),
-      24 + 8 + kToolbarHeight + 12 + 48,
-    );
-  });
-
   test('study time stays in minutes under an hour and uses hours after', () {
     expect(formatStudyMinutes(59, const Locale('en')), '59');
     expect(formatStudyMinutes(60, const Locale('en')), '1h');

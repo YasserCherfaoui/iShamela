@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Fixed
 
+- Reader side panes sit flush with the top of the window. The contents close control sits on the tab row. Previous and next keep the bars on screen, point along the reading direction, and still turn the page on the web.
 - macOS no longer maps `sqlite3.framework` twice (the `PodsDummy_sqlite3` warning). Liquid Glass chrome on wide screens wraps its items: the side rail is a short pill, and the reader bar is only as wide as its title and actions. The iOS glass view factory matches Flutter's non-optional `createArgsCodec()`.
 - macOS release builds can sign in again. The downloaded app is unsigned, so Firebase Auth could not store the session and every Google, Apple, and email sign-in ended with “Something went wrong” after the account picker closed.
 - Reading progress syncs when a book is closed, and is pulled when the app opens or the home screen is pulled down. Every saved book position is uploaded, not only the latest one.

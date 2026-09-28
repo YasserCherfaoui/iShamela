@@ -17,12 +17,14 @@ class GlassBackdropScope extends InheritedWidget {
 
   static int depthOf(BuildContext context) {
     if (!context.mounted) return 0;
-    final scope = context.dependOnInheritedWidgetOfExactType<GlassBackdropScope>();
+    final scope = context
+        .dependOnInheritedWidgetOfExactType<GlassBackdropScope>();
     return scope?.depth ?? 0;
   }
 
   @override
-  bool updateShouldNotify(GlassBackdropScope oldWidget) => depth != oldWidget.depth;
+  bool updateShouldNotify(GlassBackdropScope oldWidget) =>
+      depth != oldWidget.depth;
 }
 
 /// Caps live backdrop layers at two per screen (SPEC-027 §6).
@@ -47,15 +49,11 @@ enum GlassShapeKind { pill, bar, sheet }
 
 /// [GlassShape.pill], [GlassShape.bar], or [GlassShape.sheet] (SPEC-027 §5.1).
 class GlassShape {
-  const GlassShape.pill()
-      : kind = GlassShapeKind.pill,
-        radius = null;
+  const GlassShape.pill() : kind = GlassShapeKind.pill, radius = null;
 
   const GlassShape.bar([this.radius]) : kind = GlassShapeKind.bar;
 
-  const GlassShape.sheet()
-      : kind = GlassShapeKind.sheet,
-        radius = null;
+  const GlassShape.sheet() : kind = GlassShapeKind.sheet, radius = null;
 
   final GlassShapeKind kind;
   final double? radius;
@@ -174,8 +172,24 @@ class _DrawnGlassSurfaceState extends State<DrawnGlassSurface> {
     );
 
     if (filter != null) {
-      layers = BackdropFilter(filter: filter, child: layers);
-      layers = GlassBackdropScope(depth: GlassBackdropScope.depthOf(context) + 1, child: layers);
+      // The controls stay outside the filter. On web a BackdropFilter
+      // ancestor drops pointer events, so prev/next never receive the click.
+      layers = Stack(
+        fit: StackFit.passthrough,
+        children: [
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: filter,
+              child: const SizedBox.expand(),
+            ),
+          ),
+          layers,
+        ],
+      );
+      layers = GlassBackdropScope(
+        depth: GlassBackdropScope.depthOf(context) + 1,
+        child: layers,
+      );
     }
 
     return RepaintBoundary(
@@ -190,10 +204,7 @@ class _DrawnGlassSurfaceState extends State<DrawnGlassSurface> {
             ),
           ],
         ),
-        child: ClipRRect(
-          borderRadius: radius,
-          child: layers,
-        ),
+        child: ClipRRect(borderRadius: radius, child: layers),
       ),
     );
   }
