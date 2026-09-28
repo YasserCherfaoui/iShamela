@@ -14,6 +14,7 @@ import 'package:ishamela/features/auth/auth_welcome_screen.dart';
 import 'package:ishamela/features/catalog/catalog_service.dart';
 import 'package:ishamela/features/downloads/downloads_page.dart';
 import 'package:ishamela/features/home/home_stats_dao.dart';
+import 'package:ishamela/features/home/study_duration.dart';
 import 'package:ishamela/features/home/home_sync_sheet.dart';
 import 'package:ishamela/features/library/bookmarks_page.dart';
 import 'package:ishamela/features/library/history_page.dart';
@@ -651,7 +652,7 @@ class _WeeklyStatsStrip extends StatelessWidget {
         label: l10n.homeStreakDays,
       ),
       _StatChip(
-        value: _statDigits(stats.weeklyMinutes, locale),
+        value: formatStudyMinutes(stats.weeklyMinutes, locale),
         label: l10n.homeWeeklyMinutes,
       ),
       _StatChip(

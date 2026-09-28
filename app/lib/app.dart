@@ -15,8 +15,11 @@ import 'package:ishamela/features/settings/settings_page.dart';
 import 'package:ishamela/features/splash/startup_splash.dart';
 import 'package:ishamela/ui/app_bottom_nav.dart';
 import 'package:ishamela/ui/glass/chrome/glass_tab_bar.dart';
+import 'package:ishamela/ui/glass/drawn/drawn_glass_surface.dart';
 import 'package:ishamela/ui/glass/glass_runtime.dart';
+import 'package:ishamela/ui/glass/glass_surface.dart';
 import 'package:ishamela/ui/glass/interface_style.dart';
+import 'package:ishamela/ui/theme/glass_tokens.dart';
 import 'package:ishamela/ui/theme/ishamela_theme.dart';
 
 class IshamelaApp extends ConsumerWidget {
@@ -43,7 +46,7 @@ class IshamelaApp extends ConsumerWidget {
       ],
       theme: buildIshamelaTheme(atmosphere),
       // SP-06: catalog sync is background; splash only awaits local DB.
-        builder: (context, child) {
+      builder: (context, child) {
         return GlassRuntime(
           child: StartupSplashGate(
             child: DownloadSnackHost(
@@ -105,10 +108,14 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     final wide = MediaQuery.sizeOf(context).width >= 800;
     final glass =
         ref.watch(interfaceStyleProvider) == InterfaceStyle.liquidGlass;
+    final glassTokens = glass
+        ? GlassTokens.forAtmosphere(ref.watch(readingAtmosphereProvider))
+        : null;
     final index = ref.watch(homeTabIndexProvider);
     final locale = ref.watch(appLocaleProvider);
-    final textDir =
-        locale.languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr;
+    final textDir = locale.languageCode == 'ar'
+        ? TextDirection.rtl
+        : TextDirection.ltr;
     // SPEC-023: Home · Library · Catalog · Settings
     final pages = const [
       HomePage(),
@@ -125,10 +132,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
     final activeCount = _activeDownloadCount();
     final destinations = [
-      AppBottomNavDestination(
-        icon: Icons.home_outlined,
-        label: l10n.tabHome,
-      ),
+      AppBottomNavDestination(icon: Icons.home_outlined, label: l10n.tabHome),
       AppBottomNavDestination(
         icon: Icons.library_books_outlined,
         label: l10n.tabLibrary,
@@ -147,25 +151,81 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     final body = pages[index];
 
     if (wide) {
+      final rail = NavigationRail(
+        selectedIndex: index,
+        onDestinationSelected: _select,
+        labelType: NavigationRailLabelType.all,
+        backgroundColor: glass ? const Color(0x00000000) : null,
+        indicatorColor: glass ? const Color(0x00000000) : null,
+        selectedIconTheme: glassTokens == null
+            ? null
+            : IconThemeData(color: glassTokens.foregroundAccent),
+        unselectedIconTheme: glassTokens == null
+            ? null
+            : IconThemeData(color: glassTokens.foregroundInk),
+        selectedLabelTextStyle: glassTokens == null
+            ? null
+            : TextStyle(
+                fontWeight: FontWeight.w700,
+                color: glassTokens.foregroundAccent,
+              ),
+        unselectedLabelTextStyle: glassTokens == null
+            ? null
+            : TextStyle(
+                fontWeight: FontWeight.w500,
+                color: glassTokens.foregroundInk.withValues(alpha: 0.72),
+              ),
+        destinations: [
+          for (final d in destinations)
+            NavigationRailDestination(
+              icon: _railIcon(d, tokens: glassTokens),
+              selectedIcon: _railIcon(d, selected: true, tokens: glassTokens),
+              label: Text(d.label),
+            ),
+        ],
+      );
       return Directionality(
         textDirection: textDir,
         child: Scaffold(
           body: Row(
             children: [
-              NavigationRail(
-                selectedIndex: index,
-                onDestinationSelected: _select,
-                labelType: NavigationRailLabelType.all,
-                destinations: [
-                  for (final d in destinations)
-                    NavigationRailDestination(
-                      icon: _railIcon(d),
-                      selectedIcon: _railIcon(d, selected: true),
-                      label: Text(d.label),
+              if (glass)
+                Align(
+                  alignment: AlignmentDirectional.topStart,
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      12,
+                      MediaQuery.viewPaddingOf(context).top + 8,
+                      8,
+                      16,
                     ),
-                ],
-              ),
-              const VerticalDivider(width: 1),
+                    child: GlassSurface(
+                      shape: const GlassShape.pill(),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 8,
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            for (var i = 0; i < destinations.length; i++)
+                              _GlassRailDestination(
+                                destination: destinations[i],
+                                selected: i == index,
+                                tokens: glassTokens!,
+                                onTap: () => _select(i),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+              else ...[
+                rail,
+                const VerticalDivider(width: 1),
+              ],
               Expanded(
                 child: Center(
                   child: ConstrainedBox(
@@ -217,7 +277,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     );
   }
 
-  Widget _railIcon(AppBottomNavDestination d, {bool selected = false}) {
+  Widget _railIcon(
+    AppBottomNavDestination d, {
+    bool selected = false,
+    GlassTokens? tokens,
+  }) {
     final count = d.badgeCount ?? 0;
     Widget icon = Icon(d.icon);
     if (selected) {
@@ -225,16 +289,75 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       icon = Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: t.primaryContainer,
+          color: tokens?.activeCapsule ?? t.primaryContainer,
           borderRadius: BorderRadius.circular(999),
         ),
-        child: Icon(d.icon, color: t.onPrimaryContainer),
+        child: Icon(
+          d.icon,
+          color: tokens?.foregroundAccent ?? t.onPrimaryContainer,
+        ),
       );
     }
     if (count <= 0) return icon;
-    return Badge(
-      label: Text(count > 99 ? '99+' : '$count'),
-      child: icon,
+    return Badge(label: Text(count > 99 ? '99+' : '$count'), child: icon);
+  }
+}
+
+class _GlassRailDestination extends StatelessWidget {
+  const _GlassRailDestination({
+    required this.destination,
+    required this.selected,
+    required this.tokens,
+    required this.onTap,
+  });
+
+  final AppBottomNavDestination destination;
+  final bool selected;
+  final GlassTokens tokens;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected
+        ? tokens.foregroundAccent
+        : tokens.foregroundInk.withValues(alpha: 0.72);
+    final count = destination.badgeCount ?? 0;
+    Widget icon = Icon(destination.icon, color: color, size: 22);
+    if (selected) {
+      icon = Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: tokens.activeCapsule,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: icon,
+      );
+    }
+    if (count > 0) {
+      icon = Badge(label: Text(count > 99 ? '99+' : '$count'), child: icon);
+    }
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            icon,
+            const SizedBox(height: 2),
+            Text(
+              destination.label,
+              style: TextStyle(
+                fontFamily: kFontUi,
+                fontSize: 11,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

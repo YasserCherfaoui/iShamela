@@ -73,7 +73,7 @@ enum IshamelaGlassAvailability {
 }
 
 final class IshamelaGlassViewFactory: NSObject, FlutterPlatformViewFactory {
-  func createArgsCodec() -> (FlutterMessageCodec & NSObjectProtocol)? {
+  func createArgsCodec() -> FlutterMessageCodec & NSObjectProtocol {
     FlutterStandardMessageCodec.sharedInstance()
   }
 

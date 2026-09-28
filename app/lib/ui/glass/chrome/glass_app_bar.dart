@@ -12,11 +12,11 @@ class GlassAppBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final top = MediaQuery.viewPaddingOf(context).top;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(12, top + 8, 12, 0),
-      child: GlassSurface(
-        shape: const GlassShape.bar(),
-        child: child,
+    return Align(
+      alignment: Alignment.topCenter,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(12, top + 8, 12, 0),
+        child: GlassSurface(shape: const GlassShape.pill(), child: child),
       ),
     );
   }

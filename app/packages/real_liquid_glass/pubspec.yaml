@@ -1,0 +1,24 @@
+name: real_liquid_glass
+description: >-
+  Real Liquid Glass containers and bottom bars. Hosts Apple's native
+  UIGlassEffect on iOS 26+ and NSGlassEffectView on macOS 26+.
+  Vendored from 0.3.0 (MIT). The SDK constraint is lowered to this app's
+  Dart 3.8; the package source is otherwise unchanged.
+version: 0.3.0
+publish_to: none
+
+environment:
+  sdk: ^3.8.1
+  flutter: ">=3.32.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      ios:
+        pluginClass: LiquidGlassContainerPlugin
+      macos:
+        pluginClass: LiquidGlassContainerPlugin

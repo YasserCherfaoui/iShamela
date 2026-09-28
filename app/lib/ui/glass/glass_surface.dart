@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:real_liquid_glass/real_liquid_glass.dart';
 
 import 'package:ishamela/ui/glass/drawn/drawn_glass_surface.dart';
 import 'package:ishamela/ui/glass/glass_capability.dart';
 import 'package:ishamela/ui/glass/interface_style.dart';
-import 'native/native_glass_view_stub.dart'
-    if (dart.library.io) 'native/native_glass_view_io.dart';
 import 'package:ishamela/ui/theme/glass_tokens.dart';
 import 'package:ishamela/ui/theme/ishamela_tokens.dart';
 import 'package:ishamela/ui/theme/reader_theme_tokens.dart';
@@ -90,29 +89,13 @@ class GlassSurface extends StatelessWidget {
         ? tokens.frosted()
         : tokens;
 
-    if (capability == GlassCapability.native &&
-        nativeGlassViewSupported &&
-        !opaque) {
-      final radius = shape.borderRadius(paintTokens);
-      final rtl = Directionality.of(context) == TextDirection.rtl;
-      return Stack(
-        fit: StackFit.passthrough,
-        children: [
-          Positioned.fill(
-            child: IgnorePointer(
-              child: buildNativeGlassView(
-                creationParams: {
-                  'tint': (tintOverride ?? paintTokens.tint).toARGB32(),
-                  'radius': radius.topLeft.x,
-                  'shape': shape.kind.name,
-                  'rtl': rtl,
-                  'interactive': interactive,
-                },
-              ),
-            ),
-          ),
-          GlassClusterMarker(child: child),
-        ],
+    if (capability == GlassCapability.native && !opaque) {
+      return LiquidGlassContainer(
+        style: LiquidGlassStyle.regular,
+        shape: _liquidShape(shape, paintTokens),
+        tint: tintOverride ?? paintTokens.tint,
+        interactive: interactive,
+        child: GlassClusterMarker(child: child),
       );
     }
 
@@ -124,6 +107,17 @@ class GlassSurface extends StatelessWidget {
       opaque: opaque,
       child: GlassClusterMarker(child: child),
     );
+  }
+}
+
+LiquidGlassShape _liquidShape(GlassShape shape, GlassTokens tokens) {
+  final radius = shape.borderRadius(tokens).topLeft.x;
+  switch (shape.kind) {
+    case GlassShapeKind.pill:
+      return const LiquidGlassShape.capsule();
+    case GlassShapeKind.bar:
+    case GlassShapeKind.sheet:
+      return LiquidGlassShape.roundedRectangle(radius);
   }
 }
 

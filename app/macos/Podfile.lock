@@ -1436,6 +1436,8 @@ PODS:
   - PromisesObjC (2.4.1)
   - PromisesSwift (2.4.1):
     - PromisesObjC (= 2.4.1)
+  - real_liquid_glass (0.3.0):
+    - FlutterMacOS
   - share_plus (0.0.1):
     - FlutterMacOS
   - sign_in_with_apple (0.0.1):
@@ -1480,6 +1482,7 @@ DEPENDENCIES:
   - google_sign_in_ios (from `Flutter/ephemeral/.symlinks/plugins/google_sign_in_ios/darwin`)
   - package_info_plus (from `Flutter/ephemeral/.symlinks/plugins/package_info_plus/macos`)
   - path_provider_foundation (from `Flutter/ephemeral/.symlinks/plugins/path_provider_foundation/darwin`)
+  - real_liquid_glass (from `Flutter/ephemeral/.symlinks/plugins/real_liquid_glass/macos`)
   - share_plus (from `Flutter/ephemeral/.symlinks/plugins/share_plus/macos`)
   - sign_in_with_apple (from `Flutter/ephemeral/.symlinks/plugins/sign_in_with_apple/macos`)
   - sqlite3_flutter_libs (from `Flutter/ephemeral/.symlinks/plugins/sqlite3_flutter_libs/darwin`)
@@ -1535,6 +1538,8 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/package_info_plus/macos
   path_provider_foundation:
     :path: Flutter/ephemeral/.symlinks/plugins/path_provider_foundation/darwin
+  real_liquid_glass:
+    :path: Flutter/ephemeral/.symlinks/plugins/real_liquid_glass/macos
   share_plus:
     :path: Flutter/ephemeral/.symlinks/plugins/share_plus/macos
   sign_in_with_apple:
@@ -1582,6 +1587,7 @@ SPEC CHECKSUMS:
   path_provider_foundation: 2b6b4c569c0fb62ec74538f866245ac84301af46
   PromisesObjC: 752c3227f599e3467650e47ea36f433eeb10c273
   PromisesSwift: 217dea0fd5d2ad65222a109c48698add13cc1c5b
+  real_liquid_glass: 991d7ecb3f642c3271383f261ddb8b666342202c
   share_plus: 1fa619de8392a4398bfaf176d441853922614e89
   sign_in_with_apple: a9e97e744e8edc36aefc2723111f652102a7a727
   sqlite3: a51c07cf16e023d6c48abd5e5791a61a47354921

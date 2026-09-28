@@ -20,6 +20,7 @@ import 'package:ishamela/features/reader/book_database.dart';
 import 'package:ishamela/features/reader/export_sheet.dart';
 import 'package:ishamela/features/reader/sticky_toc.dart';
 import 'package:ishamela/ui/app_search_field.dart';
+import 'package:ishamela/ui/glass/drawn/drawn_glass_surface.dart';
 import 'package:ishamela/ui/glass/glass_surface.dart';
 import 'package:ishamela/ui/glass/chrome/glass_app_bar.dart';
 import 'package:ishamela/ui/glass/chrome/glass_filter_chip.dart';
@@ -57,6 +58,22 @@ String _readingModeKey(ReadingMode mode) {
     case ReadingMode.continuousV:
       return 'continuous_v';
   }
+}
+
+/// Wide side panes follow the user's open flag. A very wide window does not
+/// force them open.
+bool readerSidePaneVisible({
+  required bool chromeVisible,
+  required bool wide,
+  required bool open,
+}) => chromeVisible && wide && open;
+
+/// Space the floating reader bar occupies, so side panes start below it.
+double readerGlassTopClearance(
+  double viewPaddingTop, {
+  bool searchHits = false,
+}) {
+  return viewPaddingTop + 8 + kToolbarHeight + 12 + (searchHits ? 48 : 0);
 }
 
 /// SPEC-005 / SPEC-009 / SPEC-026 reader: TOC, HTML body, modes, بطاقة, in-book search, immersive chrome.
@@ -456,9 +473,16 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     final title = widget.title ?? _db?.meta('title') ?? 'book_${widget.bookId}';
     final width = MediaQuery.sizeOf(context).width;
     final wide = width >= 800;
-    final veryWide = width >= 1200;
-    final showToc = _chrome.visible && wide && (veryWide || _showToc);
-    final showCard = _chrome.visible && wide && (veryWide || _showCard);
+    final showToc = readerSidePaneVisible(
+      chromeVisible: _chrome.visible,
+      wide: wide,
+      open: _showToc,
+    );
+    final showCard = readerSidePaneVisible(
+      chromeVisible: _chrome.visible,
+      wide: wide,
+      open: _showCard,
+    );
     final reader = ReaderThemeTokens.of(context);
     final page = (_db != null && _ids.isNotEmpty)
         ? _db!.pageById(_ids[_index])
@@ -478,277 +502,318 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
             _AnimatedChrome(
               visible: chromeVisible,
               alignment: Alignment.topCenter,
-              child: _MaybeGlassBar(
-                enabled: glassOn,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    AppBar(
-                      primary: !glassOn,
-                      backgroundColor: glassOn
-                          ? const Color(0x00000000)
-                          : reader.raised,
-                      elevation: glassOn ? 0 : null,
-                      scrolledUnderElevation: glassOn ? 0 : null,
-                      surfaceTintColor: glassOn
-                          ? const Color(0x00000000)
-                          : null,
-                      shadowColor: glassOn ? const Color(0x00000000) : null,
-                      shape: glassOn ? const RoundedRectangleBorder() : null,
-                      foregroundColor: glassOn
-                          ? GlassTokens.forAtmosphere(reader.atmosphere)
-                              .foregroundInk
-                          : null,
-                      iconTheme: glassOn
-                          ? IconThemeData(
-                              color: GlassTokens.forAtmosphere(reader.atmosphere)
-                                  .foregroundAccent,
-                            )
-                          : null,
-                    title: Column(
-                      children: [
-                        Text(
-                          title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: 'Amiri',
-                            fontWeight: FontWeight.w700,
-                            fontSize: 18,
-                            color: glassOn
-                                ? GlassTokens.forAtmosphere(reader.atmosphere)
-                                    .foregroundInk
-                                : reader.body,
-                          ),
-                        ),
-                        if (_db != null)
-                          Text(
-                            part != null && part.isNotEmpty
-                                ? 'ج$part · ص$printNo'
-                                : 'ص$printNo',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: glassOn
-                                  ? GlassTokens.forAtmosphere(reader.atmosphere)
-                                      .foregroundInk
-                                      .withValues(alpha: 0.72)
-                                  : reader.muted,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _MaybeGlassBar(
+                    enabled: glassOn,
+                    child: glassOn
+                        ? _CompactGlassBar(
+                            title: title,
+                            subtitle: _db == null
+                                ? null
+                                : (part != null && part.isNotEmpty
+                                      ? 'ج$part · ص$printNo'
+                                      : 'ص$printNo'),
+                            atmosphere: reader.atmosphere,
+                            actions: _readerBarActions(
+                              l10n,
+                              page,
+                              title,
+                              wide: wide,
+                            ),
+                          )
+                        : AppBar(
+                            primary: true,
+                            backgroundColor: reader.raised,
+                            title: Column(
+                              children: [
+                                Text(
+                                  title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontFamily: 'Amiri',
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 18,
+                                    color: reader.body,
+                                  ),
+                                ),
+                                if (_db != null)
+                                  Text(
+                                    part != null && part.isNotEmpty
+                                        ? 'ج$part · ص$printNo'
+                                        : 'ص$printNo',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: reader.muted,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            centerTitle: true,
+                            actions: _readerBarActions(
+                              l10n,
+                              page,
+                              title,
+                              wide: wide,
                             ),
                           ),
-                      ],
-                    ),
-                    centerTitle: true,
-                    actions: [
-                      if (wide)
-                        SizedBox(
-                          width: 200,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: AppSearchField(
-                              hintText: l10n.searchInBook,
-                              initialQuery: _searchCtrl.text,
-                              onChanged: (v) => _searchCtrl.text = v,
-                              onSubmitted: (_) {
-                                _runSearch();
-                                setState(() {});
-                              },
-                            ),
-                          ),
-                        )
-                      else
-                        IconButton(
-                          tooltip: l10n.searchInBook,
-                          icon: const Icon(Icons.search),
-                          onPressed: () => _openSearchSheet(l10n),
-                        ),
-                      _bookmarkToggleButton(l10n, page),
-                      if (wide)
-                        TextButton(
-                          style: glassOn
-                              ? TextButton.styleFrom(
-                                  foregroundColor:
-                                      GlassTokens.forAtmosphere(
-                                        reader.atmosphere,
-                                      ).foregroundAccent,
-                                )
-                              : null,
-                          onPressed: () => setState(() => _showToc = !_showToc),
-                          child: Text(l10n.toc),
-                        )
-                      else
-                        IconButton(
-                          tooltip: l10n.toc,
-                          icon: const Icon(Icons.list_alt),
-                          onPressed: () => _openTocSheet(context, l10n),
-                        ),
-                      if (wide)
-                        TextButton(
-                          style: glassOn
-                              ? TextButton.styleFrom(
-                                  foregroundColor:
-                                      GlassTokens.forAtmosphere(
-                                        reader.atmosphere,
-                                      ).foregroundAccent,
-                                )
-                              : null,
-                          onPressed: () =>
-                              setState(() => _showCard = !_showCard),
-                          child: Text(l10n.bookCard),
-                        ),
-                      PopupMenuButton<String>(
-                        onSelected: (v) async {
-                          switch (v) {
-                            case 'card':
-                              if (wide) {
-                                setState(() => _showCard = !_showCard);
-                              } else {
-                                _openCardSheet(context, l10n, title);
-                              }
-                            case 'export':
-                              await showAnnotationsExportSheet(
-                                context,
-                                bookId: widget.bookId,
-                                title: title,
-                                authorName: widget.authorName,
-                              );
-                            case 'mode_h':
-                              _setMode(ReadingMode.pagedH);
-                            case 'mode_v':
-                              _setMode(ReadingMode.pagedV);
-                            case 'mode_c':
-                              _setMode(ReadingMode.continuousV);
-                            case 'atm_paper':
-                              ref
-                                  .read(readingAtmosphereProvider.notifier)
-                                  .save(ReadingAtmosphere.paper);
-                            case 'atm_sepia':
-                              ref
-                                  .read(readingAtmosphereProvider.notifier)
-                                  .save(ReadingAtmosphere.sepia);
-                            case 'atm_night':
-                              ref
-                                  .read(readingAtmosphereProvider.notifier)
-                                  .save(ReadingAtmosphere.night);
-                          }
-                        },
-                        itemBuilder: (_) {
-                          final state = ref
-                              .read(stateDatabaseProvider)
-                              .maybeWhen(data: (s) => s, orElse: () => null);
-                          final count =
-                              state?.annotationCountForBook(widget.bookId) ?? 0;
-                          return [
-                            if (!wide)
-                              PopupMenuItem(
-                                value: 'card',
-                                child: Text(l10n.bookCard),
-                              ),
-                            PopupMenuItem(
-                              value: 'export',
-                              enabled: count > 0,
-                              child: Text(
-                                count > 0
-                                    ? l10n.exportAnnotations
-                                    : l10n.exportNoAnnotationsHint,
-                              ),
-                            ),
-                            if (!wide) const PopupMenuDivider(),
-                            PopupMenuItem(
-                              value: 'mode_h',
-                              child: Text(l10n.modePagedH),
-                            ),
-                            PopupMenuItem(
-                              value: 'mode_v',
-                              child: Text(l10n.modePagedV),
-                            ),
-                            PopupMenuItem(
-                              value: 'mode_c',
-                              child: Text(l10n.modeContinuousV),
-                            ),
-                            const PopupMenuDivider(),
-                            PopupMenuItem(
-                              value: 'atm_paper',
-                              child: Text(l10n.atmospherePaper),
-                            ),
-                            PopupMenuItem(
-                              value: 'atm_sepia',
-                              child: Text(l10n.atmosphereSepia),
-                            ),
-                            PopupMenuItem(
-                              value: 'atm_night',
-                              child: Text(l10n.atmosphereNight),
-                            ),
-                          ];
-                        },
-                      ),
-                    ],
                   ),
                   if (_hits.isNotEmpty) _searchHits(l10n),
                 ],
               ),
-            ),
             ),
             Expanded(
               child: _error != null
                   ? Center(child: Text('$_error'))
                   : _db == null
                   ? const Center(child: CircularProgressIndicator())
-                  : Row(
-                      children: [
-                        if (showToc)
-                          SizedBox(width: 300, child: _sideIndexPane(l10n)),
-                        if (showToc) const VerticalDivider(width: 1),
-                        Expanded(
-                          child: Listener(
-                            onPointerDown: _onBodyPointerDown,
-                            onPointerUp: _onBodyPointerUp,
-                            onPointerCancel: _onBodyPointerCancel,
-                            child: Semantics(
-                              label: _chrome.visible
-                                  ? l10n.hideReaderControls
-                                  : l10n.showReaderControls,
-                              onTap: _toggleChromeFromSemantics,
-                              child: Padding(
-                                padding: _chrome.visible
-                                    ? EdgeInsets.zero
-                                    : EdgeInsets.only(
-                                        top: MediaQuery.viewPaddingOf(
-                                          context,
-                                        ).top,
-                                        bottom: MediaQuery.viewPaddingOf(
-                                          context,
-                                        ).bottom,
-                                      ),
-                                child: Center(
-                                  child: ConstrainedBox(
-                                    constraints: const BoxConstraints(
-                                      maxWidth: 660,
-                                    ),
-                                    child: _bodyPane(title),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (showCard) const VerticalDivider(width: 1),
-                        if (showCard)
-                          SizedBox(width: 300, child: _cardPane(l10n, title)),
-                      ],
+                  : _readerColumns(
+                      l10n,
+                      title,
+                      wide: wide,
+                      glassOn: glassOn,
+                      showToc: showToc,
+                      showCard: showCard,
                     ),
             ),
-            if (_db != null)
-              _AnimatedChrome(
-                visible: _chrome.visible,
-                alignment: Alignment.bottomCenter,
-                child: _MaybeGlassPill(
-                  enabled: glassOn,
-                  child: _bottomNavBar(l10n, glass: glassOn),
-                ),
-              ),
           ],
         ),
       ),
+    );
+  }
+
+  List<Widget> _readerBarActions(
+    AppLocalizations l10n,
+    BookPage? page,
+    String title, {
+    required bool wide,
+  }) {
+    return [
+      if (wide)
+        Flexible(
+          flex: 2,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 200),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: AppSearchField(
+                hintText: l10n.searchInBook,
+                initialQuery: _searchCtrl.text,
+                onChanged: (v) => _searchCtrl.text = v,
+                onSubmitted: (_) {
+                  _runSearch();
+                  setState(() {});
+                },
+              ),
+            ),
+          ),
+        )
+      else
+        IconButton(
+          tooltip: l10n.searchInBook,
+          icon: const Icon(Icons.search),
+          onPressed: () => _openSearchSheet(l10n),
+        ),
+      _bookmarkToggleButton(l10n, page),
+      if (!wide)
+        IconButton(
+          tooltip: l10n.toc,
+          icon: const Icon(Icons.list_alt),
+          onPressed: () => _openTocSheet(context, l10n),
+        ),
+      PopupMenuButton<String>(
+        onSelected: (v) async {
+          switch (v) {
+            case 'card':
+              if (wide) {
+                setState(() => _showCard = !_showCard);
+              } else {
+                _openCardSheet(context, l10n, title);
+              }
+            case 'export':
+              await showAnnotationsExportSheet(
+                context,
+                bookId: widget.bookId,
+                title: title,
+                authorName: widget.authorName,
+              );
+            case 'mode_h':
+              _setMode(ReadingMode.pagedH);
+            case 'mode_v':
+              _setMode(ReadingMode.pagedV);
+            case 'mode_c':
+              _setMode(ReadingMode.continuousV);
+            case 'atm_paper':
+              ref
+                  .read(readingAtmosphereProvider.notifier)
+                  .save(ReadingAtmosphere.paper);
+            case 'atm_sepia':
+              ref
+                  .read(readingAtmosphereProvider.notifier)
+                  .save(ReadingAtmosphere.sepia);
+            case 'atm_night':
+              ref
+                  .read(readingAtmosphereProvider.notifier)
+                  .save(ReadingAtmosphere.night);
+          }
+        },
+        itemBuilder: (_) {
+          final state = ref
+              .read(stateDatabaseProvider)
+              .maybeWhen(data: (s) => s, orElse: () => null);
+          final count = state?.annotationCountForBook(widget.bookId) ?? 0;
+          return [
+            if (!wide) PopupMenuItem(value: 'card', child: Text(l10n.bookCard)),
+            PopupMenuItem(
+              value: 'export',
+              enabled: count > 0,
+              child: Text(
+                count > 0
+                    ? l10n.exportAnnotations
+                    : l10n.exportNoAnnotationsHint,
+              ),
+            ),
+            if (!wide) const PopupMenuDivider(),
+            PopupMenuItem(value: 'mode_h', child: Text(l10n.modePagedH)),
+            PopupMenuItem(value: 'mode_v', child: Text(l10n.modePagedV)),
+            PopupMenuItem(value: 'mode_c', child: Text(l10n.modeContinuousV)),
+            const PopupMenuDivider(),
+            PopupMenuItem(
+              value: 'atm_paper',
+              child: Text(l10n.atmospherePaper),
+            ),
+            PopupMenuItem(
+              value: 'atm_sepia',
+              child: Text(l10n.atmosphereSepia),
+            ),
+            PopupMenuItem(
+              value: 'atm_night',
+              child: Text(l10n.atmosphereNight),
+            ),
+          ];
+        },
+      ),
+    ];
+  }
+
+  Widget _readerColumns(
+    AppLocalizations l10n,
+    String title, {
+    required bool wide,
+    required bool glassOn,
+    required bool showToc,
+    required bool showCard,
+  }) {
+    final chromeVisible = _chrome.visible;
+    final topClearance = glassOn && chromeVisible
+        ? readerGlassTopClearance(
+            MediaQuery.viewPaddingOf(context).top,
+            searchHits: _hits.isNotEmpty,
+          )
+        : 0.0;
+    Widget pane(Widget child) => Padding(
+      padding: EdgeInsets.only(top: topClearance),
+      child: child,
+    );
+    final page = Listener(
+      onPointerDown: _onBodyPointerDown,
+      onPointerUp: _onBodyPointerUp,
+      onPointerCancel: _onBodyPointerCancel,
+      child: Semantics(
+        label: chromeVisible
+            ? l10n.hideReaderControls
+            : l10n.showReaderControls,
+        onTap: _toggleChromeFromSemantics,
+        child: Padding(
+          padding: chromeVisible
+              ? EdgeInsets.zero
+              : EdgeInsets.only(
+                  top: MediaQuery.viewPaddingOf(context).top,
+                  bottom: MediaQuery.viewPaddingOf(context).bottom,
+                ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 660),
+              child: _bodyPane(title),
+            ),
+          ),
+        ),
+      ),
+    );
+    final nav = _db == null
+        ? null
+        : _AnimatedChrome(
+            visible: chromeVisible,
+            alignment: Alignment.bottomCenter,
+            child: _MaybeGlassPill(
+              enabled: glassOn,
+              child: _bottomNavBar(l10n, glass: glassOn),
+            ),
+          );
+    return Row(
+      children: [
+        if (showToc)
+          SizedBox(
+            width: 300,
+            child: pane(
+              _sideIndexPane(
+                l10n,
+                onClose: () => setState(() => _showToc = false),
+              ),
+            ),
+          ),
+        if (showToc) const VerticalDivider(width: 1),
+        Expanded(
+          child: Column(
+            children: [
+              Expanded(
+                child: Stack(
+                  children: [
+                    Positioned.fill(child: page),
+                    if (wide && chromeVisible && !showToc)
+                      PositionedDirectional(
+                        top: topClearance + 8,
+                        start: 4,
+                        child: _PaneEdgeButton(
+                          tooltip: l10n.toc,
+                          icon: Icons.list_alt,
+                          onPressed: () => setState(() => _showToc = true),
+                        ),
+                      ),
+                    if (wide && chromeVisible && !showCard)
+                      PositionedDirectional(
+                        top: topClearance + 8,
+                        end: 4,
+                        child: _PaneEdgeButton(
+                          tooltip: l10n.bookCard,
+                          icon: Icons.menu_book_outlined,
+                          onPressed: () => setState(() => _showCard = true),
+                        ),
+                      ),
+                    if (glassOn && nav != null)
+                      Positioned(left: 0, right: 0, bottom: 0, child: nav),
+                  ],
+                ),
+              ),
+              if (!glassOn && nav != null) nav,
+            ],
+          ),
+        ),
+        if (showCard) const VerticalDivider(width: 1),
+        if (showCard)
+          SizedBox(
+            width: 300,
+            child: pane(
+              _cardPane(
+                l10n,
+                title,
+                onClose: () => setState(() => _showCard = false),
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -916,8 +981,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                           ? GlassTokens.forAtmosphere(reader.atmosphere).stroke
                           : t.segmentTrack,
                       thumbColor: glass
-                          ? GlassTokens.forAtmosphere(reader.atmosphere)
-                              .foregroundGold
+                          ? GlassTokens.forAtmosphere(
+                              reader.atmosphere,
+                            ).foregroundGold
                           : null,
                     ),
                     child: Slider(
@@ -1066,7 +1132,11 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
 
   /// [onSheetTick] rebuilds a modal host — parent [setState] alone does not
   /// refresh [showModalBottomSheet] content.
-  Widget _sideIndexPane(AppLocalizations l10n, {VoidCallback? onSheetTick}) {
+  Widget _sideIndexPane(
+    AppLocalizations l10n, {
+    VoidCallback? onSheetTick,
+    VoidCallback? onClose,
+  }) {
     // Depend on ticks so badges rebuild when annotations/bookmarks change.
     final ticks = _notesTick + _bookmarksTick;
     assert(ticks >= 0);
@@ -1080,6 +1150,15 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         : l10n.notesTab;
     return Column(
       children: [
+        if (onClose != null)
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: IconButton(
+              tooltip: l10n.cancel,
+              icon: const Icon(Icons.close),
+              onPressed: onClose,
+            ),
+          ),
         Padding(
           padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
           child: SegmentedPills(
@@ -1280,7 +1359,11 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     );
   }
 
-  Widget _cardPane(AppLocalizations l10n, String title) {
+  Widget _cardPane(
+    AppLocalizations l10n,
+    String title, {
+    VoidCallback? onClose,
+  }) {
     final betaka = _db?.meta('betaka');
     final author = widget.authorName ?? _db?.meta('author') ?? '';
     final authorId = widget.authorId;
@@ -1290,7 +1373,22 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
-        Text(l10n.bookCard, style: Theme.of(context).textTheme.titleMedium),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                l10n.bookCard,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            if (onClose != null)
+              IconButton(
+                tooltip: l10n.cancel,
+                icon: const Icon(Icons.close),
+                onPressed: onClose,
+              ),
+          ],
+        ),
         const SizedBox(height: 8),
         Text(title, style: Theme.of(context).textTheme.titleSmall),
         if (author.isNotEmpty)
@@ -1634,6 +1732,31 @@ class _FootnotesBlock extends StatelessWidget {
   }
 }
 
+class _PaneEdgeButton extends StatelessWidget {
+  const _PaneEdgeButton({
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCluster(
+      shape: const GlassShape.pill(),
+      useBackdrop: false,
+      child: TonalIconButton(
+        tooltip: tooltip,
+        icon: icon,
+        onPressed: onPressed,
+      ),
+    );
+  }
+}
+
 /// SPEC-026: collapses the reader bars so the page grows into their space.
 class _MaybeGlassBar extends StatelessWidget {
   const _MaybeGlassBar({required this.enabled, required this.child});
@@ -1658,6 +1781,69 @@ class _MaybeGlassPill extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!enabled) return child;
     return GlassToolbar(child: child);
+  }
+}
+
+class _CompactGlassBar extends StatelessWidget {
+  const _CompactGlassBar({
+    required this.title,
+    required this.subtitle,
+    required this.atmosphere,
+    required this.actions,
+  });
+
+  final String title;
+  final String? subtitle;
+  final ReadingAtmosphere atmosphere;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = GlassTokens.forAtmosphere(atmosphere);
+    return IconTheme(
+      data: IconThemeData(color: tokens.foregroundAccent),
+      child: Padding(
+        padding: const EdgeInsetsDirectional.only(start: 4, end: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const BackButton(),
+            Flexible(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 280),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: 'Amiri',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 18,
+                        color: tokens.foregroundInk,
+                      ),
+                    ),
+                    if (subtitle != null)
+                      Text(
+                        subtitle!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: tokens.foregroundInk.withValues(alpha: 0.72),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            ...actions,
+          ],
+        ),
+      ),
+    );
   }
 }
 

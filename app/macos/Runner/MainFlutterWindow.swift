@@ -54,10 +54,10 @@ final class IshamelaMacGlassBridge: NSObject, FlutterStreamHandler {
   }
 
   private var glassAvailable: Bool {
-    if ProcessInfo.processInfo.operatingSystemVersion.majorVersion < 26 {
-      return false
+    if #available(macOS 26.0, *) {
+      return true
     }
-    return NSClassFromString("NSGlassEffect") != nil
+    return false
   }
 
   func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
@@ -91,21 +91,27 @@ final class IshamelaMacGlassViewFactory: NSObject, FlutterPlatformViewFactory {
     withViewIdentifier viewId: Int64,
     arguments args: Any?
   ) -> NSView {
-    let root = NSView()
-    root.wantsLayer = true
     let map = args as? [String: Any]
     let radius = CGFloat(truncating: (map?["radius"] as? NSNumber) ?? 20)
-    root.layer?.cornerRadius = radius
-    root.layer?.masksToBounds = true
-    guard let cls = NSClassFromString("NSGlassEffect") as? NSObject.Type else {
-      return root
+    let tint = (map?["tint"] as? NSNumber)?.uint32Value ?? 0
+    if #available(macOS 26.0, *) {
+      let glass = NSGlassEffectView()
+      glass.cornerRadius = radius
+      glass.style = .regular
+      glass.tintColor = Self.color(argb: tint)
+      return glass
     }
-    let effect = cls.init()
-    if let visual = effect as? NSVisualEffectView {
-      visual.frame = root.bounds
-      visual.autoresizingMask = [.width, .height]
-      root.addSubview(visual)
-    }
+    let root = NSView()
+    root.wantsLayer = true
     return root
+  }
+
+  private static func color(argb: UInt32) -> NSColor {
+    NSColor(
+      srgbRed: CGFloat((argb >> 16) & 0xFF) / 255,
+      green: CGFloat((argb >> 8) & 0xFF) / 255,
+      blue: CGFloat(argb & 0xFF) / 255,
+      alpha: CGFloat((argb >> 24) & 0xFF) / 255
+    )
   }
 }
