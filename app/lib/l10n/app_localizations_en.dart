@@ -278,6 +278,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notesEmpty => 'No notes yet';
 
   @override
+  String get highlightsTab => 'Highlights';
+
+  @override
+  String get highlightsEmpty => 'No highlights yet';
+
+  @override
   String get tocEmpty => 'No table of contents';
 
   @override

@@ -278,6 +278,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get notesEmpty => 'Aucune note';
 
   @override
+  String get highlightsTab => 'Surlignages';
+
+  @override
+  String get highlightsEmpty => 'Pas encore de surlignages';
+
+  @override
   String get tocEmpty => 'Pas de sommaire';
 
   @override

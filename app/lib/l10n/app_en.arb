@@ -109,6 +109,8 @@
   "fontSize": "Font size",
   "notesTab": "Notes",
   "notesEmpty": "No notes yet",
+  "highlightsTab": "Highlights",
+  "highlightsEmpty": "No highlights yet",
   "tocEmpty": "No table of contents",
   "footnotes": "Footnotes",
   "notePageLabel": "p. {page}",

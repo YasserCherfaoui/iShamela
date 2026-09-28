@@ -109,6 +109,8 @@
   "fontSize": "حجم الخط",
   "notesTab": "الملاحظات",
   "notesEmpty": "لا ملاحظات بعد",
+  "highlightsTab": "التظليلات",
+  "highlightsEmpty": "لا تظليلات بعد",
   "tocEmpty": "لا فهرس",
   "footnotes": "الحواشي",
   "notePageLabel": "ص {page}",

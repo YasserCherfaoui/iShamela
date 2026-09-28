@@ -277,6 +277,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get notesEmpty => 'لا ملاحظات بعد';
 
   @override
+  String get highlightsTab => 'التظليلات';
+
+  @override
+  String get highlightsEmpty => 'لا تظليلات بعد';
+
+  @override
   String get tocEmpty => 'لا فهرس';
 
   @override

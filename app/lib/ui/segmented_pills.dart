@@ -11,11 +11,15 @@ class SegmentedPills extends StatelessWidget {
     required this.labels,
     required this.selectedIndex,
     required this.onChanged,
+    this.fitLabels = false,
   });
 
   final List<String> labels;
   final int selectedIndex;
   final ValueChanged<int> onChanged;
+
+  /// Longer labels take more of the bar and scale down instead of ellipsizing.
+  final bool fitLabels;
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +28,9 @@ class SegmentedPills extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: glass == null ? t.segmentTrack : glass.activeCapsule.withValues(alpha: 0.08),
+        color: glass == null
+            ? t.segmentTrack
+            : glass.activeCapsule.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(999),
         border: glass == null ? null : Border.all(color: glass.stroke),
       ),
@@ -32,10 +38,12 @@ class SegmentedPills extends StatelessWidget {
         children: [
           for (var i = 0; i < labels.length; i++)
             Expanded(
+              flex: fitLabels ? _labelFlex(labels[i]) : 1,
               child: _Segment(
                 label: labels[i],
                 selected: i == selectedIndex,
                 onTap: () => onChanged(i),
+                fitLabel: fitLabels,
               ),
             ),
         ],
@@ -44,16 +52,23 @@ class SegmentedPills extends StatelessWidget {
   }
 }
 
+int _labelFlex(String label) {
+  final n = label.runes.length;
+  return n < 1 ? 1 : n;
+}
+
 class _Segment extends StatelessWidget {
   const _Segment({
     required this.label,
     required this.selected,
     required this.onTap,
+    required this.fitLabel,
   });
 
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final bool fitLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +78,12 @@ class _Segment extends StatelessWidget {
     final labelColor = glass == null
         ? (selected ? t.emphasis : t.muted)
         : (selected ? glass.foregroundAccent : glass.foregroundInk);
+    final style = TextStyle(
+      fontFamily: kFontUi,
+      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+      fontSize: 13,
+      color: labelColor,
+    );
     return Material(
       color: selected ? selectedColor : const Color(0x00000000),
       shape: StadiumBorder(
@@ -74,19 +95,27 @@ class _Segment extends StatelessWidget {
         onTap: onTap,
         customBorder: const StadiumBorder(),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontFamily: kFontUi,
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-              fontSize: 13,
-              color: labelColor,
-            ),
+          padding: EdgeInsets.symmetric(
+            horizontal: fitLabel ? 2 : 0,
+            vertical: 10,
           ),
+          child: fitLabel
+              ? FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    style: style,
+                  ),
+                )
+              : Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: style,
+                ),
         ),
       ),
     );

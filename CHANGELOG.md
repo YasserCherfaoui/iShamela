@@ -6,7 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Fixed
 
-- Reader side panes sit flush with the top of the window. The contents close control sits on the tab row. Previous and next keep the bars on screen, point along the reading direction, and still turn the page on the web.
+- Reader side panes sit flush with the top of the window. The contents close control sits on the tab row. Previous and next keep the bars on screen, point along the reading direction, and still turn the page on the web. Contents tabs keep their full titles in the wide sidebar.
 - macOS no longer maps `sqlite3.framework` twice (the `PodsDummy_sqlite3` warning). Liquid Glass chrome on wide screens wraps its items: the side rail is a short pill, and the reader bar is only as wide as its title and actions. The iOS glass view factory matches Flutter's non-optional `createArgsCodec()`.
 - macOS release builds can sign in again. The downloaded app is unsigned, so Firebase Auth could not store the session and every Google, Apple, and email sign-in ended with “Something went wrong” after the account picker closed.
 - Reading progress syncs when a book is closed, and is pulled when the app opens or the home screen is pulled down. Every saved book position is uploaded, not only the latest one.
@@ -22,6 +22,7 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
+- Highlights index (SPEC-029): the contents pane lists the open book's highlights, with the marked words, color, and print page.
 - Liquid Glass interface style (SPEC-027): Settings → نمط الواجهة switches chrome between Warm Manuscript and glass. Manuscript stays the default. iOS 26 and macOS 26 host Apple's material through `real_liquid_glass` (`UIGlassEffect` / `NSGlassEffectView`); every other platform uses the drawn recipe. Reduce Transparency, battery saver, and a frame-time governor fall back to frosted chrome. The choice is stored locally and synced with the account (last write wins on `updatedAt`).
 
 - Reader chrome hides while reading (SPEC-026): a tap on the page shows or hides the bars, and turning a page hides them.

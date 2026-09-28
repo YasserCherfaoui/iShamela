@@ -17,7 +17,9 @@ import 'package:ishamela/features/reader/annotated_body.dart';
 import 'package:ishamela/features/reader/reader_chrome.dart';
 import 'package:ishamela/features/reader/body_html.dart';
 import 'package:ishamela/features/reader/book_database.dart';
+import 'package:ishamela/features/reader/citation.dart';
 import 'package:ishamela/features/reader/export_sheet.dart';
+import 'package:ishamela/features/reader/highlight_excerpt.dart';
 import 'package:ishamela/features/reader/sticky_toc.dart';
 import 'package:ishamela/ui/app_search_field.dart';
 import 'package:ishamela/ui/glass/drawn/drawn_glass_surface.dart';
@@ -1147,9 +1149,13 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     assert(ticks >= 0);
     final noteCount = _state?.notesForBook(widget.bookId).length ?? 0;
     final bookmarkCount = _state?.bookmarksForBook(widget.bookId).length ?? 0;
+    final highlightCount = _state?.highlightsForBook(widget.bookId).length ?? 0;
     final bookmarkLabel = bookmarkCount > 0
         ? '${l10n.bookmarks} $bookmarkCount'
         : l10n.bookmarks;
+    final highlightsLabel = highlightCount > 0
+        ? '${l10n.highlightsTab} $highlightCount'
+        : l10n.highlightsTab;
     final notesLabel = noteCount > 0
         ? '${l10n.notesTab} $noteCount'
         : l10n.notesTab;
@@ -1161,7 +1167,13 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
             children: [
               Expanded(
                 child: SegmentedPills(
-                  labels: [l10n.toc, bookmarkLabel, notesLabel],
+                  fitLabels: true,
+                  labels: [
+                    l10n.toc,
+                    bookmarkLabel,
+                    highlightsLabel,
+                    notesLabel,
+                  ],
                   selectedIndex: _paneTab,
                   onChanged: (i) {
                     setState(() => _paneTab = i);
@@ -1173,6 +1185,11 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                 IconButton(
                   tooltip: l10n.cancel,
                   visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 32,
+                    height: 32,
+                  ),
                   icon: const Icon(Icons.close, size: 18),
                   onPressed: onClose,
                 ),
@@ -1182,7 +1199,12 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         Expanded(
           child: IndexedStack(
             index: _paneTab,
-            children: [_tocList(l10n), _bookmarksList(l10n), _notesList(l10n)],
+            children: [
+              _tocList(l10n),
+              _bookmarksList(l10n),
+              _highlightsList(l10n),
+              _notesList(l10n),
+            ],
           ),
         ),
       ],
@@ -1337,6 +1359,47 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     if (renamed == null || !mounted) return;
     _state!.updateBookmarkLabel(b.id, renamed);
     setState(() => _bookmarksTick++);
+  }
+
+  Widget _highlightsList(AppLocalizations l10n) {
+    final _ = _notesTick;
+    final rows = _state?.highlightsForBook(widget.bookId) ?? const [];
+    if (rows.isEmpty) {
+      return Center(child: Text(l10n.highlightsEmpty));
+    }
+    final night =
+        ReaderThemeTokens.of(context).atmosphere == ReadingAtmosphere.night;
+    final palette = night ? highlightColorsNight : highlightColors;
+    return ListView.builder(
+      itemCount: rows.length,
+      itemBuilder: (context, i) {
+        final h = rows[i];
+        final pageId = h['page_id'] as int;
+        final start = h['start_offset'] as int;
+        final end = h['end_offset'] as int;
+        final colorName = h['color'] as String? ?? 'yellow';
+        final page = _db?.pageById(pageId);
+        final excerpt = page == null
+            ? ''
+            : highlightListExcerpt(page.body, start, end);
+        final printNo = page?.pageNumber?.toString() ?? '—';
+        final argb = palette[colorName] ?? palette['yellow']!;
+        return ListTile(
+          dense: true,
+          leading: Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: Color(argb),
+              shape: BoxShape.circle,
+            ),
+          ),
+          title: Text(excerpt, maxLines: 2, overflow: TextOverflow.ellipsis),
+          subtitle: Text(l10n.notePageLabel(printNo)),
+          onTap: () => _jumpToId(pageId),
+        );
+      },
+    );
   }
 
   Widget _notesList(AppLocalizations l10n) {

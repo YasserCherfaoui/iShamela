@@ -614,6 +614,18 @@ abstract class AppLocalizations {
   /// **'لا ملاحظات بعد'**
   String get notesEmpty;
 
+  /// No description provided for @highlightsTab.
+  ///
+  /// In ar, this message translates to:
+  /// **'التظليلات'**
+  String get highlightsTab;
+
+  /// No description provided for @highlightsEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا تظليلات بعد'**
+  String get highlightsEmpty;
+
   /// No description provided for @tocEmpty.
   ///
   /// In ar, this message translates to:

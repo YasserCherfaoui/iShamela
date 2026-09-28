@@ -109,6 +109,8 @@
   "fontSize": "Taille de police",
   "notesTab": "Notes",
   "notesEmpty": "Aucune note",
+  "highlightsTab": "Surlignages",
+  "highlightsEmpty": "Pas encore de surlignages",
   "tocEmpty": "Pas de sommaire",
   "footnotes": "Notes de bas de page",
   "notePageLabel": "p. {page}",
