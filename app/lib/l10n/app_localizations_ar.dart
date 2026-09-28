@@ -181,6 +181,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get exactPhrase => 'عبارة كاملة';
 
   @override
+  String get showReaderControls => 'إظهار عناصر التحكم';
+
+  @override
+  String get hideReaderControls => 'إخفاء عناصر التحكم';
+
+  @override
   String get selectAll => 'تحديد الكل';
 
   @override

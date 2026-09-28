@@ -182,6 +182,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get exactPhrase => 'Expression exacte';
 
   @override
+  String get showReaderControls => 'Afficher les commandes';
+
+  @override
+  String get hideReaderControls => 'Masquer les commandes';
+
+  @override
   String get selectAll => 'Tout sélectionner';
 
   @override

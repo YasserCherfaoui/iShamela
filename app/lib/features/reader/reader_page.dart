@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +14,7 @@ import 'package:ishamela/core/search/normalizer.dart';
 import 'package:ishamela/core/search/normalizer_map.dart';
 import 'package:ishamela/features/catalog/author_page.dart';
 import 'package:ishamela/features/reader/annotated_body.dart';
+import 'package:ishamela/features/reader/reader_chrome.dart';
 import 'package:ishamela/features/reader/body_html.dart';
 import 'package:ishamela/features/reader/book_database.dart';
 import 'package:ishamela/features/reader/export_sheet.dart';
@@ -50,7 +53,7 @@ String _readingModeKey(ReadingMode mode) {
   }
 }
 
-/// SPEC-005 / SPEC-009 reader: TOC, HTML body, modes, بطاقة, in-book search.
+/// SPEC-005 / SPEC-009 / SPEC-026 reader: TOC, HTML body, modes, بطاقة, in-book search, immersive chrome.
 class ReaderPage extends ConsumerStatefulWidget {
   const ReaderPage({
     super.key,
@@ -135,6 +138,14 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
 
   /// Prevents multi-page jumps from a single overscroll gesture.
   bool _edgePageLock = false;
+
+  /// SPEC-026. Starts visible; not persisted.
+  final _chrome = ReaderChromeController();
+  Offset? _tapDown;
+  DateTime? _tapDownAt;
+  bool _tapSelectionWasActive = false;
+  bool _tapInteractive = false;
+  int? _tapButtons;
 
   @override
   void initState() {
@@ -247,6 +258,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     _jumpCtrl.dispose();
     _searchCtrl.dispose();
     _db?.close();
+    _restoreSystemUi();
     super.dispose();
   }
 
@@ -311,10 +323,13 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   }
 
   void _onPage(int i) {
+    final from = _index;
+    final hid = _chrome.onPageIndexChanged(from: from, to: i);
     setState(() {
       _index = i;
       _syncJumpField();
     });
+    if (hid) _applySystemUi();
     _persist(_ids[i]);
   }
 
@@ -343,11 +358,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     final i = _ids.indexOf(pageId);
     if (i < 0) return;
     if (_mode == ReadingMode.continuousV) {
-      setState(() {
-        _index = i;
-        _syncJumpField();
-      });
-      _persist(pageId);
+      _onPage(i);
     } else {
       _pageController?.jumpToPage(i);
       _onPage(i);
@@ -363,6 +374,75 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     });
   }
 
+  void _applySystemUi() {
+    if (kIsWeb) return;
+    if (_chrome.visible) {
+      _restoreSystemUi();
+      return;
+    }
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.manual,
+      overlays: const [SystemUiOverlay.bottom],
+    );
+  }
+
+  void _restoreSystemUi() {
+    if (kIsWeb) return;
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  }
+
+  void _commitChrome() {
+    setState(() {});
+    _applySystemUi();
+  }
+
+  void _onBodyPointerDown(PointerDownEvent event) {
+    _tapDown = event.position;
+    _tapDownAt = DateTime.now();
+    _tapSelectionWasActive = _chrome.selectionActive;
+    _tapButtons = event.buttons;
+  }
+
+  void _onBodyPointerUp(PointerUpEvent event) {
+    final down = _tapDown;
+    final at = _tapDownAt;
+    final buttons = _tapButtons;
+    final interactive = _tapInteractive;
+    final selectionWasActive = _tapSelectionWasActive;
+    _tapDown = null;
+    _tapDownAt = null;
+    _tapButtons = null;
+    _tapInteractive = false;
+    if (down == null || at == null) return;
+    if (buttons != null && buttons != 0 && buttons != kPrimaryButton) {
+      return;
+    }
+    final changed = _chrome.onPointerTap(
+      distance: (event.position - down).distance,
+      elapsed: DateTime.now().difference(at),
+      selectionWasActive: selectionWasActive,
+      interactiveTarget: interactive,
+    );
+    if (changed) _commitChrome();
+  }
+
+  void _onBodyPointerCancel(PointerCancelEvent event) {
+    _tapDown = null;
+    _tapDownAt = null;
+    _tapButtons = null;
+    _tapInteractive = false;
+  }
+
+  void _toggleChromeFromSemantics() {
+    final changed = _chrome.onPointerTap(
+      distance: 0,
+      elapsed: Duration.zero,
+      selectionWasActive: _chrome.selectionActive,
+      interactiveTarget: false,
+    );
+    if (changed) _commitChrome();
+  }
+
   @override
   Widget build(BuildContext context) {
     _pushReading = ref.read(authProvider.notifier).pushReading;
@@ -371,8 +451,8 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     final width = MediaQuery.sizeOf(context).width;
     final wide = width >= 800;
     final veryWide = width >= 1200;
-    final showToc = wide && (veryWide || _showToc);
-    final showCard = wide && (veryWide || _showCard);
+    final showToc = _chrome.visible && wide && (veryWide || _showToc);
+    final showCard = _chrome.visible && wide && (veryWide || _showCard);
     final reader = ReaderThemeTokens.of(context);
     final page = (_db != null && _ids.isNotEmpty)
         ? _db!.pageById(_ids[_index])
@@ -380,171 +460,217 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     final printNo = page?.pageNumber?.toString() ?? '—';
     final part = page?.part;
 
+    final chromeVisible = _db == null || _chrome.visible;
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: reader.ground,
-        appBar: AppBar(
-          backgroundColor: reader.raised,
-          title: Column(
-            children: [
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontFamily: 'Amiri',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 18,
-                  color: reader.body,
-                ),
-              ),
-              if (_db != null)
-                Text(
-                  part != null && part.isNotEmpty
-                      ? 'ج$part · ص$printNo'
-                      : 'ص$printNo',
-                  style: TextStyle(fontSize: 11, color: reader.muted),
-                ),
-            ],
-          ),
-          centerTitle: true,
-          actions: [
-            if (wide)
-              SizedBox(
-                width: 200,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: AppSearchField(
-                    hintText: l10n.searchInBook,
-                    initialQuery: _searchCtrl.text,
-                    onChanged: (v) => _searchCtrl.text = v,
-                    onSubmitted: (_) {
-                      _runSearch();
-                      setState(() {});
-                    },
-                  ),
-                ),
-              )
-            else
-              IconButton(
-                tooltip: l10n.searchInBook,
-                icon: const Icon(Icons.search),
-                onPressed: () => _openSearchSheet(l10n),
-              ),
-            _bookmarkToggleButton(l10n, page),
-            if (wide)
-              TextButton(
-                onPressed: () => setState(() => _showToc = !_showToc),
-                child: Text(l10n.toc),
-              )
-            else
-              IconButton(
-                tooltip: l10n.toc,
-                icon: const Icon(Icons.list_alt),
-                onPressed: () => _openTocSheet(context, l10n),
-              ),
-            if (wide)
-              TextButton(
-                onPressed: () => setState(() => _showCard = !_showCard),
-                child: Text(l10n.bookCard),
-              ),
-            PopupMenuButton<String>(
-              onSelected: (v) async {
-                switch (v) {
-                  case 'card':
-                    if (wide) {
-                      setState(() => _showCard = !_showCard);
-                    } else {
-                      _openCardSheet(context, l10n, title);
-                    }
-                  case 'export':
-                    await showAnnotationsExportSheet(
-                      context,
-                      bookId: widget.bookId,
-                      title: title,
-                      authorName: widget.authorName,
-                    );
-                  case 'mode_h':
-                    _setMode(ReadingMode.pagedH);
-                  case 'mode_v':
-                    _setMode(ReadingMode.pagedV);
-                  case 'mode_c':
-                    _setMode(ReadingMode.continuousV);
-                  case 'atm_paper':
-                    ref
-                        .read(readingAtmosphereProvider.notifier)
-                        .save(ReadingAtmosphere.paper);
-                  case 'atm_sepia':
-                    ref
-                        .read(readingAtmosphereProvider.notifier)
-                        .save(ReadingAtmosphere.sepia);
-                  case 'atm_night':
-                    ref
-                        .read(readingAtmosphereProvider.notifier)
-                        .save(ReadingAtmosphere.night);
-                }
-              },
-              itemBuilder: (_) {
-                final state = ref
-                    .read(stateDatabaseProvider)
-                    .maybeWhen(data: (s) => s, orElse: () => null);
-                final count = state?.annotationCountForBook(widget.bookId) ?? 0;
-                return [
-                  if (!wide)
-                    PopupMenuItem(value: 'card', child: Text(l10n.bookCard)),
-                  PopupMenuItem(
-                    value: 'export',
-                    enabled: count > 0,
-                    child: Text(
-                      count > 0
-                          ? l10n.exportAnnotations
-                          : l10n.exportNoAnnotationsHint,
-                    ),
-                  ),
-                  if (!wide) const PopupMenuDivider(),
-                  PopupMenuItem(value: 'mode_h', child: Text(l10n.modePagedH)),
-                  PopupMenuItem(value: 'mode_v', child: Text(l10n.modePagedV)),
-                  PopupMenuItem(
-                    value: 'mode_c',
-                    child: Text(l10n.modeContinuousV),
-                  ),
-                  const PopupMenuDivider(),
-                  PopupMenuItem(
-                    value: 'atm_paper',
-                    child: Text(l10n.atmospherePaper),
-                  ),
-                  PopupMenuItem(
-                    value: 'atm_sepia',
-                    child: Text(l10n.atmosphereSepia),
-                  ),
-                  PopupMenuItem(
-                    value: 'atm_night',
-                    child: Text(l10n.atmosphereNight),
-                  ),
-                ];
-              },
-            ),
-          ],
-        ),
-        body: _error != null
-            ? Center(child: Text('$_error'))
-            : _db == null
-            ? const Center(child: CircularProgressIndicator())
-            : Column(
+        body: Column(
+          children: [
+            _AnimatedChrome(
+              visible: chromeVisible,
+              alignment: Alignment.topCenter,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
+                  AppBar(
+                    backgroundColor: reader.raised,
+                    title: Column(
+                      children: [
+                        Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: 'Amiri',
+                            fontWeight: FontWeight.w700,
+                            fontSize: 18,
+                            color: reader.body,
+                          ),
+                        ),
+                        if (_db != null)
+                          Text(
+                            part != null && part.isNotEmpty
+                                ? 'ج$part · ص$printNo'
+                                : 'ص$printNo',
+                            style: TextStyle(fontSize: 11, color: reader.muted),
+                          ),
+                      ],
+                    ),
+                    centerTitle: true,
+                    actions: [
+                      if (wide)
+                        SizedBox(
+                          width: 200,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: AppSearchField(
+                              hintText: l10n.searchInBook,
+                              initialQuery: _searchCtrl.text,
+                              onChanged: (v) => _searchCtrl.text = v,
+                              onSubmitted: (_) {
+                                _runSearch();
+                                setState(() {});
+                              },
+                            ),
+                          ),
+                        )
+                      else
+                        IconButton(
+                          tooltip: l10n.searchInBook,
+                          icon: const Icon(Icons.search),
+                          onPressed: () => _openSearchSheet(l10n),
+                        ),
+                      _bookmarkToggleButton(l10n, page),
+                      if (wide)
+                        TextButton(
+                          onPressed: () => setState(() => _showToc = !_showToc),
+                          child: Text(l10n.toc),
+                        )
+                      else
+                        IconButton(
+                          tooltip: l10n.toc,
+                          icon: const Icon(Icons.list_alt),
+                          onPressed: () => _openTocSheet(context, l10n),
+                        ),
+                      if (wide)
+                        TextButton(
+                          onPressed: () =>
+                              setState(() => _showCard = !_showCard),
+                          child: Text(l10n.bookCard),
+                        ),
+                      PopupMenuButton<String>(
+                        onSelected: (v) async {
+                          switch (v) {
+                            case 'card':
+                              if (wide) {
+                                setState(() => _showCard = !_showCard);
+                              } else {
+                                _openCardSheet(context, l10n, title);
+                              }
+                            case 'export':
+                              await showAnnotationsExportSheet(
+                                context,
+                                bookId: widget.bookId,
+                                title: title,
+                                authorName: widget.authorName,
+                              );
+                            case 'mode_h':
+                              _setMode(ReadingMode.pagedH);
+                            case 'mode_v':
+                              _setMode(ReadingMode.pagedV);
+                            case 'mode_c':
+                              _setMode(ReadingMode.continuousV);
+                            case 'atm_paper':
+                              ref
+                                  .read(readingAtmosphereProvider.notifier)
+                                  .save(ReadingAtmosphere.paper);
+                            case 'atm_sepia':
+                              ref
+                                  .read(readingAtmosphereProvider.notifier)
+                                  .save(ReadingAtmosphere.sepia);
+                            case 'atm_night':
+                              ref
+                                  .read(readingAtmosphereProvider.notifier)
+                                  .save(ReadingAtmosphere.night);
+                          }
+                        },
+                        itemBuilder: (_) {
+                          final state = ref
+                              .read(stateDatabaseProvider)
+                              .maybeWhen(data: (s) => s, orElse: () => null);
+                          final count =
+                              state?.annotationCountForBook(widget.bookId) ?? 0;
+                          return [
+                            if (!wide)
+                              PopupMenuItem(
+                                value: 'card',
+                                child: Text(l10n.bookCard),
+                              ),
+                            PopupMenuItem(
+                              value: 'export',
+                              enabled: count > 0,
+                              child: Text(
+                                count > 0
+                                    ? l10n.exportAnnotations
+                                    : l10n.exportNoAnnotationsHint,
+                              ),
+                            ),
+                            if (!wide) const PopupMenuDivider(),
+                            PopupMenuItem(
+                              value: 'mode_h',
+                              child: Text(l10n.modePagedH),
+                            ),
+                            PopupMenuItem(
+                              value: 'mode_v',
+                              child: Text(l10n.modePagedV),
+                            ),
+                            PopupMenuItem(
+                              value: 'mode_c',
+                              child: Text(l10n.modeContinuousV),
+                            ),
+                            const PopupMenuDivider(),
+                            PopupMenuItem(
+                              value: 'atm_paper',
+                              child: Text(l10n.atmospherePaper),
+                            ),
+                            PopupMenuItem(
+                              value: 'atm_sepia',
+                              child: Text(l10n.atmosphereSepia),
+                            ),
+                            PopupMenuItem(
+                              value: 'atm_night',
+                              child: Text(l10n.atmosphereNight),
+                            ),
+                          ];
+                        },
+                      ),
+                    ],
+                  ),
                   if (_hits.isNotEmpty) _searchHits(l10n),
-                  Expanded(
-                    child: Row(
+                ],
+              ),
+            ),
+            Expanded(
+              child: _error != null
+                  ? Center(child: Text('$_error'))
+                  : _db == null
+                  ? const Center(child: CircularProgressIndicator())
+                  : Row(
                       children: [
                         if (showToc)
                           SizedBox(width: 300, child: _sideIndexPane(l10n)),
                         if (showToc) const VerticalDivider(width: 1),
                         Expanded(
-                          child: Center(
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 660),
-                              child: _bodyPane(title),
+                          child: Listener(
+                            onPointerDown: _onBodyPointerDown,
+                            onPointerUp: _onBodyPointerUp,
+                            onPointerCancel: _onBodyPointerCancel,
+                            child: Semantics(
+                              label: _chrome.visible
+                                  ? l10n.hideReaderControls
+                                  : l10n.showReaderControls,
+                              onTap: _toggleChromeFromSemantics,
+                              child: Padding(
+                                padding: _chrome.visible
+                                    ? EdgeInsets.zero
+                                    : EdgeInsets.only(
+                                        top: MediaQuery.viewPaddingOf(
+                                          context,
+                                        ).top,
+                                        bottom: MediaQuery.viewPaddingOf(
+                                          context,
+                                        ).bottom,
+                                      ),
+                                child: Center(
+                                  child: ConstrainedBox(
+                                    constraints: const BoxConstraints(
+                                      maxWidth: 660,
+                                    ),
+                                    child: _bodyPane(title),
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -553,10 +679,15 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                           SizedBox(width: 300, child: _cardPane(l10n, title)),
                       ],
                     ),
-                  ),
-                  _bottomNavBar(l10n),
-                ],
+            ),
+            if (_db != null)
+              _AnimatedChrome(
+                visible: _chrome.visible,
+                alignment: Alignment.bottomCenter,
+                child: _bottomNavBar(l10n),
               ),
+          ],
+        ),
       ),
     );
   }
@@ -724,6 +855,10 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                       value: _index.toDouble(),
                       min: 0,
                       max: (_ids.length - 1).toDouble(),
+                      onChangeStart: (_) => _chrome.onScrubStart(),
+                      onChangeEnd: (_) {
+                        if (_chrome.onScrubEnd()) _commitChrome();
+                      },
                       onChanged: (v) {
                         final i = v.round();
                         if (_mode == ReadingMode.continuousV) {
@@ -1138,9 +1273,12 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
 
   Widget _bodyPane(String title) {
     if (_mode == ReadingMode.continuousV) {
-      return ListView.builder(
-        itemCount: _ids.length,
-        itemBuilder: (context, i) => _pageContent(title, i),
+      return NotificationListener<ScrollNotification>(
+        onNotification: _onContinuousScroll,
+        child: ListView.builder(
+          itemCount: _ids.length,
+          itemBuilder: (context, i) => _pageContent(title, i),
+        ),
       );
     }
     final vertical = _mode == ReadingMode.pagedV;
@@ -1158,6 +1296,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   }
 
   /// Inner body scroll: at top/bottom overscroll, advance the page (paged modes).
+  /// SPEC-026: scrolling inside one print page does not hide chrome.
   bool _onPageBodyScroll(ScrollNotification notification) {
     if (_mode == ReadingMode.continuousV) return false;
     if (notification.depth != 0) return false;
@@ -1177,6 +1316,24 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     Future<void>.delayed(const Duration(milliseconds: 450), () {
       _edgePageLock = false;
     });
+    return false;
+  }
+
+  bool _onContinuousScroll(ScrollNotification notification) {
+    if (notification.depth != 0) {
+      if (notification is ScrollUpdateNotification) {
+        _chrome.onInnerPageScroll(notification.scrollDelta ?? 0);
+      }
+      return false;
+    }
+    if (notification is ScrollUpdateNotification) {
+      final delta = notification.scrollDelta ?? 0;
+      if (delta != 0 && _chrome.onContinuousScrollDelta(delta)) {
+        _commitChrome();
+      }
+    } else if (notification is ScrollEndNotification) {
+      _chrome.onContinuousScrollEnd();
+    }
     return false;
   }
 
@@ -1235,6 +1392,12 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                                   textStyles: ref.watch(
                                     readerTextStylesProvider,
                                   ),
+                                  onSelectionActive: (active) {
+                                    _chrome.selectionActive = active;
+                                  },
+                                  onInteractivePointerDown: () {
+                                    _tapInteractive = true;
+                                  },
                                   onNotesChanged: () {
                                     WidgetsBinding.instance
                                         .addPostFrameCallback((_) {
@@ -1397,5 +1560,34 @@ class _FootnotesBlock extends StatelessWidget {
       }
     }
     return SelectableText.rich(TextSpan(children: spans));
+  }
+}
+
+/// SPEC-026: collapses the reader bars so the page grows into their space.
+class _AnimatedChrome extends StatelessWidget {
+  const _AnimatedChrome({
+    required this.visible,
+    required this.alignment,
+    required this.child,
+  });
+
+  final bool visible;
+  final Alignment alignment;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final reduce = MediaQuery.disableAnimationsOf(context);
+    return ClipRect(
+      child: AnimatedAlign(
+        alignment: alignment,
+        heightFactor: visible ? 1 : 0,
+        duration: reduce
+            ? Duration.zero
+            : ReaderChromeController.animationDuration,
+        curve: Curves.easeInOut,
+        child: child,
+      ),
+    );
   }
 }

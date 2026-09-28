@@ -19,6 +19,7 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
+- Reader chrome hides while reading (SPEC-026): a tap on the page shows or hides the bars, and turning a page hides them.
 - Library sync (SPEC-025): account bookshelf in `users/{uid}/library`, per-device exclusions, auto-download on Wi-Fi (cellular respects the data toggle), first-sign-in sheet over 150 MB, storage preflight, and «إزالة من كل الأجهزة».
 - Home screen (SPEC-023): first tab «الرئيسية» with greeting + Hijri/Gregorian date, continue-reading card, weekly streak/minutes/pages chips, recent history, bookmarks/notes quick actions, and guest sync banner. Shell tab order is Home · Library · Catalog · Settings (Downloads reachable from Settings).
 - User profile (SPEC-024): guest + signed-in variants with lifetime stats (Arabic-Indic digits), sync controls, shortcuts, and account management (sign-out / change password / delete account); Settings → الحساب entry.

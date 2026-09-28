@@ -317,7 +317,8 @@ Narrow: side panes as modal sheets.
 3. Scrollable body:
    - `AnnotatedBody` (selectable rich text with roles, highlights, note badges) **or** search-hit highlighted body
    - If footnotes present: section “Footnotes” + smaller styled body
-4. **Bottom chrome** (always when book loaded):
+4. **Bottom chrome** (visible when the book loads; SPEC-026):
+   - A short tap on the page hides the app bar, search hits, wide TOC and book-card panes, and this bar. The next tap shows them again. Turning a page, or releasing the scrubber, hides them. The choice is not saved.
    - Slim scrubber slider (page index)
    - Row: **Previous** (right in RTL, chevron_right) | page label `ص…` / `ج… · ص…` | compact jump field | Go | `current/total` LTR | **Next** (left, chevron_left)
    - Nav buttons: filled-tonal rounded IconButtons at **opposite ends** so arrows face outward
@@ -374,7 +375,7 @@ Use as checklist that redesign copy must cover (AR is primary UI):
 
 **Library:** libraryAllBooks, back, bookCard, searchHint, delete, …  
 
-**Reader:** jumpToPrintPage, go, previousPage, nextPage, pageNotFound, readerProgress, toc, tocEmpty, bookCard, readingMode, modePagedH/V, modeContinuousV, searchInBook, exactPhrase, footnotes, notesTab, notesEmpty, notePageLabel, highlight + color*, addNote, copyWithReference, copiedCitation  
+**Reader:** jumpToPrintPage, go, previousPage, nextPage, pageNotFound, readerProgress, toc, tocEmpty, bookCard, readingMode, modePagedH/V, modeContinuousV, searchInBook, exactPhrase, showReaderControls, hideReaderControls, footnotes, notesTab, notesEmpty, notePageLabel, highlight + color*, addNote, copyWithReference, copiedCitation  
 
 **Settings:** textAppearance, resetTextStyles, bold, pickColor, colorHex, role*, readerFont, font*, fontSize  
 

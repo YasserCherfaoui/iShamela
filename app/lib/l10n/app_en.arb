@@ -77,6 +77,8 @@
   "modeContinuousV": "Continuous scroll",
   "searchInBook": "Search in book",
   "exactPhrase": "Exact phrase",
+  "showReaderControls": "Show controls",
+  "hideReaderControls": "Hide controls",
   "selectAll": "Select all",
   "deselectAll": "Deselect all",
   "highlight": "Highlight",

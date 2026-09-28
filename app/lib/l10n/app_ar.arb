@@ -77,6 +77,8 @@
   "modeContinuousV": "تمرير متصل",
   "searchInBook": "بحث في الكتاب",
   "exactPhrase": "عبارة كاملة",
+  "showReaderControls": "إظهار عناصر التحكم",
+  "hideReaderControls": "إخفاء عناصر التحكم",
   "selectAll": "تحديد الكل",
   "deselectAll": "إلغاء تحديد الكل",
   "highlight": "تمييز",

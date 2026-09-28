@@ -27,6 +27,8 @@ class AnnotatedBody extends StatefulWidget {
     this.pageNumber,
     this.textStyles,
     this.onNotesChanged,
+    this.onSelectionActive,
+    this.onInteractivePointerDown,
   });
 
   final String body;
@@ -39,6 +41,12 @@ class AnnotatedBody extends StatefulWidget {
   final int? pageNumber;
   final ReaderTextStyles? textStyles;
   final VoidCallback? onNotesChanged;
+
+  /// SPEC-026: true while a non-collapsed selection is active.
+  final ValueChanged<bool>? onSelectionActive;
+
+  /// SPEC-026: pointer-down on a note badge, so the page does not toggle chrome.
+  final VoidCallback? onInteractivePointerDown;
 
   @override
   State<AnnotatedBody> createState() => _AnnotatedBodyState();
@@ -99,8 +107,7 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
   }
 
   void _loadAnnotations() {
-    _highlights =
-        widget.state.highlightsForPage(widget.bookId, widget.pageId);
+    _highlights = widget.state.highlightsForPage(widget.bookId, widget.pageId);
     _notes = widget.state.notesForPage(widget.bookId, widget.pageId);
     final all = widget.state.notesForBook(widget.bookId);
     _noteIndexById = {
@@ -121,11 +128,11 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
   }
 
   TextStyle _baseStyle(ReaderTextStyles styles) => TextStyle(
-        fontSize: styles.fontSize,
-        height: 1.9,
-        fontFamily: styles.font.familyName,
-        fontFamilyFallback: styles.font.glyphFallback,
-      );
+    fontSize: styles.fontSize,
+    height: 1.9,
+    fontFamily: styles.font.familyName,
+    fontFamilyFallback: styles.font.glyphFallback,
+  );
 
   (int, int)? _selectionToBody(TextSelection sel) {
     if (!sel.isValid || sel.isCollapsed) return null;
@@ -329,9 +336,14 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
     Overlay.of(context).insert(entry);
   }
 
-  void _onSelectionChanged(TextSelection selection, SelectionChangedCause? cause) {
+  void _onSelectionChanged(
+    TextSelection selection,
+    SelectionChangedCause? cause,
+  ) {
     _selection = selection;
-    if (!selection.isValid || selection.isCollapsed) {
+    final active = selection.isValid && !selection.isCollapsed;
+    widget.onSelectionActive?.call(active);
+    if (!active) {
       _removeWebToolbar();
     }
   }
@@ -406,7 +418,11 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
     return body;
   }
 
-  Color _roleColor(TextRole role, ReaderTextStyles styles, ReaderThemeTokens theme) {
+  Color _roleColor(
+    TextRole role,
+    ReaderTextStyles styles,
+    ReaderThemeTokens theme,
+  ) {
     return resolveRoleColor(role, styles.styleFor(role), theme);
   }
 
@@ -459,6 +475,7 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
             child: _NoteBadge(
               index: n,
               gold: true,
+              onPointerDown: widget.onInteractivePointerDown,
               onTap: () {
                 Map<String, Object?>? note;
                 for (final x in _notes) {
@@ -558,33 +575,40 @@ class _NoteBadge extends StatelessWidget {
   const _NoteBadge({
     required this.index,
     required this.onTap,
+    this.onPointerDown,
     this.gold = false,
   });
 
   final int index;
   final VoidCallback onTap;
+  final VoidCallback? onPointerDown;
   final bool gold;
 
   @override
   Widget build(BuildContext context) {
-    final bg =
-        gold ? const Color(0xFFA67C2E) : Theme.of(context).colorScheme.primary;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 1),
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          '$index',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 10,
-            height: 1.2,
-            fontWeight: FontWeight.bold,
+    final bg = gold
+        ? const Color(0xFFA67C2E)
+        : Theme.of(context).colorScheme.primary;
+    return Listener(
+      behavior: HitTestBehavior.opaque,
+      onPointerDown: (_) => onPointerDown?.call(),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 1),
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            '$index',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 10,
+              height: 1.2,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ),

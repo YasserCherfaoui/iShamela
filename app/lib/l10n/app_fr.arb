@@ -77,6 +77,8 @@
   "modeContinuousV": "Défilement continu",
   "searchInBook": "Chercher dans le livre",
   "exactPhrase": "Expression exacte",
+  "showReaderControls": "Afficher les commandes",
+  "hideReaderControls": "Masquer les commandes",
   "selectAll": "Tout sélectionner",
   "deselectAll": "Tout désélectionner",
   "highlight": "Surligner",

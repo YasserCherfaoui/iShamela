@@ -182,6 +182,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exactPhrase => 'Exact phrase';
 
   @override
+  String get showReaderControls => 'Show controls';
+
+  @override
+  String get hideReaderControls => 'Hide controls';
+
+  @override
   String get selectAll => 'Select all';
 
   @override

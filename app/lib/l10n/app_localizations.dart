@@ -422,6 +422,18 @@ abstract class AppLocalizations {
   /// **'عبارة كاملة'**
   String get exactPhrase;
 
+  /// No description provided for @showReaderControls.
+  ///
+  /// In ar, this message translates to:
+  /// **'إظهار عناصر التحكم'**
+  String get showReaderControls;
+
+  /// No description provided for @hideReaderControls.
+  ///
+  /// In ar, this message translates to:
+  /// **'إخفاء عناصر التحكم'**
+  String get hideReaderControls;
+
   /// No description provided for @selectAll.
   ///
   /// In ar, this message translates to:
