@@ -38,7 +38,7 @@ After the book is open, chrome hides when the page index **changes**:
 - Previous / next
 - Jump sheet, TOC, or a search hit
 
-The same index does not hide chrome. Restoring the saved page on open is not a page turn.
+The same index does not hide chrome. Restoring the saved page on open is not a page turn. Showing or hiding chrome does not change the page: the reading column keeps its place when the wide side panes appear or disappear.
 
 The scrubber stays up while the thumb is down, including while the index is changing, and hides on release.
 
@@ -66,6 +66,7 @@ The page exposes a localized label: hide controls when chrome is visible, show c
 - [ ] A short tap on the page hides chrome; the next tap shows it.
 - [ ] A tap does nothing to chrome when a text selection was already active, or when it hits a note badge.
 - [ ] A page-index change hides chrome. Reporting the same index does not.
+- [ ] Showing chrome again leaves the reader on the page reached while chrome was hidden.
 - [ ] Dragging the scrubber keeps chrome visible until release, then hides it.
 - [ ] Continuous-list scroll of 48px or more hides chrome. Scrolling inside one print page does not.
 - [ ] The hidden flag is not written to settings. Leaving the reader restores edge-to-edge system UI.

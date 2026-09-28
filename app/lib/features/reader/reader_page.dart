@@ -772,6 +772,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
           ),
         if (showToc) const VerticalDivider(width: 1),
         Expanded(
+          // Side panes are siblings. Without a key, hiding and showing them
+          // recreates this column and PageView returns to its initial page.
+          key: const ValueKey<String>('reader-column'),
           child: Column(
             children: [
               Expanded(
