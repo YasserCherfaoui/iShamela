@@ -45,8 +45,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       context,
     ).showSnackBar(SnackBar(content: Text(l10n.profileSyncing)));
     try {
-      await ref.read(authProvider.notifier).syncNow(state);
-      await ref.read(interfaceStyleProvider.notifier).syncWithAccount();
+      await ref.read(syncSchedulerProvider).flush();
     } catch (_) {
       // syncNow already records lastError on StateDatabase.
     }
@@ -94,98 +93,50 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     }
   }
 
-  Future<void> _changePassword() async {
-    final l10n = AppLocalizations.of(context);
-    final t = IshamelaTokens.of(context);
-    final entered = await showModalBottomSheet<_PasswordEntry>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: t.card,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) => const _PasswordSheet(),
-    );
-    if (entered == null || !mounted) return;
-    final cur = entered.current;
-    final neu = entered.next;
-    final conf = entered.confirm;
-    if (neu != conf || neu.length < 8) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.profilePasswordMismatch)));
-      return;
-    }
-    try {
-      await ref
-          .read(authProvider.notifier)
-          .changePassword(currentPassword: cur, newPassword: neu);
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10n.profilePasswordChanged)));
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10n.profilePasswordMismatch)));
-      }
-    }
-  }
-
   Future<void> _signOut() async {
     final l10n = AppLocalizations.of(context);
-    final ok = await showDialog<bool>(
+    final keep = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.profileSignOut),
-        content: Text(l10n.profileSignOutConfirm),
+        content: Text(l10n.profileKeepOnDevice),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
+            onPressed: () => Navigator.pop(ctx),
             child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.profileRemoveFromDevice),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.profileSignOut),
+            child: Text(l10n.profileKeep),
           ),
         ],
       ),
     );
-    if (ok == true) {
-      await ref.read(authProvider.notifier).signOut();
-      if (mounted) Navigator.of(context).pop();
-    }
+    if (keep == null || !mounted) return;
+    await ref.read(authProvider.notifier).signOut(keepData: keep);
+    if (mounted) Navigator.of(context).pop();
   }
 
   Future<void> _deleteAccount(StateDatabase state) async {
     final l10n = AppLocalizations.of(context);
     final t = IshamelaTokens.of(context);
-    final needsPassword =
-        ref.read(authProvider).profileOrNull?.hasEmailProvider == true;
-    final confirmed = await showModalBottomSheet<_DeleteAccountEntry>(
+    final confirmed = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: t.card,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (ctx) => _DeleteAccountSheet(needsPassword: needsPassword),
+      builder: (ctx) => const _DeleteAccountSheet(),
     );
-    if (confirmed == null || !mounted) return;
-    final wipeLocal = confirmed.wipeLocal;
-    final password = confirmed.password;
-    if (needsPassword && password.isEmpty) return;
+    if (confirmed != true || !mounted) return;
 
     try {
-      await ref
-          .read(authProvider.notifier)
-          .reauthenticate(password: needsPassword ? password : null);
-      await ref.read(authProvider.notifier).deleteAccount(wipeLocal: wipeLocal);
-      if (wipeLocal) {
-        state.clearReadingHistory();
-      }
+      await ref.read(authProvider.notifier).deleteAccount();
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -223,7 +174,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       error: (e, _) => Center(child: Text('$e')),
       data: (state) {
         final stats = HomeStatsDao(state).compute(now: DateTime.now());
-        final sync = state.getSyncState();
+        final stored = state.getSyncState();
+        final lastPull = int.tryParse(state.syncMeta('last_pull_at') ?? '');
+        final sync = SyncState(
+          lastSyncedAt: lastPull ?? stored.lastSyncedAt,
+          lastError: stored.lastError,
+          cellularAllowed: stored.cellularAllowed,
+          autoDownload: stored.autoDownload,
+        );
+        final syncIssues = state.hasSyncIssues();
         final profile = auth.profileOrNull;
         final isGuest = auth.isGuest;
 
@@ -244,6 +203,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               SectionLabel(label: l10n.profileSync),
               _SyncSection(
                 sync: sync,
+                syncIssues: syncIssues,
                 syncing: _syncing,
                 onSyncNow: () => _syncNow(state, profile),
                 onCellularChanged: (v) {
@@ -272,8 +232,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               const SizedBox(height: 20),
               SectionLabel(label: l10n.profileAccount),
               _AccountCard(
-                showChangePassword: profile?.hasEmailProvider == true,
-                onChangePassword: _changePassword,
                 onSignOut: _signOut,
                 onDelete: () => _deleteAccount(state),
               ),
@@ -592,6 +550,7 @@ class _LifetimeCell extends StatelessWidget {
 class _SyncSection extends StatelessWidget {
   const _SyncSection({
     required this.sync,
+    required this.syncIssues,
     required this.syncing,
     required this.onSyncNow,
     required this.onCellularChanged,
@@ -599,6 +558,7 @@ class _SyncSection extends StatelessWidget {
   });
 
   final SyncState sync;
+  final bool syncIssues;
   final bool syncing;
   final VoidCallback onSyncNow;
   final ValueChanged<bool> onCellularChanged;
@@ -635,7 +595,31 @@ class _SyncSection extends StatelessWidget {
               child: Text(l10n.profileSyncNow),
             ),
           ),
-          if (sync.lastError != null)
+          if (syncIssues)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded, size: 16, color: t.gold),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      l10n.profileSyncIssues,
+                      style: TextStyle(
+                        fontFamily: kFontUi,
+                        fontSize: 12,
+                        color: t.gold,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: syncing ? null : onSyncNow,
+                    child: Text(l10n.retry),
+                  ),
+                ],
+              ),
+            ),
+          if (sync.lastError != null && !syncIssues)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
               child: Row(
@@ -724,14 +708,10 @@ class _ShortcutsCard extends StatelessWidget {
 
 class _AccountCard extends StatelessWidget {
   const _AccountCard({
-    required this.showChangePassword,
-    required this.onChangePassword,
     required this.onSignOut,
     required this.onDelete,
   });
 
-  final bool showChangePassword;
-  final VoidCallback onChangePassword;
   final VoidCallback onSignOut;
   final VoidCallback onDelete;
 
@@ -747,14 +727,6 @@ class _AccountCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          if (showChangePassword) ...[
-            ListTile(
-              title: Text(l10n.profileChangePassword),
-              trailing: Icon(Icons.chevron_left, color: t.muted),
-              onTap: onChangePassword,
-            ),
-            const Divider(height: 1),
-          ],
           ListTile(title: Text(l10n.profileSignOut), onTap: onSignOut),
           const Divider(height: 1),
           ListTile(
@@ -768,25 +740,6 @@ class _AccountCard extends StatelessWidget {
       ),
     );
   }
-}
-
-class _PasswordEntry {
-  const _PasswordEntry({
-    required this.current,
-    required this.next,
-    required this.confirm,
-  });
-
-  final String current;
-  final String next;
-  final String confirm;
-}
-
-class _DeleteAccountEntry {
-  const _DeleteAccountEntry({required this.wipeLocal, required this.password});
-
-  final bool wipeLocal;
-  final String password;
 }
 
 class _NameSheet extends StatefulWidget {
@@ -855,90 +808,8 @@ class _NameSheetState extends State<_NameSheet> {
   }
 }
 
-class _PasswordSheet extends StatefulWidget {
-  const _PasswordSheet();
-
-  @override
-  State<_PasswordSheet> createState() => _PasswordSheetState();
-}
-
-class _PasswordSheetState extends State<_PasswordSheet> {
-  final _current = TextEditingController();
-  final _next = TextEditingController();
-  final _confirm = TextEditingController();
-
-  @override
-  void dispose() {
-    _current.dispose();
-    _next.dispose();
-    _confirm.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final t = IshamelaTokens.of(context);
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        20,
-        16,
-        20,
-        16 + MediaQuery.viewInsetsOf(context).bottom,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            l10n.profileChangePassword,
-            style: TextStyle(
-              fontFamily: kFontAmiri,
-              fontWeight: FontWeight.w700,
-              fontSize: 20,
-              color: t.ink,
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _current,
-            obscureText: true,
-            decoration: InputDecoration(labelText: l10n.profileCurrentPassword),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _next,
-            obscureText: true,
-            decoration: InputDecoration(labelText: l10n.profileNewPassword),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _confirm,
-            obscureText: true,
-            decoration: InputDecoration(labelText: l10n.profileConfirmPassword),
-          ),
-          const SizedBox(height: 12),
-          FilledButton(
-            onPressed: () => Navigator.pop(
-              context,
-              _PasswordEntry(
-                current: _current.text,
-                next: _next.text,
-                confirm: _confirm.text,
-              ),
-            ),
-            child: Text(l10n.confirm),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _DeleteAccountSheet extends StatefulWidget {
-  const _DeleteAccountSheet({required this.needsPassword});
-
-  final bool needsPassword;
+  const _DeleteAccountSheet();
 
   @override
   State<_DeleteAccountSheet> createState() => _DeleteAccountSheetState();
@@ -946,14 +817,10 @@ class _DeleteAccountSheet extends StatefulWidget {
 
 class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
   final _confirm = TextEditingController();
-  final _password = TextEditingController();
-  var _wipeLocal = false;
-  String? _passwordError;
 
   @override
   void dispose() {
     _confirm.dispose();
-    _password.dispose();
     super.dispose();
   }
 
@@ -991,34 +858,7 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
               height: 1.45,
             ),
           ),
-          CheckboxListTile(
-            contentPadding: EdgeInsets.zero,
-            value: _wipeLocal,
-            onChanged: (v) => setState(() => _wipeLocal = v ?? false),
-            title: Text(
-              l10n.profileDeleteWipeLocal,
-              style: const TextStyle(fontFamily: kFontUi, fontSize: 13),
-            ),
-            controlAffinity: ListTileControlAffinity.leading,
-          ),
-          if (widget.needsPassword) ...[
-            TextField(
-              controller: _password,
-              obscureText: true,
-              keyboardType: TextInputType.visiblePassword,
-              autofillHints: const [AutofillHints.password],
-              decoration: InputDecoration(
-                labelText: l10n.profileCurrentPassword,
-                errorText: _passwordError,
-              ),
-              onChanged: (_) {
-                if (_passwordError != null) {
-                  setState(() => _passwordError = null);
-                }
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
+          const SizedBox(height: 12),
           TextField(
             controller: _confirm,
             decoration: InputDecoration(
@@ -1032,20 +872,10 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
               foregroundColor: Colors.white,
             ),
             onPressed: () {
-              if (widget.needsPassword && _password.text.isEmpty) {
-                setState(() => _passwordError = l10n.authFieldRequired);
-                return;
-              }
               if (_confirm.text.trim() != l10n.profileDeleteConfirmWord) {
                 return;
               }
-              Navigator.pop(
-                context,
-                _DeleteAccountEntry(
-                  wipeLocal: _wipeLocal,
-                  password: _password.text,
-                ),
-              );
+              Navigator.pop(context, true);
             },
             child: Text(l10n.profileDeleteAccount),
           ),

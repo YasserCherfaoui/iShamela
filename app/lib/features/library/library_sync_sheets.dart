@@ -86,30 +86,20 @@ Future<void> applyBookRemoval({
   required int catalogVersion,
   required StateDatabase state,
   required DownloadService downloads,
-  required Future<void> Function(List<LibraryDoc> docs) pushRemoved,
 }) async {
   if (!signedIn) {
     await downloads.deleteInstalled(bookId);
     return;
   }
-  final now = DateTime.now().millisecondsSinceEpoch;
   if (choice == BookRemovalChoice.allDevices) {
-    await pushRemoved([
-      LibraryDoc(
-        bookId: bookId,
-        title: title,
-        sizeBytes: sizeBytes,
-        catalogVersion: catalogVersion,
-        status: LibraryStatus.removed,
-        installedAt: state.installedAt(bookId) ?? now,
-        updatedAt: now,
-      ),
-    ]);
-    state.clearLibraryExclusion(bookId);
+    state.markRemovedEverywhere(bookId);
   } else {
     state.addLibraryExclusion(bookId);
   }
   await downloads.deleteInstalled(bookId);
+  if (choice == BookRemovalChoice.allDevices) {
+    state.clearLibraryExclusion(bookId);
+  }
 }
 
 class LibrarySetupResult {

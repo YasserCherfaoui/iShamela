@@ -940,7 +940,9 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
       itemCount: books.length,
       itemBuilder: (context, i) {
         final book = books[i];
-        final pageId = state?.readingPageId(book.bookId);
+        final pageId =
+            state?.readingProgressPage(book.bookId) ??
+            state?.readingPageId(book.bookId);
         final total = book.pageCount > 0
             ? book.pageCount
             : (state?.installedPageCount(book.bookId) ?? 0);
@@ -1045,8 +1047,6 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
                         catalogVersion: 0,
                         state: db,
                         downloads: svc,
-                        pushRemoved: (docs) =>
-                            ref.read(authProvider.notifier).pushLibrary(docs),
                       );
                     }
                     _categories = null;
@@ -1121,7 +1121,6 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
         catalogVersion: 0,
         state: db,
         downloads: svc,
-        pushRemoved: (docs) => ref.read(authProvider.notifier).pushLibrary(docs),
       );
     }
     _categories = null;

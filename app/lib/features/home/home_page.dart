@@ -117,8 +117,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Future<void> _onPullRefresh() async {
-    final db = await ref.read(stateDatabaseProvider.future);
-    await ref.read(authProvider.notifier).pullReading(db);
+    await ref.read(syncSchedulerProvider).flush();
     ref.read(readingSyncRevisionProvider.notifier).bump();
   }
 
@@ -154,8 +153,8 @@ class _HomePageState extends ConsumerState<HomePage> {
         );
         final dao = HomeStatsDao(state);
         final now = DateTime.now();
-        final latest = dao.latest();
-        final recent = dao.recentExcludingLatest();
+        final latest = dao.continueReading();
+        final recent = dao.recentForContinue();
         final stats = dao.compute(now: now);
         final historyCount = state.listReadingHistory().length;
         final isGuest = auth.isGuest;

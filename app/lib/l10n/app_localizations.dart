@@ -1538,6 +1538,18 @@ abstract class AppLocalizations {
   /// **'لم تتم المزامنة بعد'**
   String get profileNeverSynced;
 
+  /// No description provided for @profileSyncIssues.
+  ///
+  /// In ar, this message translates to:
+  /// **'مشكلات المزامنة — أعد المحاولة'**
+  String get profileSyncIssues;
+
+  /// No description provided for @readerResumeAt.
+  ///
+  /// In ar, this message translates to:
+  /// **'استئناف عند ص {page}'**
+  String readerResumeAt(String page);
+
   /// No description provided for @profileSyncNow.
   ///
   /// In ar, this message translates to:
@@ -1724,6 +1736,24 @@ abstract class AppLocalizations {
   /// **'سيبقى سجلك وملاحظاتك على هذا الجهاز'**
   String get profileSignOutConfirm;
 
+  /// No description provided for @profileKeepOnDevice.
+  ///
+  /// In ar, this message translates to:
+  /// **'هل نبقي بياناتك على هذا الجهاز؟'**
+  String get profileKeepOnDevice;
+
+  /// No description provided for @profileKeep.
+  ///
+  /// In ar, this message translates to:
+  /// **'إبقاء'**
+  String get profileKeep;
+
+  /// No description provided for @profileRemoveFromDevice.
+  ///
+  /// In ar, this message translates to:
+  /// **'حذف من الجهاز'**
+  String get profileRemoveFromDevice;
+
   /// No description provided for @profileDeleteAccount.
   ///
   /// In ar, this message translates to:
@@ -1733,7 +1763,7 @@ abstract class AppLocalizations {
   /// No description provided for @profileDeleteExplain.
   ///
   /// In ar, this message translates to:
-  /// **'سيُحذف حسابك السحابي وجميع البيانات المتزامنة. تبقى بياناتك المحلية على هذا الجهاز ما لم تفعّل الخيار أدناه.'**
+  /// **'سيُحذف حسابك والبيانات المتزامنة على هذا الجهاز.'**
   String get profileDeleteExplain;
 
   /// No description provided for @profileDeleteWipeLocal.
@@ -2233,6 +2263,12 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'تعذّر تحميل نسخة الحساب'**
   String get homeSyncLoadFailed;
+
+  /// No description provided for @resumeAtPage.
+  ///
+  /// In ar, this message translates to:
+  /// **'متابعة من ص {page}'**
+  String resumeAtPage(String page);
 }
 
 class _AppLocalizationsDelegate

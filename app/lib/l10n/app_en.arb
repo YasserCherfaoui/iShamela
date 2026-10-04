@@ -454,6 +454,8 @@
     }
   },
   "profileNeverSynced": "Not synced yet",
+  "profileSyncIssues": "Sync issues — retry",
+  "readerResumeAt": "Resume at p.{page}",
   "profileSyncNow": "Sync now",
   "profileSyncing": "Syncing your data…",
   "profileSyncCellular": "Sync over mobile data",
@@ -496,8 +498,11 @@
   "profilePasswordMismatch": "Passwords do not match",
   "profileSignOut": "Sign out",
   "profileSignOutConfirm": "Your history and notes will stay on this device",
+  "profileKeepOnDevice": "Keep data on this device?",
+  "profileKeep": "Keep",
+  "profileRemoveFromDevice": "Remove",
   "profileDeleteAccount": "Delete account",
-  "profileDeleteExplain": "Your cloud account and all synced data will be deleted. Local data on this device is kept unless you check the option below.",
+  "profileDeleteExplain": "Your account and the synced data on this device will be deleted.",
   "profileDeleteWipeLocal": "Also delete my data from this device",
   "profileDeleteTypeConfirm": "Type «حذف» to confirm",
   "profileDeleteConfirmWord": "حذف",
@@ -590,5 +595,11 @@
   "homeSyncThisDevice": "This device",
   "homeSyncAccount": "Account",
   "homeSyncSignIn": "Sign in to compare this device with your account",
-  "homeSyncLoadFailed": "Could not load the account copy"
+  "homeSyncLoadFailed": "Could not load the account copy",
+  "resumeAtPage": "Resume at p.{page}",
+  "@resumeAtPage": {
+    "placeholders": {
+      "page": {"type": "String"}
+    }
+  }
 }

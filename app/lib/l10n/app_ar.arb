@@ -454,6 +454,13 @@
     }
   },
   "profileNeverSynced": "لم تتم المزامنة بعد",
+  "profileSyncIssues": "مشكلات المزامنة — أعد المحاولة",
+  "readerResumeAt": "استئناف عند ص {page}",
+  "@readerResumeAt": {
+    "placeholders": {
+      "page": {"type": "String"}
+    }
+  },
   "profileSyncNow": "مزامنة الآن",
   "profileSyncing": "جارٍ مزامنة بياناتك…",
   "profileSyncCellular": "المزامنة عبر بيانات الهاتف",
@@ -496,8 +503,11 @@
   "profilePasswordMismatch": "كلمتا المرور غير متطابقتين",
   "profileSignOut": "تسجيل الخروج",
   "profileSignOutConfirm": "سيبقى سجلك وملاحظاتك على هذا الجهاز",
+  "profileKeepOnDevice": "هل نبقي بياناتك على هذا الجهاز؟",
+  "profileKeep": "إبقاء",
+  "profileRemoveFromDevice": "حذف من الجهاز",
   "profileDeleteAccount": "حذف الحساب",
-  "profileDeleteExplain": "سيُحذف حسابك السحابي وجميع البيانات المتزامنة. تبقى بياناتك المحلية على هذا الجهاز ما لم تفعّل الخيار أدناه.",
+  "profileDeleteExplain": "سيُحذف حسابك والبيانات المتزامنة على هذا الجهاز.",
   "profileDeleteWipeLocal": "احذف بياناتي من هذا الجهاز أيضًا",
   "profileDeleteTypeConfirm": "اكتب «حذف» للتأكيد",
   "profileDeleteConfirmWord": "حذف",
@@ -590,5 +600,11 @@
   "homeSyncThisDevice": "هذا الجهاز",
   "homeSyncAccount": "الحساب",
   "homeSyncSignIn": "سجّل الدخول لمقارنة هذا الجهاز بحسابك",
-  "homeSyncLoadFailed": "تعذّر تحميل نسخة الحساب"
+  "homeSyncLoadFailed": "تعذّر تحميل نسخة الحساب",
+  "resumeAtPage": "متابعة من ص {page}",
+  "@resumeAtPage": {
+    "placeholders": {
+      "page": {"type": "String"}
+    }
+  }
 }

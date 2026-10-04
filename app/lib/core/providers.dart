@@ -10,10 +10,15 @@ import 'package:ishamela/core/config.dart';
 import 'package:ishamela/core/db/paths.dart';
 import 'package:ishamela/core/db/state_database.dart';
 import 'package:ishamela/core/net/net.dart';
+import 'package:ishamela/core/sync/account_session.dart';
+import 'package:ishamela/core/sync/api_client.dart';
+import 'package:ishamela/core/sync/auth_interceptor.dart';
+import 'package:ishamela/core/sync/sync_engine.dart';
+import 'package:ishamela/core/sync/sync_scheduler.dart';
+import 'package:ishamela/core/sync/token_store.dart';
 import 'package:ishamela/features/catalog/catalog_service.dart';
 import 'package:ishamela/features/downloads/download_service.dart';
 import 'package:ishamela/features/reader/reader_styles.dart';
-import 'package:ishamela/ui/glass/appearance_prefs.dart';
 import 'package:ishamela/ui/glass/glass_capability.dart';
 import 'package:ishamela/ui/glass/glass_governor.dart';
 import 'package:ishamela/ui/glass/interface_style.dart';
@@ -59,6 +64,66 @@ class DownloadRevisionNotifier extends Notifier<int> {
 final appPathsProvider = FutureProvider<AppPaths>((ref) => AppPaths.resolve());
 
 final dioProvider = Provider<Dio>((ref) => createAppDio());
+
+final tokenStoreProvider = Provider<TokenStore>((ref) => SecureTokenStore());
+
+final syncApiProvider = Provider<IshamelaApi>((ref) {
+  final tokens = ref.watch(tokenStoreProvider);
+  final dio = Dio(
+    BaseOptions(baseUrl: apiBaseUrl, connectTimeout: SyncScheduler.httpTimeout),
+  );
+  dio.interceptors.add(
+    AuthInterceptor(
+      tokens: tokens,
+      dio: dio,
+      refreshPath: '/v1/auth/refresh',
+      onSignedOut: () async {
+        final db = await ref.read(stateDatabaseProvider.future);
+        db.clearSyncSession();
+      },
+    ),
+  );
+  ref.onDispose(dio.close);
+  return IshamelaApi(dio, baseUrl: apiBaseUrl);
+});
+
+SyncEngine _engine(Ref ref, StateDatabase db) {
+  return SyncEngine(
+    database: db,
+    transport: ref.read(syncApiProvider),
+    tokens: ref.read(tokenStoreProvider),
+  );
+}
+
+final syncSchedulerProvider = Provider<SyncScheduler>((ref) {
+  final scheduler = SyncScheduler(
+    drain: (timeout) async {
+      final db = await ref.read(stateDatabaseProvider.future);
+      await _engine(ref, db).drain(timeout);
+    },
+    pageHide: () async {
+      final db = await ref.read(stateDatabaseProvider.future);
+      await _engine(ref, db).flushPageHide();
+    },
+  );
+  void bind(AsyncValue<StateDatabase> next) {
+    next.whenData((db) => db.onWrite = scheduler.nudge);
+  }
+
+  ref.listen(stateDatabaseProvider, (_, next) => bind(next));
+  bind(ref.read(stateDatabaseProvider));
+  ref.onDispose(scheduler.dispose);
+  return scheduler;
+});
+
+final accountSessionProvider = Provider<AccountSession>((ref) {
+  return AccountSession(
+    database: () => ref.read(stateDatabaseProvider.future),
+    tokens: ref.watch(tokenStoreProvider),
+    api: ref.watch(syncApiProvider),
+    flush: () => ref.read(syncSchedulerProvider).flush(),
+  );
+});
 
 final catalogClientProvider = Provider<CatalogClient>((ref) {
   return CatalogClient(ref.watch(dioProvider), baseUrl: catalogBaseUrl);
@@ -308,8 +373,8 @@ class GlassGovernorNotifier extends Notifier<GlassGovernorSnapshot> {
 
 final glassGovernorProvider =
     NotifierProvider<GlassGovernorNotifier, GlassGovernorSnapshot>(
-  GlassGovernorNotifier.new,
-);
+      GlassGovernorNotifier.new,
+    );
 
 final glassPlatformStatusProvider = FutureProvider<GlassPlatformStatus>((ref) {
   return NativeGlassChannel.instance.query();
@@ -317,7 +382,9 @@ final glassPlatformStatusProvider = FutureProvider<GlassPlatformStatus>((ref) {
 
 final glassCapabilityProvider = Provider<GlassCapability>((ref) {
   final style = ref.watch(interfaceStyleProvider);
-  final status = ref.watch(glassPlatformStatusProvider).maybeWhen(
+  final status = ref
+      .watch(glassPlatformStatusProvider)
+      .maybeWhen(
         data: (value) => value,
         orElse: () => GlassPlatformStatus.unavailable,
       );
@@ -354,7 +421,8 @@ class InterfaceStyleNotifier extends Notifier<InterfaceStyle> {
     final async = ref.watch(stateDatabaseProvider);
     if (!async.hasValue) return InterfaceStyle.manuscript;
     final db = async.requireValue;
-    _updatedAt = int.tryParse(db.setting(InterfaceStyle.updatedAtKey) ?? '') ?? 0;
+    _updatedAt =
+        int.tryParse(db.setting(InterfaceStyle.updatedAtKey) ?? '') ?? 0;
     final style = InterfaceStyle.fromId(db.setting(InterfaceStyle.settingsKey));
     final auth = ref.read(authProvider);
     if (auth is AuthSignedIn && _syncedUid != auth.profile.uid) {
@@ -374,20 +442,11 @@ class InterfaceStyleNotifier extends Notifier<InterfaceStyle> {
     await syncWithAccount();
   }
 
-  /// Pulls the account appearance doc and keeps the newer `updatedAt`.
-  Future<void> syncWithAccount() async {
-    final local = AppearancePref(style: state, updatedAt: _updatedAt);
-    final merged = await ref.read(authProvider.notifier).syncAppearance(local);
-    if (merged.style == state && merged.updatedAt == _updatedAt) return;
-    final db = await ref.read(stateDatabaseProvider.future);
-    db.setSetting(InterfaceStyle.settingsKey, merged.style.id);
-    db.setSetting(InterfaceStyle.updatedAtKey, '${merged.updatedAt}');
-    _updatedAt = merged.updatedAt;
-    state = merged.style;
-  }
+  /// Appearance stays on this device (not a SPEC-027 synced table).
+  Future<void> syncWithAccount() async {}
 }
 
 final interfaceStyleProvider =
     NotifierProvider<InterfaceStyleNotifier, InterfaceStyle>(
-  InterfaceStyleNotifier.new,
-);
+      InterfaceStyleNotifier.new,
+    );

@@ -91,41 +91,12 @@ class _OtpScreenState extends ConsumerState<OtpScreen>
     });
   }
 
-  String get _purpose =>
-      widget.mode == OtpMode.verify ? 'verify' : 'reset';
-
-  Future<void> _runMerge(AppLocalizations l10n) async {
-    try {
-      final db = await ref.read(stateDatabaseProvider.future);
-      await ref.read(authProvider.notifier).mergeLocalAfterVerify(
-            db,
-            onProgress: (_) {
-              final nav = appNavigatorKey.currentContext;
-              if (nav != null) {
-                showAuthSnack(nav, l10n.authSyncInProgress);
-              }
-            },
-            onFailure: (_) {
-              final nav = appNavigatorKey.currentContext;
-              if (nav != null) {
-                showAuthSnack(nav, l10n.authSyncFailed);
-              }
-            },
-          );
-    } catch (_) {
-      // Non-fatal.
-    }
-  }
-
   Future<void> _resend() async {
     if (_secondsLeft > 0 || _busy) return;
     final l10n = AppLocalizations.of(context);
     setState(() => _busy = true);
     try {
-      await ref.read(authProvider.notifier).sendOtp(
-            email: widget.email,
-            purpose: _purpose,
-          );
+      await ref.read(authProvider.notifier).requestEmailCode(widget.email);
       if (mounted) {
         showAuthSnack(context, l10n.authOtpResent);
         _startCooldown();
@@ -145,26 +116,13 @@ class _OtpScreenState extends ConsumerState<OtpScreen>
       _error = null;
     });
     try {
-      final token = await ref.read(authProvider.notifier).verifyOtp(
+      await ref.read(authProvider.notifier).verifyEmailCode(
             email: widget.email,
             code: code,
-            purpose: _purpose,
           );
       if (!mounted) return;
-      if (widget.mode == OtpMode.verify) {
-        // Background merge — never blocks reading (SPEC-022 §6).
-        unawaited(_runMerge(l10n));
-        if (!mounted) return;
-        showAuthSnack(context, l10n.authWelcomeVerified);
-        Navigator.of(context).popUntil((r) => r.isFirst);
-      } else {
-        if (!mounted) return;
-        await ResetPasswordScreen.open(
-          context,
-          email: widget.email,
-          resetToken: token ?? '',
-        );
-      }
+      showAuthSnack(context, l10n.authWelcomeVerified);
+      Navigator.of(context).popUntil((r) => r.isFirst);
     } catch (e) {
       final key = mapAuthErrorToMessageKey(e);
       setState(() {

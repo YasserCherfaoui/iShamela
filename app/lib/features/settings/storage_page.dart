@@ -156,9 +156,6 @@ class _StoragePageState extends ConsumerState<StoragePage> {
                               catalogVersion: 0,
                               state: db,
                               downloads: svc,
-                              pushRemoved: (docs) => ref
-                                  .read(authProvider.notifier)
-                                  .pushLibrary(docs),
                             );
                           }
                         }
@@ -350,10 +347,6 @@ class _StoragePageState extends ConsumerState<StoragePage> {
                                                     catalogVersion: 0,
                                                     state: db,
                                                     downloads: svc,
-                                                    pushRemoved: (docs) => ref
-                                                        .read(authProvider
-                                                            .notifier)
-                                                        .pushLibrary(docs),
                                                   );
                                                 }
                                                 if (!mounted) return;

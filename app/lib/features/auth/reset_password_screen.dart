@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ishamela/l10n/app_localizations.dart';
 
-import 'package:ishamela/core/providers.dart';
 import 'package:ishamela/features/auth/auth_l10n.dart';
 import 'package:ishamela/features/auth/auth_routes.dart';
 import 'package:ishamela/features/auth/auth_widgets.dart';
@@ -63,11 +62,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
 
     setState(() => _busy = true);
     try {
-      await ref.read(authProvider.notifier).resetPassword(
-            email: widget.email,
-            resetToken: widget.resetToken,
-            newPassword: password,
-          );
+      Navigator.of(context).pop();
       if (!mounted) return;
       showAuthSnack(context, l10n.authPasswordChanged);
       Navigator.of(context).popUntil((r) => r.isFirst);

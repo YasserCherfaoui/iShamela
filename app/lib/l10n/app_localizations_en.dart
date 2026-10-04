@@ -819,6 +819,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileNeverSynced => 'Not synced yet';
 
   @override
+  String get profileSyncIssues => 'Sync issues — retry';
+
+  @override
+  String readerResumeAt(String page) {
+    return 'Resume at p.$page';
+  }
+
+  @override
   String get profileSyncNow => 'Sync now';
 
   @override
@@ -917,11 +925,20 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your history and notes will stay on this device';
 
   @override
+  String get profileKeepOnDevice => 'Keep data on this device?';
+
+  @override
+  String get profileKeep => 'Keep';
+
+  @override
+  String get profileRemoveFromDevice => 'Remove';
+
+  @override
   String get profileDeleteAccount => 'Delete account';
 
   @override
   String get profileDeleteExplain =>
-      'Your cloud account and all synced data will be deleted. Local data on this device is kept unless you check the option below.';
+      'Your account and the synced data on this device will be deleted.';
 
   @override
   String get profileDeleteWipeLocal => 'Also delete my data from this device';
@@ -1179,4 +1196,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeSyncLoadFailed => 'Could not load the account copy';
+
+  @override
+  String resumeAtPage(String page) {
+    return 'Resume at p.$page';
+  }
 }

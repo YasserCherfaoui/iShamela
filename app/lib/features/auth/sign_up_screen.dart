@@ -73,11 +73,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
     setState(() => _busy = true);
     try {
-      await ref.read(authProvider.notifier).signUpEmail(
-            email: email,
-            password: password,
-            displayName: name,
-          );
+      await ref.read(authProvider.notifier).requestEmailCode(email);
       if (!mounted) return;
       await OtpScreen.open(
         context,

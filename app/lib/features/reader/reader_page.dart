@@ -10,6 +10,8 @@ import 'package:ishamela/l10n/app_localizations.dart';
 import 'package:ishamela/core/db/state_database.dart';
 import 'package:ishamela/core/models/models.dart';
 import 'package:ishamela/core/providers.dart';
+import 'package:ishamela/core/sync/progress_policy.dart';
+import 'package:ishamela/core/sync/sync_scheduler.dart';
 import 'package:ishamela/core/search/normalizer.dart';
 import 'package:ishamela/core/search/normalizer_map.dart';
 import 'package:ishamela/features/catalog/author_page.dart';
@@ -130,7 +132,8 @@ class ReaderPage extends ConsumerStatefulWidget {
   ConsumerState<ReaderPage> createState() => _ReaderPageState();
 }
 
-class _ReaderPageState extends ConsumerState<ReaderPage> {
+class _ReaderPageState extends ConsumerState<ReaderPage>
+    with WidgetsBindingObserver {
   BookDatabase? _db;
   List<int> _ids = const [];
   List<TocEntry> _toc = const [];
@@ -149,8 +152,12 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   Set<int> _highlightPageIds = {};
   StateDatabase? _state;
 
-  /// Captured while mounted. [ref] is unsafe in [dispose].
-  Future<void> Function(StateDatabase db)? _pushReading;
+  SyncScheduler? _scheduler;
+  final _policy = ProgressPolicy();
+  Timer? _dwellTimer;
+  bool _showResumeChip = false;
+  int? _resumeProgressPageId;
+  int? _resumePrintPage;
   int _paneTab = 0;
 
   /// Prevents multi-page jumps from a single overscroll gesture.
@@ -171,6 +178,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _exactPhrase = widget.exactPhrase;
     if (widget.initialSearchQuery != null) {
       _searchCtrl.text = widget.initialSearchQuery!;
@@ -191,7 +199,8 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         setState(() => _error = 'empty book');
         return;
       }
-      final saved = state.readingPageId(widget.bookId);
+      final saved = state.viewportPageId(widget.bookId);
+      final qualified = state.readingProgressFor(widget.bookId);
       var index = 0;
       var resumeMissing = false;
       if (widget.initialPrintPage != null) {
@@ -224,10 +233,11 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
       final mode = _parseReadingMode(state.setting('reading_mode'));
       final page = db.pageById(ids[index]);
       final section = _sectionTitleForToc(db.tocEntries(), ids[index]);
-      state.upsertReadingState(
+      final openedAt = DateTime.now().millisecondsSinceEpoch;
+      state.upsertBookSession(
         bookId: widget.bookId,
-        pageId: ids[index],
-        updatedAt: DateTime.now().millisecondsSinceEpoch,
+        page: ids[index],
+        updatedAt: openedAt,
       );
       state.touchReadingHistory(
         bookId: widget.bookId,
@@ -235,8 +245,12 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         part: page?.part,
         printPage: page?.pageNumber,
         sectionTitle: section,
-        nowMs: DateTime.now().millisecondsSinceEpoch,
+        nowMs: openedAt,
       );
+      _policy.land(bookId: widget.bookId, ordinal: index, page: ids[index]);
+      final progressPage = qualified?.page;
+      final showChip =
+          progressPage != null && progressPage != ids[index];
       if (!mounted) {
         db.close();
         return;
@@ -250,6 +264,19 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         _mode = mode;
         _pageController = PageController(initialPage: index);
         _jumpCtrl.text = page?.pageNumber?.toString() ?? '';
+        _showResumeChip = showChip;
+        _resumeProgressPageId = progressPage;
+        _resumePrintPage = showChip
+            ? db.pageById(progressPage)?.pageNumber
+            : null;
+      });
+      _scheduler = ref.read(syncSchedulerProvider);
+      _scheduler!.setBookOpen(true);
+      _dwellTimer?.cancel();
+      _dwellTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (!_policy.checkDwell()) return;
+        if (_ids.isEmpty) return;
+        _qualify(_ids[_index]);
       });
       if (widget.initialSearchQuery != null &&
           widget.initialSearchQuery!.trim().isNotEmpty) {
@@ -269,12 +296,10 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _dwellTimer?.cancel();
+    _scheduler?.setBookOpen(false);
     _closeHistorySession();
-    final state = _state;
-    final push = _pushReading;
-    if (state != null && push != null) {
-      unawaited(push(state));
-    }
     _pageController?.dispose();
     _jumpCtrl.dispose();
     _searchCtrl.dispose();
@@ -290,9 +315,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     final pageId = _ids[_index];
     final page = db.pageById(pageId);
     final now = DateTime.now().millisecondsSinceEpoch;
-    state.upsertReadingState(
+    state.upsertBookSession(
       bookId: widget.bookId,
-      pageId: pageId,
+      page: pageId,
       updatedAt: now,
     );
     state.touchReadingHistory(
@@ -314,15 +339,23 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     return toc[i].title;
   }
 
-  Future<void> _persist(int pageId) async {
-    final state = await ref.read(stateDatabaseProvider.future);
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _policy.setForeground(state == AppLifecycleState.resumed);
+  }
+
+  /// Viewport on every turn. Qualified progress is a separate write.
+  void _writeViewport(int pageId) {
+    final state = _state;
+    if (state == null) return;
     final now = DateTime.now().millisecondsSinceEpoch;
-    state.upsertReadingState(
+    final page = _db?.pageById(pageId);
+    state.upsertBookSession(
       bookId: widget.bookId,
-      pageId: pageId,
+      page: pageId,
+      volume: int.tryParse(page?.part ?? ''),
       updatedAt: now,
     );
-    final page = _db?.pageById(pageId);
     state.touchReadingHistory(
       bookId: widget.bookId,
       pageId: pageId,
@@ -331,6 +364,21 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
       sectionTitle: _sectionTitleFor(pageId),
       nowMs: now,
     );
+  }
+
+  void _qualify(int pageId) {
+    final state = _state;
+    if (state == null) return;
+    final page = _db?.pageById(pageId);
+    state.commitQualifiedProgress(
+      bookId: widget.bookId,
+      page: pageId,
+      progressAt: DateTime.now().millisecondsSinceEpoch,
+      volume: int.tryParse(page?.part ?? ''),
+    );
+    _scheduler?.nudge();
+    if (!mounted || !_showResumeChip) return;
+    setState(() => _showResumeChip = false);
   }
 
   Future<void> _setMode(ReadingMode mode) async {
@@ -350,12 +398,20 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     final hid = keepChrome
         ? false
         : _chrome.onPageIndexChanged(from: from, to: i);
+    final pageId = _ids[i];
+    final qualified = _policy.onTurn(
+      bookId: widget.bookId,
+      ordinal: i,
+      page: pageId,
+    );
     setState(() {
       _index = i;
+      if (pageId == _resumeProgressPageId) _showResumeChip = false;
       _syncJumpField();
     });
     if (hid) _applySystemUi();
-    _persist(_ids[i]);
+    _writeViewport(pageId);
+    if (qualified) _qualify(pageId);
   }
 
   void _syncJumpField() {
@@ -483,7 +539,6 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
 
   @override
   Widget build(BuildContext context) {
-    _pushReading = ref.read(authProvider.notifier).pushReading;
     final l10n = AppLocalizations.of(context);
     final title = widget.title ?? _db?.meta('title') ?? 'book_${widget.bookId}';
     final width = MediaQuery.sizeOf(context).width;
@@ -799,6 +854,29 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                           tooltip: l10n.bookCard,
                           icon: Icons.menu_book_outlined,
                           onPressed: () => setState(() => _showCard = true),
+                        ),
+                      ),
+                    if (_showResumeChip && _resumeProgressPageId != null)
+                      Positioned(
+                        top: viewPad.top + 12,
+                        left: 24,
+                        right: 24,
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          child: _ResumeProgressChip(
+                            label: l10n.resumeAtPage(
+                              '${_resumePrintPage ?? _resumeProgressPageId}',
+                            ),
+                            dismissLabel: l10n.cancel,
+                            onResume: () {
+                              final id = _resumeProgressPageId;
+                              if (id == null) return;
+                              setState(() => _showResumeChip = false);
+                              _jumpToId(id);
+                            },
+                            onDismiss: () =>
+                                setState(() => _showResumeChip = false),
+                          ),
                         ),
                       ),
                     if (glassOn && nav != null)
@@ -1978,6 +2056,64 @@ class _AnimatedChrome extends StatelessWidget {
             : ReaderChromeController.animationDuration,
         curve: Curves.easeInOut,
         child: child,
+      ),
+    );
+  }
+}
+
+class _ResumeProgressChip extends StatelessWidget {
+  const _ResumeProgressChip({
+    required this.label,
+    required this.dismissLabel,
+    required this.onResume,
+    required this.onDismiss,
+  });
+
+  final String label;
+  final String dismissLabel;
+  final VoidCallback onResume;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = IshamelaTokens.of(context);
+    return Material(
+      color: t.card,
+      elevation: 2,
+      shadowColor: t.ink.withValues(alpha: 0.2),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: t.hairline),
+      ),
+      child: InkWell(
+        onTap: onResume,
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsetsDirectional.only(start: 14),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: kFontUi,
+                    fontSize: 13,
+                    color: t.ink,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: dismissLabel,
+                visualDensity: VisualDensity.compact,
+                icon: Icon(Icons.close, size: 18, color: t.muted),
+                onPressed: onDismiss,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

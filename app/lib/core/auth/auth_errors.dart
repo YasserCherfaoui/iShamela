@@ -1,3 +1,5 @@
+import 'package:ishamela/core/sync/api_client.dart';
+
 /// Thrown when Firebase is not configured / init failed (guest forever).
 class AuthUnavailable implements Exception {
   AuthUnavailable([this.message = 'Authentication is unavailable']);
@@ -27,6 +29,7 @@ String mapAuthErrorToMessageKey(Object error) {
       return 'authInvalidEmail';
     case 'too-many-requests':
     case 'resource-exhausted':
+    case 'RATE_LIMITED':
       return 'authTooManyRequests';
     case 'network-request-failed':
     case 'unavailable':
@@ -36,13 +39,19 @@ String mapAuthErrorToMessageKey(Object error) {
     case 'user-disabled':
       return 'authSessionExpired';
     case 'otp-invalid':
+    case 'OTP_INVALID':
     case 'invalid-argument':
       return 'authOtpWrong';
     case 'otp-expired':
+    case 'OTP_EXPIRED':
     case 'deadline-exceeded':
       return 'authOtpExpired';
     case 'otp-locked':
+    case 'OTP_TOO_MANY_ATTEMPTS':
       return 'authOtpLocked';
+    case 'TOKEN_INVALID':
+    case 'UNAUTHORIZED':
+      return 'authSessionExpired';
     case 'not-found':
     case 'unimplemented':
     case 'failed-precondition':
@@ -54,6 +63,7 @@ String mapAuthErrorToMessageKey(Object error) {
 }
 
 String? _authCode(Object error) {
+  if (error is ApiAuthException) return error.code;
   try {
     final dynamic e = error;
     // FirebaseAuthException / FirebaseFunctionsException / PlatformException

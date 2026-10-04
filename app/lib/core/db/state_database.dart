@@ -1,8 +1,12 @@
+import 'dart:convert';
+
 import 'package:ishamela/core/db/app_fs.dart';
 import 'package:ishamela/core/db/sqlite_api.dart';
 
 import 'package:ishamela/core/db/paths.dart';
 import 'package:ishamela/core/models/models.dart';
+import 'package:ishamela/core/sync/sync_drain.dart';
+import 'package:ishamela/core/sync/uuid_v5.dart';
 
 /// Read-write app-state database (SPEC-004 / SPEC-005 reading_state).
 class StateDatabase {
@@ -10,9 +14,18 @@ class StateDatabase {
 
   final AppDatabase _db;
 
+  /// Fired after a synced row is appended to the outbox. The scheduler nudges.
+  void Function()? onWrite;
+
   static Future<StateDatabase> open(AppPaths paths) async {
     final db = openAppDatabase(paths.stateSqlite);
     db.execute('PRAGMA foreign_keys = ON');
+    try {
+      db.execute('PRAGMA journal_mode=WAL');
+      db.execute('PRAGMA synchronous=NORMAL');
+    } catch (_) {
+      // WASM builds may reject WAL. The default journal still persists rows.
+    }
     final version = db.select('PRAGMA user_version').first.columnAt(0) as int;
     if (version < 1) {
       db.execute('''
@@ -218,6 +231,82 @@ class StateDatabase {
       ''');
       db.execute('PRAGMA user_version = 10');
     }
+    final version11 = db.select('PRAGMA user_version').first.columnAt(0) as int;
+    if (version11 < 11) {
+      // SPEC-028: viewport, qualified progress, outbox. Existing positions
+      // are copied so continue-reading survives the upgrade.
+      db.execute('''
+        CREATE TABLE IF NOT EXISTS book_session (
+          book_id INTEGER PRIMARY KEY,
+          page INTEGER NOT NULL,
+          volume INTEGER,
+          scroll_offset REAL,
+          updated_at INTEGER NOT NULL
+        )
+      ''');
+      db.execute('''
+        CREATE TABLE IF NOT EXISTS reading_progress (
+          book_id INTEGER PRIMARY KEY,
+          page INTEGER NOT NULL,
+          volume INTEGER,
+          scroll_offset REAL,
+          progress_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          deleted_at INTEGER,
+          server_seq INTEGER,
+          device_id TEXT,
+          sync_state TEXT NOT NULL DEFAULT 'pending'
+            CHECK (sync_state IN ('synced','pending','conflict'))
+        )
+      ''');
+      db.execute('''
+        CREATE TABLE IF NOT EXISTS bookshelf_sync (
+          book_id INTEGER PRIMARY KEY,
+          added_at INTEGER NOT NULL,
+          removed_everywhere INTEGER NOT NULL DEFAULT 0,
+          updated_at INTEGER NOT NULL,
+          deleted_at INTEGER,
+          server_seq INTEGER,
+          device_id TEXT,
+          sync_state TEXT NOT NULL DEFAULT 'pending'
+            CHECK (sync_state IN ('synced','pending','conflict'))
+        )
+      ''');
+      db.execute('''
+        CREATE TABLE IF NOT EXISTS sync_outbox (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          kind TEXT NOT NULL CHECK (kind IN ('beacon','change')),
+          table_name TEXT,
+          record_key TEXT,
+          payload_json TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          attempts INTEGER NOT NULL DEFAULT 0,
+          last_error TEXT
+        )
+      ''');
+      db.execute('''
+        CREATE TABLE IF NOT EXISTS sync_meta (
+          key TEXT PRIMARY KEY,
+          value TEXT
+        )
+      ''');
+      for (final table in ['bookmarks', 'text_notes', 'reading_history']) {
+        try {
+          db.execute('ALTER TABLE $table ADD COLUMN server_id TEXT');
+        } catch (_) {}
+      }
+      db.execute('''
+        INSERT OR IGNORE INTO book_session (book_id, page, updated_at)
+        SELECT book_id, page_id, updated_at FROM reading_state
+      ''');
+      db.execute('''
+        INSERT OR IGNORE INTO reading_progress
+          (book_id, page, progress_at, updated_at, sync_state)
+        SELECT book_id, page_id, updated_at, updated_at, 'pending'
+        FROM reading_state
+      ''');
+      db.execute('PRAGMA user_version = 11');
+    }
     return StateDatabase(db);
   }
 
@@ -294,6 +383,9 @@ class StateDatabase {
         size,
       ],
     );
+    if (!libraryExclusionIds().contains(bookId)) {
+      _enqueueShelf(bookId: bookId, addedAt: installedAt, removed: false);
+    }
   }
 
   int? installedSizeBytes(int bookId) {
@@ -444,6 +536,749 @@ class StateDatabase {
       pageId: r['page_id'] as int,
       updatedAt: r['updated_at'] as int,
     );
+  }
+
+  /// Page to reopen: last viewport, else qualified progress, else legacy state.
+  int? viewportPageId(int bookId) =>
+      bookSessionPage(bookId) ??
+      readingProgressPage(bookId) ??
+      readingPageId(bookId);
+
+  int? bookSessionPage(int bookId) {
+    final rows = _db.select(
+      'SELECT page FROM book_session WHERE book_id = ? LIMIT 1',
+      [bookId],
+    );
+    if (rows.isEmpty) return null;
+    return rows.first['page'] as int;
+  }
+
+  void upsertBookSession({
+    required int bookId,
+    required int page,
+    required int updatedAt,
+    int? volume,
+    double? scrollOffset,
+  }) {
+    _db.execute(
+      '''
+      INSERT INTO book_session (book_id, page, volume, scroll_offset, updated_at)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(book_id) DO UPDATE SET
+        page=excluded.page,
+        volume=excluded.volume,
+        scroll_offset=excluded.scroll_offset,
+        updated_at=excluded.updated_at
+      ''',
+      [bookId, page, volume, scrollOffset, updatedAt],
+    );
+  }
+
+  int? readingProgressPage(int bookId) => readingProgressFor(bookId)?.page;
+
+  LocalReadingProgress? readingProgressFor(int bookId) {
+    final rows = _db.select(
+      '''
+      SELECT book_id, page, volume, scroll_offset, progress_at, device_id, sync_state
+      FROM reading_progress WHERE book_id = ? LIMIT 1
+      ''',
+      [bookId],
+    );
+    if (rows.isEmpty) return null;
+    return LocalReadingProgress.fromRow(rows.first);
+  }
+
+  LocalReadingProgress? latestReadingProgress() {
+    final rows = _db.select('''
+      SELECT book_id, page, volume, scroll_offset, progress_at, device_id, sync_state
+      FROM reading_progress
+      ORDER BY progress_at DESC LIMIT 1
+      ''');
+    if (rows.isEmpty) return null;
+    return LocalReadingProgress.fromRow(rows.first);
+  }
+
+  /// Qualified progress only. Also updates legacy reading_state so older
+  /// readers of that table do not treat a peek as progress.
+  void commitQualifiedProgress({
+    required int bookId,
+    required int page,
+    required int progressAt,
+    int? volume,
+    double? scrollOffset,
+  }) {
+    final existing = readingProgressFor(bookId);
+    if (existing != null && existing.progressAt >= progressAt) return;
+    final deviceId = syncMeta('device_id');
+    _db.execute(
+      '''
+      INSERT INTO reading_progress (
+        book_id, page, volume, scroll_offset, progress_at, updated_at,
+        device_id, sync_state
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
+      ON CONFLICT(book_id) DO UPDATE SET
+        page=excluded.page,
+        volume=excluded.volume,
+        scroll_offset=excluded.scroll_offset,
+        progress_at=excluded.progress_at,
+        updated_at=excluded.updated_at,
+        device_id=excluded.device_id,
+        sync_state='pending'
+      ''',
+      [bookId, page, volume, scrollOffset, progressAt, progressAt, deviceId],
+    );
+    upsertReadingState(bookId: bookId, pageId: page, updatedAt: progressAt);
+    _enqueue(
+      kind: 'beacon',
+      tableName: 'reading_progress',
+      recordKey: '$bookId',
+      payload: _beaconPayload(
+        bookId: bookId,
+        page: page,
+        progressAt: progressAt,
+        volume: volume,
+        scrollOffset: scrollOffset,
+        deviceId: deviceId,
+      ),
+      createdAt: progressAt,
+    );
+  }
+
+  bool applyPulledChange({
+    required String table,
+    required Map<String, Object?> record,
+  }) {
+    switch (table) {
+      case 'reading_progress':
+        return _applyPulledProgress(record);
+      case 'reading_history_events':
+        return _applyPulledHistory(record);
+      case 'bookmarks':
+        return _applyPulledBookmark(record);
+      case 'notes':
+        return _applyPulledNote(record);
+      case 'bookshelf':
+        return _applyPulledShelf(record);
+      default:
+        return false;
+    }
+  }
+
+  void prepareSignInReplay({required String deviceId, required int nowMs}) {
+    setSyncMeta('device_id', deviceId);
+    _db.execute('UPDATE reading_progress SET device_id = ?', [deviceId]);
+    _db.execute('DELETE FROM sync_outbox');
+    for (final row in _db.select(
+      'SELECT book_id, page, volume, scroll_offset, progress_at FROM reading_progress',
+    )) {
+      final bookId = row['book_id'] as int;
+      final page = row['page'] as int;
+      final progressAt = row['progress_at'] as int;
+      _enqueue(
+        kind: 'beacon',
+        tableName: 'reading_progress',
+        recordKey: '$bookId',
+        payload: _beaconPayload(
+          bookId: bookId,
+          page: page,
+          progressAt: progressAt,
+          volume: row['volume'] as int?,
+          scrollOffset: (row['scroll_offset'] as num?)?.toDouble(),
+          deviceId: deviceId,
+        ),
+        createdAt: nowMs,
+      );
+    }
+    for (final row in _db.select('''
+      SELECT id, book_id, page_id, print_page, opened_at, duration_seconds, server_id
+      FROM reading_history
+    ''')) {
+      final localId = row['id'] as int;
+      final serverId = _ensureServerId(
+        'reading_history',
+        localId,
+        row['server_id'] as String?,
+      );
+      final openedAt = row['opened_at'] as int;
+      final page = (row['print_page'] as int?) ?? (row['page_id'] as int);
+      _enqueueChange(
+        table: 'reading_history_events',
+        recordKey: serverId,
+        createdAt: nowMs,
+        record: {
+          'id': serverId,
+          'book_id': '${row['book_id']}',
+          'page': page,
+          'opened_at': _iso(openedAt),
+          'duration_s': (row['duration_seconds'] as int?) ?? 0,
+          'updated_at': _iso(openedAt),
+        },
+      );
+    }
+    for (final row in _db.select(
+      'SELECT id, book_id, page_id, print_page, label, created_at, server_id FROM bookmarks',
+    )) {
+      final localId = row['id'] as int;
+      final serverId = _ensureServerId(
+        'bookmarks',
+        localId,
+        row['server_id'] as String?,
+      );
+      final createdAt = row['created_at'] as int;
+      _enqueueChange(
+        table: 'bookmarks',
+        recordKey: serverId,
+        createdAt: nowMs,
+        record: {
+          'id': serverId,
+          'book_id': '${row['book_id']}',
+          'page': (row['print_page'] as int?) ?? (row['page_id'] as int),
+          'label': row['label'],
+          'updated_at': _iso(createdAt),
+        },
+      );
+    }
+    for (final row in _db.select(
+      'SELECT id, book_id, page_id, note, created_at, server_id FROM text_notes',
+    )) {
+      final localId = row['id'] as int;
+      final serverId = _ensureServerId(
+        'text_notes',
+        localId,
+        row['server_id'] as String?,
+      );
+      final createdAt = row['created_at'] as int;
+      _enqueueChange(
+        table: 'notes',
+        recordKey: serverId,
+        createdAt: nowMs,
+        record: {
+          'id': serverId,
+          'book_id': '${row['book_id']}',
+          'page': row['page_id'],
+          'body': row['note'],
+          'updated_at': _iso(createdAt),
+        },
+      );
+    }
+    for (final row in _db.select('''
+      SELECT book_id, installed_at FROM installed_books
+      WHERE book_id NOT IN (SELECT book_id FROM library_exclusions)
+    ''')) {
+      final bookId = row['book_id'] as int;
+      final addedAt = row['installed_at'] as int;
+      _db.execute(
+        '''
+        INSERT INTO bookshelf_sync (book_id, added_at, updated_at, device_id, sync_state)
+        VALUES (?, ?, ?, ?, 'pending')
+        ON CONFLICT(book_id) DO UPDATE SET
+          device_id=excluded.device_id
+        ''',
+        [bookId, addedAt, addedAt, deviceId],
+      );
+      _enqueueChange(
+        table: 'bookshelf',
+        recordKey: '$bookId',
+        createdAt: nowMs,
+        record: {
+          'book_id': '$bookId',
+          'added_at': _iso(addedAt),
+          'removed_everywhere': false,
+          'updated_at': _iso(addedAt),
+        },
+      );
+    }
+  }
+
+  List<OutboxItem> listOutbox() {
+    return _db
+        .select('''
+      SELECT id, kind, table_name, record_key, payload_json, created_at,
+             attempts, last_error
+      FROM sync_outbox ORDER BY id ASC
+      ''')
+        .map((row) {
+          final payload =
+              jsonDecode(row['payload_json'] as String) as Map<String, dynamic>;
+          return OutboxItem(
+            id: row['id'] as int,
+            kind: row['kind'] as String,
+            tableName: row['table_name'] as String?,
+            recordKey: row['record_key'] as String?,
+            payload: Map<String, Object?>.from(payload),
+            createdAt: row['created_at'] as int,
+            attempts: row['attempts'] as int? ?? 0,
+            lastError: row['last_error'] as String?,
+          );
+        })
+        .toList();
+  }
+
+  void deleteOutbox(List<int> ids) {
+    for (final id in ids) {
+      _db.execute('DELETE FROM sync_outbox WHERE id = ?', [id]);
+    }
+  }
+
+  void markOutboxFailure({
+    required int id,
+    required int attempts,
+    required String lastError,
+    required int nowMs,
+  }) {
+    _db.execute(
+      '''
+      UPDATE sync_outbox
+      SET attempts = ?, last_error = ?, created_at = ?
+      WHERE id = ?
+      ''',
+      [attempts, lastError, nowMs, id],
+    );
+  }
+
+  bool hasSyncIssues() {
+    final rows = _db.select(
+      'SELECT 1 FROM sync_outbox WHERE attempts >= 10 LIMIT 1',
+    );
+    return rows.isNotEmpty;
+  }
+
+  void pruneOutbox() {
+    _db.execute('DELETE FROM sync_outbox');
+  }
+
+  String? syncMeta(String key) {
+    final rows = _db.select(
+      'SELECT value FROM sync_meta WHERE key = ? LIMIT 1',
+      [key],
+    );
+    if (rows.isEmpty) return null;
+    return rows.first['value'] as String?;
+  }
+
+  void setSyncMeta(String key, String value) {
+    _db.execute(
+      '''
+      INSERT INTO sync_meta (key, value) VALUES (?, ?)
+      ON CONFLICT(key) DO UPDATE SET value=excluded.value
+      ''',
+      [key, value],
+    );
+  }
+
+  void clearSyncSession() {
+    _db.execute('DELETE FROM sync_outbox');
+    _db.execute('DELETE FROM sync_meta');
+  }
+
+  /// Account deletion: synced rows, outbox, and cursor. Viewport stays.
+  void wipeAccountLocal() {
+    _db.execute('DELETE FROM reading_progress');
+    _db.execute('DELETE FROM bookshelf_sync');
+    _db.execute('DELETE FROM bookmarks');
+    _db.execute('DELETE FROM text_notes');
+    _db.execute('DELETE FROM reading_history');
+    _db.execute('DELETE FROM reading_state');
+    clearSyncSession();
+  }
+
+  void _enqueue({
+    required String kind,
+    required String payload,
+    required int createdAt,
+    String? tableName,
+    String? recordKey,
+  }) {
+    _db.execute(
+      '''
+      INSERT INTO sync_outbox
+        (kind, table_name, record_key, payload_json, created_at)
+      VALUES (?, ?, ?, ?, ?)
+      ''',
+      [kind, tableName, recordKey, payload, createdAt],
+    );
+    onWrite?.call();
+  }
+
+  String ensureDeviceId() {
+    final existing = syncMeta('device_id');
+    if (existing != null && isDeviceUuid(existing)) return existing;
+    final id = uuidV4();
+    setSyncMeta('device_id', id);
+    return id;
+  }
+
+  List<({int bookId, int addedAt, int updatedAt, bool removed})>
+  listBookshelfSync() {
+    return _db
+        .select('''
+          SELECT book_id, added_at, updated_at, removed_everywhere
+          FROM bookshelf_sync
+        ''')
+        .map(
+          (row) => (
+            bookId: row['book_id'] as int,
+            addedAt: row['added_at'] as int,
+            updatedAt: row['updated_at'] as int,
+            removed: (row['removed_everywhere'] as int? ?? 0) != 0,
+          ),
+        )
+        .toList();
+  }
+
+  void _enqueueHistoryId(
+    int localId, {
+    required int nowMs,
+    bool deleted = false,
+  }) {
+    final rows = _db.select(
+      '''
+      SELECT id, book_id, page_id, print_page, opened_at, duration_seconds, server_id
+      FROM reading_history WHERE id = ? LIMIT 1
+      ''',
+      [localId],
+    );
+    if (rows.isEmpty) return;
+    final row = rows.first;
+    final serverId = _ensureServerId(
+      'reading_history',
+      localId,
+      row['server_id'] as String?,
+    );
+    final openedAt = row['opened_at'] as int;
+    final page = (row['print_page'] as int?) ?? (row['page_id'] as int);
+    _enqueueChange(
+      table: 'reading_history_events',
+      recordKey: serverId,
+      createdAt: nowMs,
+      record: {
+        'id': serverId,
+        'book_id': '${row['book_id']}',
+        'page': page,
+        'opened_at': _iso(openedAt),
+        'duration_s': (row['duration_seconds'] as int?) ?? 0,
+        'updated_at': _iso(nowMs),
+        if (deleted) 'deleted_at': _iso(nowMs),
+      },
+    );
+  }
+
+  void _enqueueBookmarkId(
+    int localId, {
+    required int nowMs,
+    bool deleted = false,
+  }) {
+    final rows = _db.select(
+      '''
+      SELECT id, book_id, page_id, print_page, label, created_at, server_id
+      FROM bookmarks WHERE id = ? LIMIT 1
+      ''',
+      [localId],
+    );
+    if (rows.isEmpty) return;
+    final row = rows.first;
+    final serverId = _ensureServerId(
+      'bookmarks',
+      localId,
+      row['server_id'] as String?,
+    );
+    _enqueueChange(
+      table: 'bookmarks',
+      recordKey: serverId,
+      createdAt: nowMs,
+      record: {
+        'id': serverId,
+        'book_id': '${row['book_id']}',
+        'page': (row['print_page'] as int?) ?? (row['page_id'] as int),
+        'label': row['label'],
+        'updated_at': _iso(nowMs),
+        if (deleted) 'deleted_at': _iso(nowMs),
+      },
+    );
+  }
+
+  void _enqueueNoteId(int localId, {bool deleted = false}) {
+    final rows = _db.select(
+      '''
+      SELECT id, book_id, page_id, note, created_at, server_id
+      FROM text_notes WHERE id = ? LIMIT 1
+      ''',
+      [localId],
+    );
+    if (rows.isEmpty) return;
+    final row = rows.first;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final serverId = _ensureServerId(
+      'text_notes',
+      localId,
+      row['server_id'] as String?,
+    );
+    _enqueueChange(
+      table: 'notes',
+      recordKey: serverId,
+      createdAt: now,
+      record: {
+        'id': serverId,
+        'book_id': '${row['book_id']}',
+        'page': row['page_id'],
+        'body': row['note'],
+        'updated_at': _iso(now),
+        if (deleted) 'deleted_at': _iso(now),
+      },
+    );
+  }
+
+  void _enqueueShelf({
+    required int bookId,
+    required int addedAt,
+    required bool removed,
+  }) {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    _db.execute(
+      '''
+      INSERT INTO bookshelf_sync (book_id, added_at, updated_at, device_id, sync_state, removed_everywhere)
+      VALUES (?, ?, ?, ?, 'pending', ?)
+      ON CONFLICT(book_id) DO UPDATE SET
+        updated_at=excluded.updated_at,
+        removed_everywhere=excluded.removed_everywhere,
+        device_id=excluded.device_id,
+        sync_state='pending'
+      ''',
+      [bookId, addedAt, now, syncMeta('device_id'), removed ? 1 : 0],
+    );
+    _enqueueChange(
+      table: 'bookshelf',
+      recordKey: '$bookId',
+      createdAt: now,
+      record: {
+        'book_id': '$bookId',
+        'added_at': _iso(addedAt),
+        'removed_everywhere': removed,
+        'updated_at': _iso(now),
+      },
+    );
+  }
+
+  void _enqueueChange({
+    required String table,
+    required String recordKey,
+    required Map<String, Object?> record,
+    required int createdAt,
+  }) {
+    _enqueue(
+      kind: 'change',
+      tableName: table,
+      recordKey: recordKey,
+      payload: jsonEncode(record),
+      createdAt: createdAt,
+    );
+  }
+
+  String _ensureServerId(String table, int localId, String? existing) {
+    if (existing != null && existing.isNotEmpty) return existing;
+    final id = uuidV5(ishamelaIdNamespace, '$table:$localId');
+    _db.execute('UPDATE $table SET server_id = ? WHERE id = ?', [id, localId]);
+    return id;
+  }
+
+  bool _applyPulledProgress(Map<String, Object?> record) {
+    final bookId = _asInt(record['book_id']);
+    final page = _asInt(record['page']);
+    final progressAt = _millis(record['progress_at']);
+    if (bookId == null || page == null || progressAt == null) return false;
+    final local = readingProgressFor(bookId);
+    if (local != null && local.progressAt >= progressAt) return false;
+    _db.execute(
+      '''
+      INSERT INTO reading_progress (
+        book_id, page, volume, scroll_offset, progress_at, updated_at,
+        device_id, server_seq, sync_state
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'synced')
+      ON CONFLICT(book_id) DO UPDATE SET
+        page=excluded.page,
+        volume=excluded.volume,
+        scroll_offset=excluded.scroll_offset,
+        progress_at=excluded.progress_at,
+        updated_at=excluded.updated_at,
+        device_id=excluded.device_id,
+        server_seq=excluded.server_seq,
+        sync_state='synced'
+      ''',
+      [
+        bookId,
+        page,
+        _asInt(record['volume']),
+        (record['scroll_offset'] as num?)?.toDouble(),
+        progressAt,
+        _millis(record['updated_at']) ?? progressAt,
+        record['device_id'] as String?,
+        _asInt(record['server_seq']),
+      ],
+    );
+    return true;
+  }
+
+  bool _applyPulledHistory(Map<String, Object?> record) {
+    final serverId = record['id'] as String?;
+    final bookId = _asInt(record['book_id']);
+    final page = _asInt(record['page']);
+    final openedAt = _millis(record['opened_at']);
+    final updatedAt = _millis(record['updated_at']);
+    if (serverId == null ||
+        bookId == null ||
+        page == null ||
+        openedAt == null) {
+      return false;
+    }
+    if (record['deleted_at'] != null) {
+      _db.execute('DELETE FROM reading_history WHERE server_id = ?', [
+        serverId,
+      ]);
+      return true;
+    }
+    final rows = _db.select(
+      'SELECT id, opened_at FROM reading_history WHERE server_id = ? LIMIT 1',
+      [serverId],
+    );
+    if (rows.isNotEmpty) {
+      final local = rows.first['opened_at'] as int;
+      if (updatedAt != null && local >= updatedAt) return false;
+      _db.execute(
+        '''
+        UPDATE reading_history
+        SET page_id = ?, print_page = ?, opened_at = ?, duration_seconds = ?
+        WHERE server_id = ?
+        ''',
+        [page, page, openedAt, _asInt(record['duration_s']) ?? 0, serverId],
+      );
+      return true;
+    }
+    _db.execute(
+      '''
+      INSERT INTO reading_history
+        (book_id, part, page_id, print_page, opened_at, duration_seconds, server_id)
+      VALUES (?, '', ?, ?, ?, ?, ?)
+      ''',
+      [
+        bookId,
+        page,
+        page,
+        openedAt,
+        _asInt(record['duration_s']) ?? 0,
+        serverId,
+      ],
+    );
+    return true;
+  }
+
+  bool _applyPulledBookmark(Map<String, Object?> record) {
+    final serverId = record['id'] as String?;
+    final bookId = _asInt(record['book_id']);
+    final page = _asInt(record['page']);
+    final updatedAt = _millis(record['updated_at']);
+    if (serverId == null ||
+        bookId == null ||
+        page == null ||
+        updatedAt == null) {
+      return false;
+    }
+    if (record['deleted_at'] != null) {
+      _db.execute('DELETE FROM bookmarks WHERE server_id = ?', [serverId]);
+      return true;
+    }
+    final rows = _db.select(
+      'SELECT created_at FROM bookmarks WHERE server_id = ? LIMIT 1',
+      [serverId],
+    );
+    if (rows.isNotEmpty) {
+      if ((rows.first['created_at'] as int) >= updatedAt) return false;
+      _db.execute(
+        '''
+        UPDATE bookmarks SET page_id = ?, print_page = ?, label = ?, created_at = ?
+        WHERE server_id = ?
+        ''',
+        [page, page, record['label'], updatedAt, serverId],
+      );
+      return true;
+    }
+    _db.execute(
+      '''
+      INSERT INTO bookmarks (book_id, part, page_id, print_page, label, created_at, server_id)
+      VALUES (?, '', ?, ?, ?, ?, ?)
+      ''',
+      [bookId, page, page, record['label'], updatedAt, serverId],
+    );
+    return true;
+  }
+
+  bool _applyPulledNote(Map<String, Object?> record) {
+    final serverId = record['id'] as String?;
+    final bookId = _asInt(record['book_id']);
+    final page = _asInt(record['page']);
+    final body = record['body'] as String?;
+    final updatedAt = _millis(record['updated_at']);
+    if (serverId == null ||
+        bookId == null ||
+        page == null ||
+        body == null ||
+        body.isEmpty ||
+        updatedAt == null) {
+      return false;
+    }
+    if (record['deleted_at'] != null) {
+      _db.execute('DELETE FROM text_notes WHERE server_id = ?', [serverId]);
+      return true;
+    }
+    final rows = _db.select(
+      'SELECT created_at FROM text_notes WHERE server_id = ? LIMIT 1',
+      [serverId],
+    );
+    if (rows.isNotEmpty) {
+      if ((rows.first['created_at'] as int) >= updatedAt) return false;
+      _db.execute(
+        'UPDATE text_notes SET page_id = ?, note = ?, created_at = ? WHERE server_id = ?',
+        [page, body, updatedAt, serverId],
+      );
+      return true;
+    }
+    _db.execute(
+      '''
+      INSERT INTO text_notes (book_id, page_id, start_offset, end_offset, note, created_at, server_id)
+      VALUES (?, ?, 0, 0, ?, ?, ?)
+      ''',
+      [bookId, page, body, updatedAt, serverId],
+    );
+    return true;
+  }
+
+  bool _applyPulledShelf(Map<String, Object?> record) {
+    final bookId = _asInt(record['book_id']);
+    final addedAt = _millis(record['added_at']);
+    final updatedAt = _millis(record['updated_at']);
+    if (bookId == null || addedAt == null || updatedAt == null) return false;
+    final rows = _db.select(
+      'SELECT updated_at FROM bookshelf_sync WHERE book_id = ? LIMIT 1',
+      [bookId],
+    );
+    if (rows.isNotEmpty && (rows.first['updated_at'] as int) >= updatedAt) {
+      return false;
+    }
+    final removed = record['removed_everywhere'] == true ? 1 : 0;
+    _db.execute(
+      '''
+      INSERT INTO bookshelf_sync (
+        book_id, added_at, removed_everywhere, updated_at, device_id, sync_state
+      ) VALUES (?, ?, ?, ?, ?, 'synced')
+      ON CONFLICT(book_id) DO UPDATE SET
+        added_at=excluded.added_at,
+        removed_everywhere=excluded.removed_everywhere,
+        updated_at=excluded.updated_at,
+        device_id=excluded.device_id,
+        sync_state='synced'
+      ''',
+      [bookId, addedAt, removed, updatedAt, record['device_id'] as String?],
+    );
+    return true;
   }
 
   void upsertReadingState({
@@ -725,14 +1560,18 @@ class StateDatabase {
       'VALUES (?, ?, ?, ?, ?, ?)',
       [bookId, pageId, start, end, note, createdAt],
     );
-    return _db.lastInsertRowId;
+    final id = _db.lastInsertRowId;
+    _enqueueNoteId(id);
+    return id;
   }
 
   void updateNote(int id, String note) {
     _db.execute('UPDATE text_notes SET note = ? WHERE id = ?', [note, id]);
+    _enqueueNoteId(id);
   }
 
   void deleteNote(int id) {
+    _enqueueNoteId(id, deleted: true);
     _db.execute('DELETE FROM text_notes WHERE id = ?', [id]);
   }
 
@@ -802,6 +1641,7 @@ class StateDatabase {
           ''',
           [part, pageId, printPage, sectionTitle, closedAt, nextDuration, id],
         );
+        _enqueueHistoryId(id, nowMs: nowMs);
         return id;
       }
     }
@@ -829,6 +1669,7 @@ class StateDatabase {
     );
     final id = _db.lastInsertRowId;
     _pruneReadingHistory(nowMs: nowMs, maxAge: maxAge, maxRows: maxRows);
+    _enqueueHistoryId(id, nowMs: nowMs);
     return id;
   }
 
@@ -838,12 +1679,26 @@ class StateDatabase {
     required int maxRows,
   }) {
     final cutoff = nowMs - maxAge.inMilliseconds;
+    final stale = _db.select(
+      'SELECT id FROM reading_history WHERE opened_at < ?',
+      [cutoff],
+    );
+    for (final row in stale) {
+      _enqueueHistoryId(row['id'] as int, nowMs: nowMs, deleted: true);
+    }
     _db.execute('DELETE FROM reading_history WHERE opened_at < ?', [cutoff]);
     final count =
         _db.select('SELECT COUNT(*) AS n FROM reading_history').first['n']
             as int;
     if (count <= maxRows) return;
     final overflow = count - maxRows;
+    final oldest = _db.select(
+      'SELECT id FROM reading_history ORDER BY opened_at ASC LIMIT ?',
+      [overflow],
+    );
+    for (final row in oldest) {
+      _enqueueHistoryId(row['id'] as int, nowMs: nowMs, deleted: true);
+    }
     _db.execute(
       '''
       DELETE FROM reading_history WHERE id IN (
@@ -888,10 +1743,19 @@ class StateDatabase {
   }
 
   void clearReadingHistory() {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    for (final row in _db.select('SELECT id FROM reading_history')) {
+      _enqueueHistoryId(row['id'] as int, nowMs: now, deleted: true);
+    }
     _db.execute('DELETE FROM reading_history');
   }
 
   void deleteReadingHistory(int id) {
+    _enqueueHistoryId(
+      id,
+      nowMs: DateTime.now().millisecondsSinceEpoch,
+      deleted: true,
+    );
     _db.execute('DELETE FROM reading_history WHERE id = ?', [id]);
   }
 
@@ -971,15 +1835,32 @@ class StateDatabase {
   Set<int> libraryExclusionIds() =>
       _idSet('SELECT book_id FROM library_exclusions');
 
+  void markRemovedEverywhere(int bookId) {
+    _enqueueShelf(
+      bookId: bookId,
+      addedAt: installedAt(bookId) ?? DateTime.now().millisecondsSinceEpoch,
+      removed: true,
+    );
+  }
+
   void addLibraryExclusion(int bookId) {
     _db.execute(
       'INSERT OR IGNORE INTO library_exclusions (book_id) VALUES (?)',
       [bookId],
     );
+    _enqueueShelf(
+      bookId: bookId,
+      addedAt: installedAt(bookId) ?? DateTime.now().millisecondsSinceEpoch,
+      removed: true,
+    );
   }
 
   void clearLibraryExclusion(int bookId) {
     _db.execute('DELETE FROM library_exclusions WHERE book_id = ?', [bookId]);
+    final added = installedAt(bookId);
+    if (added != null) {
+      _enqueueShelf(bookId: bookId, addedAt: added, removed: false);
+    }
   }
 
   Set<int> libraryDeferredIds() => _markIds('deferred');
@@ -1169,7 +2050,9 @@ class StateDatabase {
       ''',
       [bookId, key, pageId, printPage, label, createdAt],
     );
-    return _db.lastInsertRowId;
+    final id = _db.lastInsertRowId;
+    _enqueueBookmarkId(id, nowMs: createdAt);
+    return id;
   }
 
   void updateBookmarkLabel(int id, String? label) {
@@ -1177,9 +2060,15 @@ class StateDatabase {
         ? null
         : label.trim();
     _db.execute('UPDATE bookmarks SET label = ? WHERE id = ?', [stored, id]);
+    _enqueueBookmarkId(id, nowMs: DateTime.now().millisecondsSinceEpoch);
   }
 
   void deleteBookmark(int id) {
+    _enqueueBookmarkId(
+      id,
+      nowMs: DateTime.now().millisecondsSinceEpoch,
+      deleted: true,
+    );
     _db.execute('DELETE FROM bookmarks WHERE id = ?', [id]);
   }
 
@@ -1206,6 +2095,43 @@ class StateDatabase {
         .toList();
   }
 
+  String _beaconPayload({
+    required int bookId,
+    required int page,
+    required int progressAt,
+    int? volume,
+    double? scrollOffset,
+    String? deviceId,
+  }) {
+    return jsonEncode({
+      'bookId': '$bookId',
+      'page': page,
+      'volume': volume,
+      'scrollOffset': scrollOffset,
+      'progressAt': _iso(progressAt),
+      'deviceId': deviceId,
+    });
+  }
+
+  static String _iso(int ms) =>
+      DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true).toIso8601String();
+
+  static int? _asInt(Object? value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    return null;
+  }
+
+  static int? _millis(Object? value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) {
+      return DateTime.tryParse(value)?.millisecondsSinceEpoch;
+    }
+    return null;
+  }
+
   /// All text notes across books (SPEC-023 quick-action destination).
   List<Map<String, Object?>> listAllNotes() {
     return _db
@@ -1215,5 +2141,37 @@ class StateDatabase {
           ''')
         .map((r) => Map<String, Object?>.from(r))
         .toList();
+  }
+}
+
+class LocalReadingProgress {
+  const LocalReadingProgress({
+    required this.bookId,
+    required this.page,
+    required this.progressAt,
+    this.volume,
+    this.scrollOffset,
+    this.deviceId,
+    this.syncState = 'pending',
+  });
+
+  final int bookId;
+  final int page;
+  final int? volume;
+  final double? scrollOffset;
+  final int progressAt;
+  final String? deviceId;
+  final String syncState;
+
+  static LocalReadingProgress fromRow(Row row) {
+    return LocalReadingProgress(
+      bookId: row['book_id'] as int,
+      page: row['page'] as int,
+      volume: row['volume'] as int?,
+      scrollOffset: (row['scroll_offset'] as num?)?.toDouble(),
+      progressAt: row['progress_at'] as int,
+      deviceId: row['device_id'] as String?,
+      syncState: row['sync_state'] as String? ?? 'pending',
+    );
   }
 }

@@ -46,10 +46,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     try {
       // Always show success — no account enumeration (SPEC-022 §3.4).
       try {
-        await ref.read(authProvider.notifier).sendOtp(
-              email: email,
-              purpose: 'reset',
-            );
+        await ref.read(authProvider.notifier).requestEmailCode(email);
       } catch (_) {
         // Swallow — still show generic OK.
       }
@@ -58,7 +55,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       await OtpScreen.open(
         context,
         email: email,
-        mode: OtpMode.reset,
+        mode: OtpMode.verify,
       );
     } catch (e) {
       if (mounted) showAuthSnack(context, localizeAuthError(l10n, e));

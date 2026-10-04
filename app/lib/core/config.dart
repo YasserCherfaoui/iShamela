@@ -24,6 +24,12 @@ String get pagesBaseUrl {
   return 'https://huggingface.co/datasets/$shamela4Dataset/resolve/$shamela4Revision/';
 }
 
+/// Project API (SPEC-027). Override with `--dart-define=API_BASE_URL=...`.
+const String apiBaseUrl = String.fromEnvironment(
+  'API_BASE_URL',
+  defaultValue: 'https://ishamelabackend-production.up.railway.app',
+);
+
 /// App identity written to book `meta.built_by` (SPEC-008).
 const String appBuiltBy = 'ishamela/0.1.0';
 

@@ -35,6 +35,7 @@ dependencies:
   sign_in_with_apple: ^6.1.4
   pin_code_fields: ^8.0.1
   connectivity_plus: ^6.1.4
+  flutter_secure_storage: ^9.2.4
   real_liquid_glass:
     path: packages/real_liquid_glass
 

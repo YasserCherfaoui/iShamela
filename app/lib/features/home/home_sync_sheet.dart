@@ -68,9 +68,7 @@ class _HomeSyncSheetState extends ConsumerState<_HomeSyncSheet> {
     });
     try {
       final db = await ref.read(stateDatabaseProvider.future);
-      final diffs = await ref
-          .read(authProvider.notifier)
-          .previewReadingDiff(db);
+      const diffs = <ReadingProgressDiff>[];
       final sync = db.getSyncState();
       if (!mounted) return;
       setState(() {
@@ -90,9 +88,7 @@ class _HomeSyncSheetState extends ConsumerState<_HomeSyncSheet> {
   Future<void> _syncNow() async {
     setState(() => _syncing = true);
     try {
-      final db = await ref.read(stateDatabaseProvider.future);
-      await ref.read(authProvider.notifier).syncNow(db);
-      await ref.read(interfaceStyleProvider.notifier).syncWithAccount();
+      await ref.read(syncSchedulerProvider).flush();
       ref.read(readingSyncRevisionProvider.notifier).bump();
     } catch (_) {
       // syncNow records the error on the local sync row.

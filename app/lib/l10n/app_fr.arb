@@ -454,6 +454,8 @@
     }
   },
   "profileNeverSynced": "Pas encore synchronisé",
+  "profileSyncIssues": "Problèmes de sync — réessayez",
+  "readerResumeAt": "Reprendre à la p. {page}",
   "profileSyncNow": "Synchroniser",
   "profileSyncing": "Synchronisation en cours…",
   "profileSyncCellular": "Sync via données mobiles",
@@ -496,8 +498,11 @@
   "profilePasswordMismatch": "Les mots de passe ne correspondent pas",
   "profileSignOut": "Se déconnecter",
   "profileSignOutConfirm": "Votre historique et vos notes resteront sur cet appareil",
+  "profileKeepOnDevice": "Conserver les données sur cet appareil ?",
+  "profileKeep": "Conserver",
+  "profileRemoveFromDevice": "Supprimer",
   "profileDeleteAccount": "Supprimer le compte",
-  "profileDeleteExplain": "Votre compte cloud et toutes les données synchronisées seront supprimés. Les données locales restent sauf si vous cochez l'option ci-dessous.",
+  "profileDeleteExplain": "Votre compte et les données synchronisées sur cet appareil seront supprimés.",
   "profileDeleteWipeLocal": "Supprimer aussi mes données de cet appareil",
   "profileDeleteTypeConfirm": "Tapez «حذف» pour confirmer",
   "profileDeleteConfirmWord": "حذف",
@@ -590,5 +595,11 @@
   "homeSyncThisDevice": "Cet appareil",
   "homeSyncAccount": "Compte",
   "homeSyncSignIn": "Connectez-vous pour comparer cet appareil à votre compte",
-  "homeSyncLoadFailed": "Impossible de charger la copie du compte"
+  "homeSyncLoadFailed": "Impossible de charger la copie du compte",
+  "resumeAtPage": "Reprendre à la p. {page}",
+  "@resumeAtPage": {
+    "placeholders": {
+      "page": {"type": "String"}
+    }
+  }
 }

@@ -91,6 +91,44 @@ class HomeStatsDao {
 
   ReadingHistoryEntry? latest() => state.latestReadingHistory();
 
+  /// Continue reading follows qualified progress, not the viewport (SPEC-028).
+  ReadingHistoryEntry? continueReading() {
+    final progress = state.latestReadingProgress();
+    final history = latest();
+    if (progress == null) return history;
+    ReadingHistoryEntry? crumb;
+    for (final row in state.listReadingHistory()) {
+      if (row.bookId == progress.bookId && row.pageId == progress.page) {
+        crumb = row;
+        break;
+      }
+    }
+    return ReadingHistoryEntry(
+      id: crumb?.id ?? 0,
+      bookId: progress.bookId,
+      pageId: progress.page,
+      part: crumb?.part,
+      printPage: crumb?.printPage,
+      sectionTitle: crumb?.sectionTitle,
+      openedAt: progress.progressAt,
+      closedAt: crumb?.closedAt,
+      durationSeconds: crumb?.durationSeconds,
+    );
+  }
+
+  List<ReadingHistoryEntry> recentForContinue({int limit = 5}) {
+    final current = continueReading();
+    if (current == null) return const [];
+    if (state.latestReadingProgress() == null) {
+      return recentExcludingLatest(limit: limit);
+    }
+    return state
+        .listReadingHistory()
+        .where((row) => row.bookId != current.bookId)
+        .take(limit)
+        .toList();
+  }
+
   List<ReadingHistoryEntry> recentExcludingLatest({int limit = 5}) {
     final all = state.listReadingHistory();
     if (all.isEmpty) return const [];

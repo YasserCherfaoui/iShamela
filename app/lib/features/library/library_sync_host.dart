@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ishamela/core/auth/auth_state.dart';
+import 'package:ishamela/core/db/state_database.dart';
 import 'package:ishamela/core/library/library_plan.dart';
 import 'package:ishamela/core/providers.dart';
 import 'package:ishamela/core/storage_size.dart';
@@ -88,12 +89,11 @@ class _LibrarySyncHostState extends ConsumerState<LibrarySyncHost>
         }
         _knownInstalled = installed;
       }
-      final auth = ref.read(authProvider.notifier);
-      // Retry a close-book upload that failed offline, then pull other devices.
-      await auth.pushReading(db);
-      await auth.pullReading(db);
+      try {
+        await ref.read(syncSchedulerProvider).flush();
+      } catch (_) {}
       ref.read(readingSyncRevisionProvider.notifier).bump();
-      final remote = await auth.pullLibrary();
+      final remote = _withShelf(const [], db);
       final link = await _link();
       final free = await deviceFreeBytes(paths);
       final req = librarySyncRequest(
@@ -105,7 +105,6 @@ class _LibrarySyncHostState extends ConsumerState<LibrarySyncHost>
         signedIn: true,
       );
       final plan = planLibrarySync(req);
-      await auth.pushLibrary(plan.upserts);
       await applyLibraryPlan(state: db, downloads: downloads, plan: plan);
       if (!mounted) return;
       final nav = appNavigatorKey.currentContext;
@@ -129,7 +128,6 @@ class _LibrarySyncHostState extends ConsumerState<LibrarySyncHost>
                 ? const {}
                 : result.selected,
           );
-          await auth.pushLibrary(follow.upserts);
           await applyLibraryPlan(state: db, downloads: downloads, plan: follow);
         }
       } else if (plan.showStorageSheet &&
@@ -164,6 +162,24 @@ class _LibrarySyncHostState extends ConsumerState<LibrarySyncHost>
     } finally {
       _busy = false;
     }
+  }
+
+  List<LibraryDoc> _withShelf(List<LibraryDoc> remote, StateDatabase db) {
+    final seen = remote.map((doc) => doc.bookId).toSet();
+    return [
+      ...remote,
+      for (final row in db.listBookshelfSync())
+        if (!row.removed && !seen.contains(row.bookId))
+          LibraryDoc(
+            bookId: row.bookId,
+            title: '',
+            sizeBytes: 0,
+            catalogVersion: 0,
+            status: LibraryStatus.installed,
+            installedAt: row.addedAt,
+            updatedAt: row.updatedAt,
+          ),
+    ];
   }
 
   @override

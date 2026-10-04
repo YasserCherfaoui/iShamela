@@ -13,6 +13,7 @@ import 'package:ishamela/features/library/library_page.dart';
 import 'package:ishamela/features/library/library_sync_host.dart';
 import 'package:ishamela/features/settings/settings_page.dart';
 import 'package:ishamela/features/splash/startup_splash.dart';
+import 'package:ishamela/features/sync/progress_sync_host.dart';
 import 'package:ishamela/ui/app_bottom_nav.dart';
 import 'package:ishamela/ui/glass/chrome/glass_tab_bar.dart';
 import 'package:ishamela/ui/glass/drawn/drawn_glass_surface.dart';
@@ -50,7 +51,9 @@ class IshamelaApp extends ConsumerWidget {
         return GlassRuntime(
           child: StartupSplashGate(
             child: DownloadSnackHost(
-              child: LibrarySyncHost(child: child ?? const SizedBox.shrink()),
+              child: LibrarySyncHost(
+                child: ProgressSyncHost(child: child ?? const SizedBox.shrink()),
+              ),
             ),
           ),
         );

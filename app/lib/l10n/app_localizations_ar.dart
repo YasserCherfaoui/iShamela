@@ -815,6 +815,14 @@ class AppLocalizationsAr extends AppLocalizations {
   String get profileNeverSynced => 'لم تتم المزامنة بعد';
 
   @override
+  String get profileSyncIssues => 'مشكلات المزامنة — أعد المحاولة';
+
+  @override
+  String readerResumeAt(String page) {
+    return 'استئناف عند ص $page';
+  }
+
+  @override
   String get profileSyncNow => 'مزامنة الآن';
 
   @override
@@ -912,11 +920,20 @@ class AppLocalizationsAr extends AppLocalizations {
   String get profileSignOutConfirm => 'سيبقى سجلك وملاحظاتك على هذا الجهاز';
 
   @override
+  String get profileKeepOnDevice => 'هل نبقي بياناتك على هذا الجهاز؟';
+
+  @override
+  String get profileKeep => 'إبقاء';
+
+  @override
+  String get profileRemoveFromDevice => 'حذف من الجهاز';
+
+  @override
   String get profileDeleteAccount => 'حذف الحساب';
 
   @override
   String get profileDeleteExplain =>
-      'سيُحذف حسابك السحابي وجميع البيانات المتزامنة. تبقى بياناتك المحلية على هذا الجهاز ما لم تفعّل الخيار أدناه.';
+      'سيُحذف حسابك والبيانات المتزامنة على هذا الجهاز.';
 
   @override
   String get profileDeleteWipeLocal => 'احذف بياناتي من هذا الجهاز أيضًا';
@@ -1171,4 +1188,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get homeSyncLoadFailed => 'تعذّر تحميل نسخة الحساب';
+
+  @override
+  String resumeAtPage(String page) {
+    return 'متابعة من ص $page';
+  }
 }
