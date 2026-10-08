@@ -80,6 +80,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         authorName: book?.authorName,
         initialPageId: entry.pageId,
         initialPrintPage: entry.printPage,
+        initialPart: entry.part,
       );
       if (mounted) setState(() => _tick++);
       return;

@@ -82,6 +82,7 @@ class ReaderPage extends ConsumerStatefulWidget {
     this.authorId,
     this.initialPageId,
     this.initialPrintPage,
+    this.initialPart,
     this.initialSearchQuery,
     this.exactPhrase = false,
   });
@@ -91,9 +92,10 @@ class ReaderPage extends ConsumerStatefulWidget {
   final String? authorName;
   final int? authorId;
 
-  /// Prefer [initialPrintPage] when set (SPEC-014 resume).
+  /// Page id wins. [initialPrintPage] is the fallback, inside [initialPart].
   final int? initialPageId;
   final int? initialPrintPage;
+  final String? initialPart;
 
   /// Prefill in-book search (SPEC-017 «عرض المزيد» / hit open).
   final String? initialSearchQuery;
@@ -107,6 +109,7 @@ class ReaderPage extends ConsumerStatefulWidget {
     int? authorId,
     int? initialPageId,
     int? initialPrintPage,
+    String? initialPart,
     String? initialSearchQuery,
     bool exactPhrase = false,
   }) {
@@ -121,6 +124,7 @@ class ReaderPage extends ConsumerStatefulWidget {
           authorId: authorId,
           initialPageId: initialPageId,
           initialPrintPage: initialPrintPage,
+          initialPart: initialPart,
           initialSearchQuery: initialSearchQuery,
           exactPhrase: exactPhrase,
         ),
@@ -137,6 +141,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
   BookDatabase? _db;
   List<int> _ids = const [];
   List<TocEntry> _toc = const [];
+  List<BookPart> _parts = const [];
+  final _tocExpanded = <int>{};
+  String _tocQuery = '';
   int _notesTick = 0;
   int _bookmarksTick = 0;
   int _index = 0;
@@ -158,6 +165,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
   bool _showResumeChip = false;
   int? _resumeProgressPageId;
   int? _resumePrintPage;
+  String? _resumePart;
   int _paneTab = 0;
 
   /// Prevents multi-page jumps from a single overscroll gesture.
@@ -201,38 +209,23 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
       }
       final saved = state.viewportPageId(widget.bookId);
       final qualified = state.readingProgressFor(widget.bookId);
-      var index = 0;
-      var resumeMissing = false;
-      if (widget.initialPrintPage != null) {
-        final p = db.pageByPrintNumber(widget.initialPrintPage!);
-        if (p != null) {
-          final i = ids.indexOf(p.id);
-          if (i >= 0) index = i;
-        } else {
-          resumeMissing = true;
-        }
-      } else if (widget.initialPageId != null) {
-        final i = ids.indexOf(widget.initialPageId!);
-        if (i >= 0) {
-          index = i;
-        } else {
-          resumeMissing = true;
-        }
-      }
-      if ((widget.initialPrintPage != null || widget.initialPageId != null) &&
-          resumeMissing &&
-          saved != null) {
+      final located = _locateOpenIndex(db, ids);
+      var index = located ?? 0;
+      final resumeMissing =
+          located == null &&
+          (widget.initialPageId != null || widget.initialPrintPage != null);
+      if (resumeMissing && saved != null) {
         final i = ids.indexOf(saved);
         if (i >= 0) index = i;
-      } else if (widget.initialPrintPage == null &&
-          widget.initialPageId == null &&
-          saved != null) {
+      } else if (located == null && saved != null) {
         final i = ids.indexOf(saved);
         if (i >= 0) index = i;
       }
       final mode = _parseReadingMode(state.setting('reading_mode'));
       final page = db.pageById(ids[index]);
-      final section = _sectionTitleForToc(db.tocEntries(), ids[index]);
+      final toc = db.tocEntries();
+      final parts = db.parts();
+      final section = _sectionTitleForToc(toc, ids[index]);
       final openedAt = DateTime.now().millisecondsSinceEpoch;
       state.upsertBookSession(
         bookId: widget.bookId,
@@ -249,6 +242,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
       );
       _policy.land(bookId: widget.bookId, ordinal: index, page: ids[index]);
       final progressPage = qualified?.page;
+      final resumePage = progressPage == null
+          ? null
+          : db.pageById(progressPage);
       final showChip =
           progressPage != null && progressPage != ids[index];
       if (!mounted) {
@@ -259,16 +255,17 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
         _db = db;
         _state = state;
         _ids = ids;
-        _toc = db.tocEntries();
+        _toc = toc;
+        _parts = parts;
         _index = index;
         _mode = mode;
         _pageController = PageController(initialPage: index);
         _jumpCtrl.text = page?.pageNumber?.toString() ?? '';
         _showResumeChip = showChip;
         _resumeProgressPageId = progressPage;
-        _resumePrintPage = showChip
-            ? db.pageById(progressPage)?.pageNumber
-            : null;
+        _resumePrintPage = showChip ? resumePage?.pageNumber : null;
+        _resumePart = showChip ? resumePage?.part : null;
+        _tocExpanded.clear();
       });
       _scheduler = ref.read(syncSchedulerProvider);
       _scheduler!.setBookOpen(true);
@@ -331,7 +328,31 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
     );
   }
 
+  /// Page id first. Print page is used only when that id is not in this book.
+  int? _locateOpenIndex(BookDatabase db, List<int> ids) {
+    final pageId = widget.initialPageId;
+    if (pageId != null) {
+      final i = ids.indexOf(pageId);
+      if (i >= 0) return i;
+    }
+    final printPage = widget.initialPrintPage;
+    if (printPage == null) return null;
+    final page = db.pageByPrintNumber(printPage, part: widget.initialPart);
+    if (page == null) return null;
+    final i = ids.indexOf(page.id);
+    return i >= 0 ? i : null;
+  }
+
   String? _sectionTitleFor(int pageId) => _sectionTitleForToc(_toc, pageId);
+
+  String _resumeChipLabel(AppLocalizations l10n) {
+    final page = '${_resumePrintPage ?? _resumeProgressPageId}';
+    final part = _resumePart;
+    if (part != null && part.isNotEmpty) {
+      return l10n.resumeAtPartPage(part, page);
+    }
+    return l10n.resumeAtPage(page);
+  }
 
   static String? _sectionTitleForToc(List<TocEntry> toc, int pageId) {
     if (toc.isEmpty) return null;
@@ -864,9 +885,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
                         child: Align(
                           alignment: Alignment.topCenter,
                           child: _ResumeProgressChip(
-                            label: l10n.resumeAtPage(
-                              '${_resumePrintPage ?? _resumeProgressPageId}',
-                            ),
+                            label: _resumeChipLabel(l10n),
                             dismissLabel: l10n.cancel,
                             onResume: () {
                               final id = _resumeProgressPageId;
@@ -1115,7 +1134,10 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
                             onGo: (raw) async {
                               final n = int.tryParse(raw.trim());
                               if (n == null) return false;
-                              final p = _db!.pageByPrintNumber(n);
+                              final p = _db!.pageByPrintNumber(
+                                n,
+                                part: page?.part,
+                              );
                               if (p == null) {
                                 if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
@@ -1293,6 +1315,68 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
   }
 
   Widget _tocList(AppLocalizations l10n) {
+    if (_toc.isEmpty && _parts.length < 2) {
+      return Center(child: Text(l10n.tocEmpty));
+    }
+    return Column(
+      children: [
+        if (_parts.length > 1) _partSwitcher(),
+        if (_toc.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+            child: AppSearchField(
+              hintText: l10n.tocSearch,
+              onChanged: (value) => setState(() => _tocQuery = value),
+            ),
+          ),
+        Expanded(child: _tocRows(l10n)),
+      ],
+    );
+  }
+
+  Widget _partSwitcher() {
+    final t = IshamelaTokens.of(context);
+    final current = (_db != null && _ids.isNotEmpty)
+        ? _db!.pageById(_ids[_index])?.part
+        : null;
+    return SizedBox(
+      height: 40,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        itemCount: _parts.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 6),
+        itemBuilder: (context, i) {
+          final part = _parts[i];
+          final selected = part.label == current;
+          return Material(
+            color: selected ? t.green100 : t.card,
+            borderRadius: BorderRadius.circular(999),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(999),
+              onTap: () => _jumpToId(part.firstPageId),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Center(
+                  child: Text(
+                    part.label,
+                    style: TextStyle(
+                      fontFamily: kFontUi,
+                      fontSize: 12,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+                      color: selected ? t.emphasis : t.ink,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _tocRows(AppLocalizations l10n) {
     if (_toc.isEmpty) {
       return Center(child: Text(l10n.tocEmpty));
     }
@@ -1301,65 +1385,124 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
       _toc.map((e) => e.pageId).toList(),
       currentId,
     );
-    final depths = tocIndentDepths(
+    final query = normalize(_tocQuery.trim());
+    final matchIds = query.isEmpty
+        ? null
+        : <int>{
+            for (final entry in _toc)
+              if (normalize(entry.title).contains(query)) entry.id,
+          };
+    final rows = visibleTocRows(
       ids: _toc.map((e) => e.id).toList(),
-      parentIds: _toc.map((e) => e.parentId).toList(),
+      parentIds: tocInferredParents(
+        ids: _toc.map((e) => e.id).toList(),
+        parentIds: _toc.map((e) => e.parentId).toList(),
+        titles: _toc.map((e) => e.title).toList(),
+      ),
+      expandedIds: _tocExpanded,
+      matchIds: matchIds,
     );
+    if (rows.isEmpty) {
+      return Center(child: Text(l10n.tocSearchEmpty));
+    }
     final t = IshamelaTokens.of(context);
     return ListView.builder(
-      itemCount: _toc.length,
+      itemCount: rows.length,
       itemBuilder: (context, i) {
-        final e = _toc[i];
-        final selected = i == active;
-        final printNo = _db?.pageById(e.pageId)?.pageNumber?.toString() ?? '—';
-        final depth = depths[i].clamp(0, 6);
+        final row = rows[i];
+        final e = _toc[row.index];
+        final selected = row.index == active;
+        final page = _db?.pageById(e.pageId);
+        final printNo = page?.pageNumber?.toString() ?? '—';
+        final part = page?.part;
+        final pageLabel = _parts.length > 1 && part != null && part.isNotEmpty
+            ? 'ج$part · ص$printNo'
+            : printNo;
+        final depth = row.depth.clamp(0, 8);
+        final fontSize = depth <= 0
+            ? 15.0
+            : depth == 1
+            ? 14.0
+            : 13.0;
         return Padding(
-          padding: EdgeInsetsDirectional.only(start: 8.0 + depth * 14),
+          padding: EdgeInsetsDirectional.only(start: 4.0 + depth * 18),
           child: Material(
             color: selected ? t.green100 : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(10),
-              onTap: () => _jumpToId(e.pageId),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 8,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        e.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontFamily: 'Amiri',
-                          fontWeight: selected
-                              ? FontWeight.w700
-                              : FontWeight.w400,
-                          fontSize: 14,
-                          color: selected ? t.emphasis : t.ink,
-                        ),
+            child: Row(
+              children: [
+                if (row.hasChildren)
+                  IconButton(
+                    tooltip: row.expanded ? l10n.tocCollapse : l10n.tocExpand,
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 28,
+                      height: 28,
+                    ),
+                    icon: Icon(
+                      row.expanded ? Icons.expand_more : Icons.chevron_left,
+                      size: 18,
+                      color: t.muted,
+                    ),
+                    onPressed: () => _toggleToc(e.id),
+                  )
+                else
+                  const SizedBox(width: 28),
+                Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () => _jumpToId(e.pageId),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              e.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: 'Amiri',
+                                fontWeight: selected
+                                    ? FontWeight.w700
+                                    : (depth == 0
+                                          ? FontWeight.w600
+                                          : FontWeight.w400),
+                                fontSize: fontSize,
+                                color: selected ? t.emphasis : t.ink,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            pageLabel,
+                            style: TextStyle(
+                              fontFamily: kFontUi,
+                              fontSize: 11,
+                              color: t.muted,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      printNo,
-                      style: TextStyle(
-                        fontFamily: kFontUi,
-                        fontSize: 11,
-                        color: t.muted,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         );
       },
     );
+  }
+
+  void _toggleToc(int id) {
+    setState(() {
+      if (!_tocExpanded.add(id)) _tocExpanded.remove(id);
+    });
   }
 
   Widget _bookmarksList(AppLocalizations l10n) {

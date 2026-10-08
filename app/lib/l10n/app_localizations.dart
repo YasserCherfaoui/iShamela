@@ -380,6 +380,30 @@ abstract class AppLocalizations {
   /// **'الفهرس'**
   String get toc;
 
+  /// No description provided for @tocSearch.
+  ///
+  /// In ar, this message translates to:
+  /// **'بحث في الفهرس'**
+  String get tocSearch;
+
+  /// No description provided for @tocSearchEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا نتائج في الفهرس'**
+  String get tocSearchEmpty;
+
+  /// No description provided for @tocExpand.
+  ///
+  /// In ar, this message translates to:
+  /// **'توسيع'**
+  String get tocExpand;
+
+  /// No description provided for @tocCollapse.
+  ///
+  /// In ar, this message translates to:
+  /// **'طي'**
+  String get tocCollapse;
+
   /// No description provided for @bookCard.
   ///
   /// In ar, this message translates to:
@@ -2269,6 +2293,12 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'متابعة من ص {page}'**
   String resumeAtPage(String page);
+
+  /// No description provided for @resumeAtPartPage.
+  ///
+  /// In ar, this message translates to:
+  /// **'متابعة من ج {part} · ص {page}'**
+  String resumeAtPartPage(String part, String page);
 }
 
 class _AppLocalizationsDelegate

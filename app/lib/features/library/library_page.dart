@@ -1324,6 +1324,7 @@ class _ContinueReadingHero extends StatelessWidget {
                               authorName: book.authorName,
                               initialPageId: latest.pageId,
                               initialPrintPage: latest.printPage,
+                              initialPart: latest.part,
                             )
                         : null,
                     child: Text(
@@ -1368,6 +1369,7 @@ class _ContinueReadingHero extends StatelessWidget {
                   authorName: book.authorName,
                   initialPageId: latest.pageId,
                   initialPrintPage: latest.printPage,
+                  initialPart: latest.part,
                 ),
                 child: CircleAvatar(
                   backgroundColor: t.gold,

@@ -301,6 +301,7 @@ class _HistoryRow extends ConsumerWidget {
                   authorName: book?.authorName,
                   initialPageId: entry.pageId,
                   initialPrintPage: entry.printPage,
+                  initialPart: entry.part,
                 )
             : null,
       ),

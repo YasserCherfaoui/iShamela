@@ -84,6 +84,7 @@ class _BookmarksPageState extends ConsumerState<BookmarksPage> {
                             authorName: book?.authorName,
                             initialPageId: b.pageId,
                             initialPrintPage: b.printPage,
+                            initialPart: b.part,
                           )
                       : null,
                 ),

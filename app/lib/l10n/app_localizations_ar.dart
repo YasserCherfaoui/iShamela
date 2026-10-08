@@ -160,6 +160,18 @@ class AppLocalizationsAr extends AppLocalizations {
   String get toc => 'الفهرس';
 
   @override
+  String get tocSearch => 'بحث في الفهرس';
+
+  @override
+  String get tocSearchEmpty => 'لا نتائج في الفهرس';
+
+  @override
+  String get tocExpand => 'توسيع';
+
+  @override
+  String get tocCollapse => 'طي';
+
+  @override
   String get bookCard => 'بطاقة الكتاب';
 
   @override
@@ -1192,5 +1204,10 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String resumeAtPage(String page) {
     return 'متابعة من ص $page';
+  }
+
+  @override
+  String resumeAtPartPage(String part, String page) {
+    return 'متابعة من ج $part · ص $page';
   }
 }

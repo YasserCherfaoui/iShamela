@@ -70,6 +70,10 @@
   "searchScopeAuthors": "Auteurs",
   "searchScopeCategories": "Catégories",
   "toc": "Sommaire",
+  "tocSearch": "Rechercher dans le sommaire",
+  "tocSearchEmpty": "Aucun titre correspondant",
+  "tocExpand": "Développer",
+  "tocCollapse": "Réduire",
   "bookCard": "Fiche du livre",
   "readingMode": "Mode de lecture",
   "modePagedH": "Pages · horizontal",
@@ -599,6 +603,13 @@
   "resumeAtPage": "Reprendre à la p. {page}",
   "@resumeAtPage": {
     "placeholders": {
+      "page": {"type": "String"}
+    }
+  },
+  "resumeAtPartPage": "Reprendre au vol. {part}, p. {page}",
+  "@resumeAtPartPage": {
+    "placeholders": {
+      "part": {"type": "String"},
       "page": {"type": "String"}
     }
   }

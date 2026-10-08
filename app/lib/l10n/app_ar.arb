@@ -70,6 +70,10 @@
   "searchScopeAuthors": "مؤلفون",
   "searchScopeCategories": "أقسام",
   "toc": "الفهرس",
+  "tocSearch": "بحث في الفهرس",
+  "tocSearchEmpty": "لا نتائج في الفهرس",
+  "tocExpand": "توسيع",
+  "tocCollapse": "طي",
   "bookCard": "بطاقة الكتاب",
   "readingMode": "وضع القراءة",
   "modePagedH": "صفحات · أفقي",
@@ -604,6 +608,13 @@
   "resumeAtPage": "متابعة من ص {page}",
   "@resumeAtPage": {
     "placeholders": {
+      "page": {"type": "String"}
+    }
+  },
+  "resumeAtPartPage": "متابعة من ج {part} · ص {page}",
+  "@resumeAtPartPage": {
+    "placeholders": {
+      "part": {"type": "String"},
       "page": {"type": "String"}
     }
   }

@@ -161,6 +161,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get toc => 'Contents';
 
   @override
+  String get tocSearch => 'Search contents';
+
+  @override
+  String get tocSearchEmpty => 'No matching headings';
+
+  @override
+  String get tocExpand => 'Expand';
+
+  @override
+  String get tocCollapse => 'Collapse';
+
+  @override
   String get bookCard => 'Book card';
 
   @override
@@ -1200,5 +1212,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String resumeAtPage(String page) {
     return 'Resume at p.$page';
+  }
+
+  @override
+  String resumeAtPartPage(String part, String page) {
+    return 'Resume at vol. $part, p.$page';
   }
 }

@@ -26,6 +26,13 @@ class BookPage {
   final String? footnotes;
 }
 
+class BookPart {
+  const BookPart({required this.label, required this.firstPageId});
+
+  final String label;
+  final int firstPageId;
+}
+
 class TocEntry {
   TocEntry({
     required this.id,
@@ -219,24 +226,46 @@ class BookDatabase {
     }
   }
 
-  BookPage? pageByPrintNumber(int pageNumber) {
+  BookPage? pageByPrintNumber(int pageNumber, {String? part}) {
+    final scoped = part != null && part.isNotEmpty;
+    final where = scoped ? 'page_number = ? AND part = ?' : 'page_number = ?';
+    final args = scoped ? <Object?>[pageNumber, part] : <Object?>[pageNumber];
     try {
       final rows = _db.select(
         'SELECT id, part, page_number, body, footnotes FROM pages '
-        'WHERE page_number = ? ORDER BY ${pagesReadingOrderSql()} LIMIT 1',
-        [pageNumber],
+        'WHERE $where ORDER BY ${pagesReadingOrderSql()} LIMIT 1',
+        args,
       );
       if (rows.isEmpty) return null;
       return _pageFromRow(rows.first);
     } catch (_) {
       final rows = _db.select(
         'SELECT id, part, page_number, body FROM pages '
-        'WHERE page_number = ? ORDER BY ${pagesReadingOrderSql()} LIMIT 1',
-        [pageNumber],
+        'WHERE $where ORDER BY ${pagesReadingOrderSql()} LIMIT 1',
+        args,
       );
       if (rows.isEmpty) return null;
       return _pageFromRow(rows.first);
     }
+  }
+
+  /// Distinct volume labels in reading order, each with its first page.
+  List<BookPart> parts() {
+    final rows = _db.select(
+      '''
+      SELECT id, part FROM pages
+      WHERE part IS NOT NULL AND part != ''
+      ORDER BY ${pagesReadingOrderSql()}
+      ''',
+    );
+    final out = <BookPart>[];
+    final seen = <String>{};
+    for (final row in rows) {
+      final label = row['part'] as String;
+      if (!seen.add(label)) continue;
+      out.add(BookPart(label: label, firstPageId: row['id'] as int));
+    }
+    return out;
   }
 
   BookPage _pageFromRow(Row r) {

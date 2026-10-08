@@ -89,7 +89,9 @@ class AuthController extends Notifier<AuthStatus> {
       clientId: kIsWeb
           ? webClientId
           : (applePlatform ? iosClientId : null),
-      serverClientId: applePlatform ? webClientId : null,
+      // Web ignores this. Android and Apple platforms mint the ID token for it.
+      // iOS still puts the iOS client ID in `aud`, so the API must allow all three.
+      serverClientId: kIsWeb ? null : webClientId,
       scopes: const ['email', 'profile'],
     );
     final account = await _google!.signIn();

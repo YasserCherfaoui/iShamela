@@ -36,6 +36,13 @@ void main() {
     final book = BookDatabase.open(paths, 9);
     expect(book.pageIds(), [4, 3, 6, 2, 1, 5]);
     expect(book.pageByPrintNumber(2)?.body, 'vol1-p2');
+    expect(book.pageByPrintNumber(1, part: '2')?.body, 'vol2-p1');
+    expect(book.pageByPrintNumber(1, part: '10')?.body, 'vol10');
+    expect(book.pageByPrintNumber(2, part: '2'), isNull);
+    expect(
+      book.parts().map((part) => (part.label, part.firstPageId)),
+      [('1', 3), ('2', 1), ('10', 5)],
+    );
     book.close();
   });
 }
