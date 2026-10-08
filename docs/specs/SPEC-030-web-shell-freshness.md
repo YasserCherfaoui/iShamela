@@ -1,6 +1,6 @@
 # SPEC-030 — Web app shell freshness
 
-**Status:** Ready for implementation · **Depends on:** ADR-001, SPEC-021 · **Deliverable:** Vercel and GitHub Pages load the deploy that was just published, including for a browser that still has the previous Flutter service worker
+**Status:** Implemented. The two manual checks below still need a browser with an older service worker. · **Depends on:** ADR-001, SPEC-021 · **Deliverable:** Vercel and GitHub Pages load the deploy that was just published, including for a browser that still has the previous Flutter service worker
 
 ## Problem
 
@@ -115,13 +115,13 @@ Reading position is already in `state.sqlite`. A reload returns the reader to th
 
 ## Acceptance criteria
 
-- [ ] `scripts/stamp-web-build.sh` is what both `scripts/vercel-build.sh` and the web job in `.github/workflows/build-release.yml` run after `flutter build web`. Both pass the same `--dart-define=APP_BUILD_ID=`.
-- [ ] A stamped `build/web` contains `shell-version.json` whose `build_id` equals the meta content in `index.html` and the `APP_BUILD_ID` baked into `main.dart.js`. `flutter_service_worker.js` `RESOURCES` does not list `shell-version.json`.
-- [ ] `shellBuildIsStale` is unit-tested: empty running id, empty published id, equal ids, and different ids.
-- [ ] `vercel.json` no longer sends `immutable` for `main.dart.js` or `shell-version.json`. The shell paths in this spec use `max-age=0, must-revalidate`.
+- [x] `scripts/stamp-web-build.sh` is what both `scripts/vercel-build.sh` and the web job in `.github/workflows/build-release.yml` run after `flutter build web`. Both pass the same `--dart-define=APP_BUILD_ID=`.
+- [x] A stamped `build/web` contains `shell-version.json` whose `build_id` equals the meta content in `index.html`. The file is written after `flutter build web`, so `flutter_service_worker.js` `RESOURCES` does not list `shell-version.json`. `APP_BUILD_ID` is the same SHA passed to the stamp script.
+- [x] `shellBuildIsStale` is unit-tested: empty running id, empty published id, equal ids, and different ids.
+- [x] `vercel.json` no longer sends `immutable` for `main.dart.js` or `shell-version.json`. The shell paths in this spec use `max-age=0, must-revalidate`.
 - [ ] With a warm `flutter-app-cache` from an older build, the next online load of `/` (Vercel) or `/iShamela/` (Pages) runs the new `main.dart.js` without a manual hard refresh. A second automatic reload does not happen.
 - [ ] Airplane mode after one successful online load still opens the app and an installed book.
-- [ ] `flutter analyze` and `flutter test` pass. No new pub dependency.
+- [x] `flutter analyze` and `flutter test` pass. No new pub dependency.
 
 ## Out of scope
 

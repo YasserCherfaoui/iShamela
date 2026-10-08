@@ -20,4 +20,6 @@ if grep -q "webApiKey = '';" "$REPO_ROOT/app/lib/firebase_local_secrets.dart"; t
 fi
 
 cd app
-flutter build web --release --base-href /
+SHA="$(git -C "$REPO_ROOT" rev-parse HEAD)"
+flutter build web --release --base-href / --dart-define=APP_BUILD_ID="$SHA"
+"$REPO_ROOT/scripts/stamp-web-build.sh" "$REPO_ROOT/app/build/web" "$SHA"

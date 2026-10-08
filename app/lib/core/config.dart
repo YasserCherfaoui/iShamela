@@ -30,6 +30,12 @@ const String apiBaseUrl = String.fromEnvironment(
   defaultValue: 'https://ishamelabackend-production.up.railway.app',
 );
 
+/// Git SHA of this web build (SPEC-030). Empty for local `flutter run`.
+const String appBuildId = String.fromEnvironment(
+  'APP_BUILD_ID',
+  defaultValue: '',
+);
+
 /// Public OAuth client IDs (SPEC-031). Not secrets.
 const String googleWebClientId =
     '940987204287-i32s08v3mlpngvn98v58q133m2h5kpt3.apps.googleusercontent.com';

@@ -174,7 +174,10 @@ jobs:
       - run: flutter pub get
 
       - name: Build web
-        run: flutter build web --release --base-href "${{ env.WEB_BASE_HREF }}"
+        run: |
+          SHA="$(git rev-parse HEAD)"
+          flutter build web --release --base-href "${{ env.WEB_BASE_HREF }}" --dart-define=APP_BUILD_ID="$SHA"
+          ../scripts/stamp-web-build.sh build/web "$SHA"
 
       - name: Zip web
         working-directory: app/build

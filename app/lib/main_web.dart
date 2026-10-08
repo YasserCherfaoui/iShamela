@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ishamela/app.dart';
 import 'package:ishamela/core/auth/firebase_bootstrap.dart';
 import 'package:ishamela/core/db/web_sqlite.dart';
+import 'package:ishamela/core/web/shell_freshness_web.dart';
 
 /// Web entry: WASM sqlite + IndexedDB VFS, then the real app shell.
 /// Book downloads/installs are disabled (see [DownloadService] web stub).
@@ -12,4 +13,5 @@ Future<void> main() async {
   await WebSqlite.init();
   await initFirebaseBestEffort();
   runApp(const ProviderScope(child: IshamelaApp()));
+  startShellFreshnessWatch();
 }

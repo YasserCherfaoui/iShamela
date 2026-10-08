@@ -30,6 +30,7 @@
   <title>الشاملة · iShamela</title>
   <link rel="manifest" href="manifest.json">
   <meta name="google-signin-client_id" content="940987204287-i32s08v3mlpngvn98v58q133m2h5kpt3.apps.googleusercontent.com">
+  <meta name="ishamela-build-id" content="__ISHAMELA_BUILD_ID__">
   <script type="text/javascript" src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js"></script>
   
   
@@ -107,7 +108,67 @@
       <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="">
   </picture>
   
-  <script src="flutter_bootstrap.js" async=""></script>
+  <script>
+    (function () {
+      function loadBootstrap() {
+        var script = document.createElement('script');
+        script.src = 'flutter_bootstrap.js';
+        script.async = true;
+        document.body.appendChild(script);
+      }
+      var meta = document.querySelector('meta[name="ishamela-build-id"]');
+      var id = meta ? (meta.getAttribute('content') || '') : '';
+      if (!id || id.indexOf('__ISHAMELA_BUILD_ID__') !== -1) {
+        loadBootstrap();
+        return;
+      }
+      var seen;
+      try {
+        seen = localStorage.getItem('ishamela-build-id');
+      } catch (e) {
+        loadBootstrap();
+        return;
+      }
+      if (seen === id) {
+        loadBootstrap();
+        return;
+      }
+      try {
+        localStorage.setItem('ishamela-build-id', id);
+      } catch (e) {
+        loadBootstrap();
+        return;
+      }
+      if (!navigator.serviceWorker || !navigator.serviceWorker.controller) {
+        loadBootstrap();
+        return;
+      }
+      Promise.all([
+        navigator.serviceWorker.getRegistrations().then(function (regs) {
+          return Promise.all(regs.map(function (reg) { return reg.unregister(); }));
+        }),
+        (window.caches ? caches.keys() : Promise.resolve([])).then(function (keys) {
+          return Promise.all(keys.filter(function (key) {
+            return key.indexOf('flutter-') === 0;
+          }).map(function (key) { return caches.delete(key); }));
+        })
+      ]).then(function () {
+        try {
+          if (sessionStorage.getItem('ishamela-shell-reloaded') === id) {
+            loadBootstrap();
+            return;
+          }
+          sessionStorage.setItem('ishamela-shell-reloaded', id);
+        } catch (e) {
+          loadBootstrap();
+          return;
+        }
+        location.reload();
+      }).catch(function () {
+        loadBootstrap();
+      });
+    })();
+  </script>
 
 
 </body></html>
