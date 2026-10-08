@@ -30,6 +30,18 @@ const String apiBaseUrl = String.fromEnvironment(
   defaultValue: 'https://ishamelabackend-production.up.railway.app',
 );
 
+/// Public OAuth client IDs (SPEC-031). Not secrets.
+const String googleWebClientId =
+    '940987204287-i32s08v3mlpngvn98v58q133m2h5kpt3.apps.googleusercontent.com';
+const String googleIosClientId =
+    '940987204287-638kvo2uo56bj712ospf2cso3prhfvpq.apps.googleusercontent.com';
+const String googleAndroidClientId =
+    '940987204287-05mer02npo5b9t0i8c901j6aitooincf.apps.googleusercontent.com';
+
+/// Apple App ID and the web Services ID (SPEC-031).
+const String appleBundleId = 'org.ishamela.ishamela';
+const String appleWebServiceId = 'online.ishamela.web';
+
 /// App identity written to book `meta.built_by` (SPEC-008).
 const String appBuiltBy = 'ishamela/0.1.0';
 

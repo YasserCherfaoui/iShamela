@@ -1,4 +1,4 @@
-# SPEC-026 — Liquid Glass Interface Style
+# SPEC-027 — Liquid Glass Interface Style
 
 - **Status:** Draft
 - **Depends on:** DESIGN-001 (Warm Manuscript tokens), SPEC-004 (app foundation / theming), SPEC-016 (app language & About — settings screen structure), SPEC-024 (profile → synced preferences)

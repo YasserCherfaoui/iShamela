@@ -6,7 +6,9 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import 'package:ishamela/core/auth/auth_errors.dart';
 import 'package:ishamela/core/auth/auth_state.dart';
+import 'package:ishamela/core/auth/provider_sign_in.dart';
 import 'package:ishamela/core/auth/user_profile.dart';
+import 'package:ishamela/core/config.dart';
 import 'package:ishamela/core/providers.dart';
 import 'package:ishamela/core/sync/api_client.dart';
 
@@ -78,20 +80,16 @@ class AuthController extends Notifier<AuthStatus> {
   }
 
   Future<void> signInGoogle() async {
-    const iosClientId =
-        '940987204287-638kvo2uo56bj712ospf2cso3prhfvpq.apps.googleusercontent.com';
-    const webClientId =
-        '940987204287-i32s08v3mlpngvn98v58q133m2h5kpt3.apps.googleusercontent.com';
     final applePlatform =
         defaultTargetPlatform == TargetPlatform.iOS ||
         defaultTargetPlatform == TargetPlatform.macOS;
     _google ??= GoogleSignIn(
       clientId: kIsWeb
-          ? webClientId
-          : (applePlatform ? iosClientId : null),
+          ? googleWebClientId
+          : (applePlatform ? googleIosClientId : null),
       // Web ignores this. Android and Apple platforms mint the ID token for it.
       // iOS still puts the iOS client ID in `aud`, so the API must allow all three.
-      serverClientId: kIsWeb ? null : webClientId,
+      serverClientId: kIsWeb ? null : googleWebClientId,
       scopes: const ['email', 'profile'],
     );
     final account = await _google!.signIn();
@@ -108,11 +106,18 @@ class AuthController extends Notifier<AuthStatus> {
     if (!supportsAppleSignIn) {
       throw AuthUnavailable('Apple Sign In is not available on this platform');
     }
+    final web = appleWebAuthentication(isWeb: kIsWeb, page: Uri.base);
     final apple = await SignInWithApple.getAppleIDCredential(
       scopes: [
         AppleIDAuthorizationScopes.email,
         AppleIDAuthorizationScopes.fullName,
       ],
+      webAuthenticationOptions: web == null
+          ? null
+          : WebAuthenticationOptions(
+              clientId: web.clientId,
+              redirectUri: web.redirectUri,
+            ),
     );
     final identity = apple.identityToken;
     if (identity == null || identity.isEmpty) {
