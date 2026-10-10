@@ -79,10 +79,7 @@ final syncApiProvider = Provider<IshamelaApi>((ref) {
       tokens: tokens,
       dio: dio,
       refreshPath: '/v1/auth/refresh',
-      readFirebaseToken: () async {
-        if (!firebaseReady) return null;
-        return FirebaseAuth.instance.currentUser?.getIdToken();
-      },
+      readFirebaseToken: readFirebaseIdToken,
       readDeviceId: () async {
         final db = await ref.read(stateDatabaseProvider.future);
         return db.ensureDeviceId();
@@ -105,7 +102,15 @@ SyncEngine _engine(Ref ref, StateDatabase db) {
     database: db,
     transport: ref.read(syncApiProvider),
     tokens: ref.read(tokenStoreProvider),
+    readFirebaseToken: readFirebaseIdToken,
   );
+}
+
+Future<String?> readFirebaseIdToken() async {
+  if (!firebaseReady) return null;
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return null;
+  return user.getIdToken();
 }
 
 final syncSchedulerProvider = Provider<SyncScheduler>((ref) {

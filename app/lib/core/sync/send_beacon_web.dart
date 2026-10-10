@@ -31,11 +31,19 @@ void Function() bindPageHide(void Function() onHide) {
 
 /// Tab close cannot wait on XHR. A bearer token needs `fetch` keepalive;
 /// `navigator.sendBeacon` cannot set `Authorization`.
-bool sendBeacon(String url, String body, {String? bearer}) {
+bool sendBeacon(
+  String url,
+  String body, {
+  String? bearer,
+  String? deviceId,
+}) {
   if (bearer != null && bearer.isNotEmpty) {
     final headers = JSObject();
     headers['Content-Type'] = 'application/json'.toJS;
     headers['Authorization'] = 'Bearer $bearer'.toJS;
+    if (deviceId != null && deviceId.isNotEmpty) {
+      headers['X-Device-Id'] = deviceId.toJS;
+    }
     final init = JSObject();
     init['method'] = 'POST'.toJS;
     init['body'] = body.toJS;

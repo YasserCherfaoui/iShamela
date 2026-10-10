@@ -4,5 +4,5 @@ import 'package:ishamela/core/sync/send_beacon_web.dart'
 
 void Function() bindPageHide(void Function() onHide) => impl.bindPageHide(onHide);
 
-bool sendBeacon(String url, String body, {String? bearer}) =>
-    impl.sendBeacon(url, body, bearer: bearer);
+bool sendBeacon(String url, String body, {String? bearer, String? deviceId}) =>
+    impl.sendBeacon(url, body, bearer: bearer, deviceId: deviceId);
