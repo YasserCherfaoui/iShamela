@@ -62,42 +62,93 @@ class TocVisibleRow {
   final bool expanded;
 }
 
-/// Parent ids with a missing third level filled in.
-///
-/// Shamela stores كتاب → باب, then leaves the following مسألة and فصل rows
-/// with a null parent. Those rows belong to the باب they follow. A كتاب,
-/// مقدمة, or bracketed heading stays a root and starts a new section.
-List<int?> tocInferredParents({
-  required List<int> ids,
-  required List<int?> parentIds,
-  required List<String> titles,
-}) {
-  assert(ids.length == parentIds.length && ids.length == titles.length);
-  final known = ids.toSet();
-  final out = List<int?>.filled(ids.length, null);
-  int? section;
-  for (var i = 0; i < ids.length; i++) {
-    final parent = parentIds[i];
-    if (parent != null && known.contains(parent)) {
-      out[i] = parent;
-      section = ids[i];
-      continue;
-    }
-    if (_startsNewSection(titles[i])) {
-      out[i] = null;
-      section = null;
-      continue;
-    }
-    out[i] = section;
-  }
-  return out;
+/// One Shamela contents heading, in the order it was stored.
+class TocHeading {
+  const TocHeading({
+    required this.titleId,
+    required this.shamelaTitleId,
+    required this.title,
+    this.parentId,
+  });
+
+  final int titleId;
+  final int shamelaTitleId;
+  final int? parentId;
+  final String title;
 }
 
-bool _startsNewSection(String title) {
-  final text = title.trim();
-  return text.startsWith('كتاب') ||
-      text.startsWith('مقدمة') ||
-      text.startsWith('[');
+/// A node in the contents tree. [titleId] is the Shamela title id.
+class TocTreeNode {
+  TocTreeNode({required this.titleId, required this.title});
+
+  final int titleId;
+  final String title;
+  final List<TocTreeNode> children = [];
+}
+
+/// Dart's `\b` is an ASCII boundary, so it never matches after an Arabic word.
+/// The lookahead is that boundary: the keyword must not continue into more
+/// Arabic letters (`كتاب` matches, `كتابي` does not).
+final bookRegex = RegExp(
+  r'^(كتاب|مقدمة|\[مقدمة|المجلد|الجزء)(?![\u0600-\u06FF])',
+);
+final chapterRegex = RegExp(
+  r'^(باب|فصل|مطلب|مبحث|\[باب|تابع)(?![\u0600-\u06FF])',
+);
+
+/// Contents tree in `shamela_title_id` order.
+///
+/// A heading whose parent is already in the tree hangs on that parent. A book
+/// title otherwise starts a root and clears the chapter. A chapter title hangs
+/// on the current book. Anything else hangs on the current chapter, then the
+/// current book, then the top level.
+List<TocTreeNode> buildTocTree(List<TocHeading> items) {
+  final sorted = [...items]
+    ..sort((a, b) {
+      final byTitle = a.shamelaTitleId.compareTo(b.shamelaTitleId);
+      if (byTitle != 0) return byTitle;
+      return a.titleId.compareTo(b.titleId);
+    });
+  final nodeMap = <int, TocTreeNode>{};
+  final roots = <TocTreeNode>[];
+  TocTreeNode? currentBook;
+  TocTreeNode? currentChapter;
+  for (final item in sorted) {
+    final title = item.title.trim();
+    final node = TocTreeNode(titleId: item.titleId, title: title);
+    nodeMap[item.titleId] = node;
+    final parentId = item.parentId;
+    if (parentId != null && nodeMap.containsKey(parentId)) {
+      nodeMap[parentId]!.children.add(node);
+      if (chapterRegex.hasMatch(title)) currentChapter = node;
+    } else if (bookRegex.hasMatch(title) && !chapterRegex.hasMatch(title)) {
+      roots.add(node);
+      currentBook = node;
+      currentChapter = null;
+    } else if (chapterRegex.hasMatch(title)) {
+      (currentBook?.children ?? roots).add(node);
+      currentChapter = node;
+    } else {
+      (currentChapter?.children ?? currentBook?.children ?? roots).add(node);
+    }
+  }
+  return roots;
+}
+
+/// Parent id of each [titleIds] entry, aligned with that list.
+List<int?> tocTreeParentIds(List<TocTreeNode> roots, List<int> titleIds) {
+  final parentOf = <int, int?>{};
+  void walk(TocTreeNode node, int? parent) {
+    parentOf[node.titleId] = parent;
+    for (final child in node.children) {
+      walk(child, node.titleId);
+    }
+  }
+
+  for (final root in roots) {
+    walk(root, null);
+  }
+  return [for (final id in titleIds) parentOf[id]];
 }
 
 /// Ids from [index] up through the root.
@@ -146,9 +197,7 @@ List<TocVisibleRow> visibleTocRows({
     for (final id in matchIds) {
       final i = byId[id];
       if (i == null) continue;
-      forced.addAll(
-        tocPathIds(ids: ids, parentIds: parentIds, index: i),
-      );
+      forced.addAll(tocPathIds(ids: ids, parentIds: parentIds, index: i));
     }
   }
   final showsChild = <int>{};
@@ -182,7 +231,9 @@ List<TocVisibleRow> visibleTocRows({
         index: i,
         depth: depths[i],
         hasChildren: childCount[i] > 0,
-        expanded: searching ? showsChild.contains(id) : expandedIds.contains(id),
+        expanded: searching
+            ? showsChild.contains(id)
+            : expandedIds.contains(id),
       ),
     );
   }

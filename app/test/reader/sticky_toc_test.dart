@@ -25,10 +25,7 @@ void main() {
   test('visible rows follow expanded ancestors', () {
     const ids = [1, 2, 3, 4];
     const parents = <int?>[null, 1, 1, 2];
-    expect(
-      tocPathIds(ids: ids, parentIds: parents, index: 3),
-      {4, 2, 1},
-    );
+    expect(tocPathIds(ids: ids, parentIds: parents, index: 3), {4, 2, 1});
 
     final closed = visibleTocRows(
       ids: ids,
@@ -93,45 +90,134 @@ void main() {
     expect(rootClosed.map((row) => row.index), [0]);
   });
 
-  test('orphan headings nest under the section they follow', () {
-    const ids = [1, 2, 3, 4, 5, 6];
-    const parents = <int?>[null, 1, null, null, 4, null];
-    const titles = [
-      'مقدمة التحقيق',
-      '[١ - المقنع]',
-      '[مخطوطات المقنع]',
-      'كتاب الطهارة',
-      'باب المياه',
-      '١ - مسألة؛ قال: (وهو الباقي)',
-    ];
-    final inferred = tocInferredParents(
-      ids: ids,
-      parentIds: parents,
-      titles: titles,
-    );
-    expect(inferred, [null, 1, null, null, 4, 5]);
+  List<int> idsOf(List<TocTreeNode> nodes) => [
+    for (final node in nodes) node.titleId,
+  ];
 
+  test('books, chapters, and leaves follow shamela title order', () {
+    final roots = buildTocTree(const [
+      TocHeading(titleId: 1, shamelaTitleId: 1, title: 'المجلد الأول'),
+      TocHeading(titleId: 2, shamelaTitleId: 2, title: 'كتاب الطهارة'),
+      TocHeading(titleId: 3, shamelaTitleId: 3, title: 'باب المياه'),
+      TocHeading(titleId: 4, shamelaTitleId: 4, title: 'مسألة في الماء'),
+      TocHeading(titleId: 5, shamelaTitleId: 5, title: '[باب الغسل]'),
+      TocHeading(titleId: 6, shamelaTitleId: 6, title: 'بيت من الشعر'),
+    ]);
+    expect(idsOf(roots), [1, 2]);
+    expect(idsOf(roots[1].children), [3, 5]);
+    expect(idsOf(roots[1].children[0].children), [4]);
+    expect(idsOf(roots[1].children[1].children), [6]);
+
+    const ids = [1, 2, 3, 4, 5, 6];
+    final parents = tocTreeParentIds(roots, ids);
+    expect(parents, [null, null, 2, 3, 2, 5]);
     final closed = visibleTocRows(
       ids: ids,
-      parentIds: inferred,
+      parentIds: parents,
       expandedIds: const {},
     );
-    expect(closed.map((row) => row.index), [0, 2, 3]);
-
-    final bookOpen = visibleTocRows(
-      ids: ids,
-      parentIds: inferred,
-      expandedIds: const {4},
-    );
-    expect(bookOpen.map((row) => row.index), [0, 2, 3, 4]);
-
+    expect(closed.map((row) => row.index), [0, 1]);
     final chapterOpen = visibleTocRows(
       ids: ids,
-      parentIds: inferred,
-      expandedIds: const {4, 5},
+      parentIds: parents,
+      expandedIds: const {2, 5},
     );
-    expect(chapterOpen.map((row) => row.index), [0, 2, 3, 4, 5]);
+    expect(chapterOpen.map((row) => row.index), [0, 1, 2, 4, 5]);
     expect(chapterOpen.last.depth, 2);
+  });
+
+  test('a new book clears the chapter', () {
+    final roots = buildTocTree(const [
+      TocHeading(titleId: 1, shamelaTitleId: 1, title: 'كتاب الطهارة'),
+      TocHeading(titleId: 2, shamelaTitleId: 2, title: 'باب المياه'),
+      TocHeading(titleId: 3, shamelaTitleId: 3, title: 'مسألة'),
+      TocHeading(titleId: 4, shamelaTitleId: 4, title: 'كتاب الصلاة'),
+      TocHeading(titleId: 5, shamelaTitleId: 5, title: 'فصل في الأوقات'),
+    ]);
+    expect(idsOf(roots), [1, 4]);
+    expect(idsOf(roots[0].children), [2]);
+    expect(idsOf(roots[0].children.single.children), [3]);
+    expect(idsOf(roots[1].children), [5]);
+  });
+
+  test('leaves before any book stay at the top level', () {
+    final roots = buildTocTree(const [
+      TocHeading(titleId: 1, shamelaTitleId: 1, title: 'الإهداء'),
+      TocHeading(titleId: 2, shamelaTitleId: 2, title: 'مسألة'),
+      TocHeading(titleId: 3, shamelaTitleId: 3, title: 'بيت من الشعر'),
+    ]);
+    expect(idsOf(roots), [1, 2, 3]);
+  });
+
+  test('a known parent wins, and a chapter title updates the chapter', () {
+    final roots = buildTocTree(const [
+      TocHeading(titleId: 1, shamelaTitleId: 1, title: 'كتاب الطهارة'),
+      TocHeading(
+        titleId: 2,
+        shamelaTitleId: 2,
+        parentId: 1,
+        title: 'أنواع المياه',
+      ),
+      TocHeading(
+        titleId: 3,
+        shamelaTitleId: 3,
+        parentId: 1,
+        title: 'باب المياه',
+      ),
+      TocHeading(titleId: 4, shamelaTitleId: 4, title: 'مسألة'),
+    ]);
+    expect(idsOf(roots.single.children), [2, 3]);
+    expect(idsOf(roots.single.children[1].children), [4]);
+  });
+
+  test(
+    'a parented book stays under its volume and does not take the chapter',
+    () {
+      final roots = buildTocTree(const [
+        TocHeading(titleId: 1, shamelaTitleId: 1, title: 'المجلد الأول'),
+        TocHeading(
+          titleId: 2,
+          shamelaTitleId: 2,
+          parentId: 1,
+          title: 'كتاب الطهارة',
+        ),
+        TocHeading(titleId: 3, shamelaTitleId: 3, title: 'مسألة'),
+        TocHeading(titleId: 4, shamelaTitleId: 4, title: '[مقدمة التحقيق]'),
+        TocHeading(titleId: 5, shamelaTitleId: 5, title: '[مخطوطات المقنع]'),
+      ]);
+      expect(idsOf(roots), [1, 4]);
+      expect(idsOf(roots[0].children), [2, 3]);
+      expect(idsOf(roots[1].children), [5]);
+    },
+  );
+
+  test('only chapter titles move the chapter pointer', () {
+    final roots = buildTocTree(const [
+      TocHeading(titleId: 1, shamelaTitleId: 1, title: 'كتاب الطهارة'),
+      TocHeading(titleId: 2, shamelaTitleId: 2, title: 'ثم نعود إلى المسألة'),
+      TocHeading(titleId: 3, shamelaTitleId: 3, title: 'تابع الكلام'),
+      TocHeading(titleId: 4, shamelaTitleId: 4, title: 'مسألة'),
+    ]);
+    expect(idsOf(roots.single.children), [2, 3]);
+    expect(idsOf(roots.single.children[1].children), [4]);
+  });
+
+  test('entries are ordered by shamela title id, not page id', () {
+    final roots = buildTocTree(const [
+      TocHeading(titleId: 10, shamelaTitleId: 2, title: 'باب المياه'),
+      TocHeading(titleId: 1, shamelaTitleId: 1, title: 'كتاب الطهارة'),
+    ]);
+    expect(roots.single.titleId, 1);
+    expect(roots.single.children.single.titleId, 10);
+  });
+
+  test('a keyword must end before the next Arabic letter', () {
+    final roots = buildTocTree(const [
+      TocHeading(titleId: 1, shamelaTitleId: 1, title: 'كتابي في الفقه'),
+      TocHeading(titleId: 2, shamelaTitleId: 2, title: 'كتاب الطهارة'),
+    ]);
+    expect(idsOf(roots), [1, 2]);
+    expect(roots[0].children, isEmpty);
   });
 
   test('a search shows the match and its ancestors', () {

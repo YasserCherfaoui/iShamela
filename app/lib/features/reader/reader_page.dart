@@ -246,8 +246,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
       final resumePage = progressPage == null
           ? null
           : db.pageById(progressPage);
-      final showChip =
-          progressPage != null && progressPage != ids[index];
+      final showChip = progressPage != null && progressPage != ids[index];
       if (!mounted) {
         db.close();
         return;
@@ -1380,13 +1379,19 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
             for (final entry in _toc)
               if (normalize(entry.title).contains(query)) entry.id,
           };
+    final headings = [
+      for (final entry in _toc)
+        TocHeading(
+          titleId: entry.id,
+          shamelaTitleId: entry.position,
+          parentId: entry.parentId,
+          title: entry.title,
+        ),
+    ];
+    final titleIds = [for (final heading in headings) heading.titleId];
     final rows = visibleTocRows(
-      ids: _toc.map((e) => e.id).toList(),
-      parentIds: tocInferredParents(
-        ids: _toc.map((e) => e.id).toList(),
-        parentIds: _toc.map((e) => e.parentId).toList(),
-        titles: _toc.map((e) => e.title).toList(),
-      ),
+      ids: titleIds,
+      parentIds: tocTreeParentIds(buildTocTree(headings), titleIds),
       expandedIds: _tocExpanded,
       matchIds: matchIds,
     );
