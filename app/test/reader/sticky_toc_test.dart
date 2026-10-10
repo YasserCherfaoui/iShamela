@@ -103,26 +103,26 @@ void main() {
       TocHeading(titleId: 5, shamelaTitleId: 5, title: '[باب الغسل]'),
       TocHeading(titleId: 6, shamelaTitleId: 6, title: 'بيت من الشعر'),
     ]);
-    expect(idsOf(roots), [1, 2]);
-    expect(idsOf(roots[1].children), [3, 5]);
-    expect(idsOf(roots[1].children[0].children), [4]);
-    expect(idsOf(roots[1].children[1].children), [6]);
+    expect(idsOf(roots), [1]);
+    expect(idsOf(roots.single.children), [2, 3, 5]);
+    expect(idsOf(roots.single.children[1].children), [4]);
+    expect(idsOf(roots.single.children[2].children), [6]);
 
     const ids = [1, 2, 3, 4, 5, 6];
     final parents = tocTreeParentIds(roots, ids);
-    expect(parents, [null, null, 2, 3, 2, 5]);
+    expect(parents, [null, 1, 1, 3, 1, 5]);
     final closed = visibleTocRows(
       ids: ids,
       parentIds: parents,
       expandedIds: const {},
     );
-    expect(closed.map((row) => row.index), [0, 1]);
+    expect(closed.map((row) => row.index), [0]);
     final chapterOpen = visibleTocRows(
       ids: ids,
       parentIds: parents,
-      expandedIds: const {2, 5},
+      expandedIds: const {1, 3, 5},
     );
-    expect(chapterOpen.map((row) => row.index), [0, 1, 2, 4, 5]);
+    expect(chapterOpen.map((row) => row.index), [0, 1, 2, 3, 4, 5]);
     expect(chapterOpen.last.depth, 2);
   });
 
@@ -185,21 +185,42 @@ void main() {
         TocHeading(titleId: 4, shamelaTitleId: 4, title: '[مقدمة التحقيق]'),
         TocHeading(titleId: 5, shamelaTitleId: 5, title: '[مخطوطات المقنع]'),
       ]);
-      expect(idsOf(roots), [1, 4]);
-      expect(idsOf(roots[0].children), [2, 3]);
-      expect(idsOf(roots[1].children), [5]);
+      expect(idsOf(roots), [1]);
+      expect(idsOf(roots.single.children), [2, 3, 4, 5]);
     },
   );
+
+  test('a letter title containing إلى stays a leaf', () {
+    final roots = buildTocTree(const [
+      TocHeading(titleId: 1, shamelaTitleId: 1, title: 'كتاب الطهارة'),
+      TocHeading(titleId: 2, shamelaTitleId: 2, title: 'كتاب عثمان إلى علي'),
+      TocHeading(titleId: 3, shamelaTitleId: 3, title: 'مسألة'),
+    ]);
+    expect(idsOf(roots), [1]);
+    expect(idsOf(roots.single.children), [2, 3]);
+  });
+
+  test('an introduction is a root only when the book has no volumes', () {
+    final roots = buildTocTree(const [
+      TocHeading(titleId: 1, shamelaTitleId: 1, title: '[مقدمة التحقيق]'),
+      TocHeading(titleId: 2, shamelaTitleId: 2, title: '[مخطوطات المقنع]'),
+    ]);
+    expect(idsOf(roots), [1]);
+    expect(idsOf(roots.single.children), [2]);
+  });
 
   test('only chapter titles move the chapter pointer', () {
     final roots = buildTocTree(const [
       TocHeading(titleId: 1, shamelaTitleId: 1, title: 'كتاب الطهارة'),
-      TocHeading(titleId: 2, shamelaTitleId: 2, title: 'ثم نعود إلى المسألة'),
-      TocHeading(titleId: 3, shamelaTitleId: 3, title: 'تابع الكلام'),
-      TocHeading(titleId: 4, shamelaTitleId: 4, title: 'مسألة'),
+      TocHeading(titleId: 2, shamelaTitleId: 2, title: 'فائدة'),
+      TocHeading(titleId: 3, shamelaTitleId: 3, title: 'ثم نعود إلى المسألة'),
+      TocHeading(titleId: 4, shamelaTitleId: 4, title: 'عاد القول في الباب'),
+      TocHeading(titleId: 5, shamelaTitleId: 5, title: '[فصل في المياه]'),
+      TocHeading(titleId: 6, shamelaTitleId: 6, title: 'مسألة'),
     ]);
-    expect(idsOf(roots.single.children), [2, 3]);
-    expect(idsOf(roots.single.children[1].children), [4]);
+    expect(idsOf(roots.single.children), [2, 3, 4, 5]);
+    expect(idsOf(roots.single.children[1].children), isEmpty);
+    expect(idsOf(roots.single.children.last.children), [6]);
   });
 
   test('entries are ordered by shamela title id, not page id', () {

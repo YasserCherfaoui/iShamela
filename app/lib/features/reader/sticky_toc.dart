@@ -89,20 +89,22 @@ class TocTreeNode {
 /// Dart's `\b` is an ASCII boundary, so it never matches after an Arabic word.
 /// The lookahead is that boundary: the keyword must not continue into more
 /// Arabic letters (`كتاب` matches, `كتابي` does not).
-final bookRegex = RegExp(
-  r'^(كتاب|مقدمة|\[مقدمة|المجلد|الجزء)(?![\u0600-\u06FF])',
-);
+final volumeRegex = RegExp(r'^(المجلد|الجزء)(?![\u0600-\u06FF])');
 final chapterRegex = RegExp(
-  r'^(باب|فصل|مطلب|مبحث|\[باب|تابع)(?![\u0600-\u06FF])',
+  r'^(باب|فصل|مطلب|مبحث|\[باب|\[فصل|تابع|ثم نعود|عاد القول)(?![\u0600-\u06FF])',
 );
+final bookRegex = RegExp(r'^(كتاب|مقدمة|\[مقدمة)(?![\u0600-\u06FF])');
 
 /// Contents tree in `shamela_title_id` order.
 ///
-/// A heading whose parent is already in the tree hangs on that parent. A book
-/// title otherwise starts a root and clears the chapter. A chapter title hangs
-/// on the current book. Anything else hangs on the current chapter, then the
-/// current book, then the top level.
+/// A null-parent volume is always a root. A book title is a root only when
+/// the dataset has no volumes, and not when the title contains إلى. A known
+/// parent wins. A chapter title hangs on the current root. Anything else
+/// hangs on the current chapter, then the current root, then the top level.
 List<TocTreeNode> buildTocTree(List<TocHeading> items) {
+  final hasVolumes = items.any(
+    (item) => item.parentId == null && volumeRegex.hasMatch(item.title.trim()),
+  );
   final sorted = [...items]
     ..sort((a, b) {
       final byTitle = a.shamelaTitleId.compareTo(b.shamelaTitleId);
@@ -111,8 +113,18 @@ List<TocTreeNode> buildTocTree(List<TocHeading> items) {
     });
   final nodeMap = <int, TocTreeNode>{};
   final roots = <TocTreeNode>[];
-  TocTreeNode? currentBook;
+  TocTreeNode? currentRoot;
   TocTreeNode? currentChapter;
+
+  bool isRoot(TocHeading item, String title) {
+    if (item.parentId != null) return false;
+    if (volumeRegex.hasMatch(title)) return true;
+    return !hasVolumes &&
+        bookRegex.hasMatch(title) &&
+        !title.contains('إلى') &&
+        !chapterRegex.hasMatch(title);
+  }
+
   for (final item in sorted) {
     final title = item.title.trim();
     final node = TocTreeNode(titleId: item.titleId, title: title);
@@ -121,15 +133,15 @@ List<TocTreeNode> buildTocTree(List<TocHeading> items) {
     if (parentId != null && nodeMap.containsKey(parentId)) {
       nodeMap[parentId]!.children.add(node);
       if (chapterRegex.hasMatch(title)) currentChapter = node;
-    } else if (bookRegex.hasMatch(title) && !chapterRegex.hasMatch(title)) {
+    } else if (isRoot(item, title)) {
       roots.add(node);
-      currentBook = node;
+      currentRoot = node;
       currentChapter = null;
     } else if (chapterRegex.hasMatch(title)) {
-      (currentBook?.children ?? roots).add(node);
+      (currentRoot?.children ?? roots).add(node);
       currentChapter = node;
     } else {
-      (currentChapter?.children ?? currentBook?.children ?? roots).add(node);
+      (currentChapter?.children ?? currentRoot?.children ?? roots).add(node);
     }
   }
   return roots;
