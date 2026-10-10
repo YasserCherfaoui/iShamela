@@ -62,6 +62,15 @@ void main() {
       expect(ReadingAtmosphere.fromId('night'), ReadingAtmosphere.night);
       expect(ReadingAtmosphere.sepia.id, 'sepia');
       expect(ReadingAtmosphere.fromId(null), ReadingAtmosphere.paper);
+      for (final atmosphere in ReadingAtmosphere.pickerOrder) {
+        expect(ReadingAtmosphere.fromId(atmosphere.id), atmosphere);
+        final theme = buildIshamelaTheme(atmosphere);
+        expect(theme.extension<ReaderThemeTokens>()?.atmosphere, atmosphere);
+        expect(
+          theme.brightness,
+          atmosphere.isDark ? Brightness.dark : Brightness.light,
+        );
+      }
     });
   });
 }

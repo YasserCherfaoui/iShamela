@@ -14,6 +14,7 @@ import 'package:ishamela/features/reader/text_roles.dart';
 import 'package:ishamela/features/settings/about_page.dart';
 import 'package:ishamela/features/settings/storage_page.dart';
 import 'package:ishamela/ui/glass/interface_style.dart';
+import 'package:ishamela/ui/theme/atmosphere_label.dart';
 import 'package:ishamela/ui/theme/ishamela_theme.dart';
 import 'package:ishamela/ui/theme/ishamela_tokens.dart';
 import 'package:ishamela/ui/theme/reader_theme_tokens.dart';
@@ -69,21 +70,10 @@ class SettingsPage extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 8),
-        Row(
-          children: [
-            for (final a in ReadingAtmosphere.values) ...[
-              Expanded(
-                child: _AtmosphereTile(
-                  atmosphere: a,
-                  selected: atmosphere == a,
-                  label: _atmosphereLabel(l10n, a),
-                  onTap: () =>
-                      ref.read(readingAtmosphereProvider.notifier).save(a),
-                ),
-              ),
-              if (a != ReadingAtmosphere.night) const SizedBox(width: 8),
-            ],
-          ],
+        _AtmospherePicker(
+          selected: atmosphere,
+          onSelected: (next) =>
+              ref.read(readingAtmosphereProvider.notifier).save(next),
         ),
         const SizedBox(height: 20),
         Text(
@@ -259,17 +249,6 @@ class SettingsPage extends ConsumerWidget {
     return Scaffold(body: body);
   }
 
-  String _atmosphereLabel(AppLocalizations l10n, ReadingAtmosphere a) {
-    switch (a) {
-      case ReadingAtmosphere.paper:
-        return l10n.atmospherePaper;
-      case ReadingAtmosphere.sepia:
-        return l10n.atmosphereSepia;
-      case ReadingAtmosphere.night:
-        return l10n.atmosphereNight;
-    }
-  }
-
   String _roleLabel(AppLocalizations l10n, TextRole role) {
     switch (role) {
       case TextRole.body:
@@ -361,8 +340,77 @@ class _StyleTile extends StatelessWidget {
   }
 }
 
-class _AtmosphereTile extends StatelessWidget {
-  const _AtmosphereTile({
+class _AtmospherePicker extends StatefulWidget {
+  const _AtmospherePicker({required this.selected, required this.onSelected});
+
+  final ReadingAtmosphere selected;
+  final ValueChanged<ReadingAtmosphere> onSelected;
+
+  @override
+  State<_AtmospherePicker> createState() => _AtmospherePickerState();
+}
+
+class _AtmospherePickerState extends State<_AtmospherePicker> {
+  late bool _open = ReadingAtmosphere.moreThemes.contains(widget.selected);
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final t = IshamelaTokens.of(context);
+    final shown = [
+      ...ReadingAtmosphere.coreThemes,
+      if (_open) ...ReadingAtmosphere.moreThemes,
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        LayoutBuilder(
+          builder: (context, constraints) {
+            const gap = 8.0;
+            final tileWidth = (constraints.maxWidth - gap * 2) / 3;
+            return Wrap(
+              spacing: gap,
+              runSpacing: 4,
+              children: [
+                for (final atmosphere in shown)
+                  SizedBox(
+                    width: tileWidth,
+                    child: _AtmosphereSwatch(
+                      atmosphere: atmosphere,
+                      selected: widget.selected == atmosphere,
+                      label: atmosphereLabel(l10n, atmosphere),
+                      onTap: () => widget.onSelected(atmosphere),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: TextButton.icon(
+            onPressed: () => setState(() => _open = !_open),
+            icon: Icon(
+              _open ? Icons.expand_less : Icons.expand_more,
+              color: t.emphasis,
+            ),
+            label: Text(
+              _open ? l10n.atmosphereShowLess : l10n.atmosphereShowMore,
+              style: TextStyle(
+                fontFamily: kFontUi,
+                fontWeight: FontWeight.w600,
+                color: t.emphasis,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AtmosphereSwatch extends StatelessWidget {
+  const _AtmosphereSwatch({
     required this.atmosphere,
     required this.selected,
     required this.label,
@@ -379,50 +427,64 @@ class _AtmosphereTile extends StatelessWidget {
     final tokens = ReaderThemeTokens.forAtmosphere(atmosphere);
     final t = IshamelaTokens.of(context);
     return Material(
-      color: tokens.ground,
+      color: selected ? t.chipBg : Colors.transparent,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: selected ? t.green700 : t.hairline,
-          width: selected ? 2 : 1,
+          color: selected ? t.emphasis : Colors.transparent,
+          width: 1.5,
         ),
       ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.fromLTRB(4, 10, 4, 8),
           child: Column(
             children: [
-              Text(
-                'أبجد',
-                style: TextStyle(
-                  fontFamily: kFontAmiri,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16,
-                  color: tokens.titles,
-                ),
-              ),
-              Text(
-                'نص',
-                style: TextStyle(
-                  fontFamily: kFontAmiri,
-                  fontSize: 12,
-                  color: tokens.body,
-                ),
-              ),
-              const SizedBox(height: 6),
+              _SplitCircle(ground: tokens.ground, accent: tokens.titles),
+              const SizedBox(height: 8),
               Text(
                 label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
                 style: TextStyle(
                   fontFamily: kFontUi,
-                  fontSize: 11,
+                  fontSize: 12,
+                  height: 1.2,
                   fontWeight: FontWeight.w600,
-                  color: tokens.muted,
+                  color: t.ink,
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SplitCircle extends StatelessWidget {
+  const _SplitCircle({required this.ground, required this.accent});
+
+  final Color ground;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 52,
+      height: 52,
+      child: ClipOval(
+        child: Row(
+          children: [
+            Expanded(
+              child: ColoredBox(color: ground, child: const SizedBox.expand()),
+            ),
+            Expanded(
+              child: ColoredBox(color: accent, child: const SizedBox.expand()),
+            ),
+          ],
         ),
       ),
     );

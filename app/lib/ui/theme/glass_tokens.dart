@@ -100,6 +100,32 @@ class GlassTokens {
     foregroundGold: Color(0xFFC6A15B),
   );
 
+  static GlassTokens tinted({
+    required Color page,
+    required Color ink,
+    required Color accent,
+    required Color gold,
+  }) {
+    return GlassTokens(
+      blur: 28,
+      saturation: 1.6,
+      brightness: 1.04,
+      tint: page.withValues(alpha: 0.58),
+      stroke: const Color(0x99FFFFFF),
+      highlight: const Color(0xB3FFFFFF),
+      shadow: const Color(0x1F000000),
+      shadowY: 8,
+      shadowBlur: 24,
+      radiusPill: 999,
+      radiusBar: 20,
+      radiusSheet: 28,
+      activeCapsule: accent.withValues(alpha: 0.12),
+      foregroundInk: ink,
+      foregroundAccent: accent,
+      foregroundGold: gold,
+    );
+  }
+
   static GlassTokens forAtmosphere(ReadingAtmosphere atmosphere) {
     switch (atmosphere) {
       case ReadingAtmosphere.paper:
@@ -108,6 +134,46 @@ class GlassTokens {
         return sepia;
       case ReadingAtmosphere.night:
         return night;
+      case ReadingAtmosphere.olive:
+        final reader = ReaderThemeTokens.olive;
+        return tinted(
+          page: reader.ground,
+          ink: reader.body,
+          accent: reader.titles,
+          gold: reader.progressFill,
+        );
+      case ReadingAtmosphere.gold:
+        final reader = ReaderThemeTokens.gold;
+        return tinted(
+          page: reader.ground,
+          ink: reader.body,
+          accent: reader.titles,
+          gold: reader.progressFill,
+        );
+      case ReadingAtmosphere.ink:
+        final reader = ReaderThemeTokens.ink;
+        return tinted(
+          page: reader.ground,
+          ink: reader.body,
+          accent: reader.titles,
+          gold: reader.progressFill,
+        );
+      case ReadingAtmosphere.blue:
+        final reader = ReaderThemeTokens.blue;
+        return tinted(
+          page: reader.ground,
+          ink: reader.body,
+          accent: reader.titles,
+          gold: reader.progressFill,
+        );
+      case ReadingAtmosphere.wood:
+        final reader = ReaderThemeTokens.wood;
+        return tinted(
+          page: reader.ground,
+          ink: reader.body,
+          accent: reader.titles,
+          gold: reader.progressFill,
+        );
     }
   }
 

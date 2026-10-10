@@ -357,7 +357,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get browseCatalog => 'Browse catalog';
 
   @override
-  String get readingTheme => 'Reading theme';
+  String get readingTheme => 'Background';
 
   @override
   String get interfaceStyle => 'Interface style';
@@ -377,6 +377,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Glass was simplified to keep browsing smooth';
 
   @override
+  String get atmosphereShowMore => 'More colors';
+
+  @override
+  String get atmosphereShowLess => 'Show less';
+
+  @override
   String get atmospherePaper => 'Paper';
 
   @override
@@ -384,6 +390,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get atmosphereNight => 'Night';
+
+  @override
+  String get atmosphereOlive => 'Olive';
+
+  @override
+  String get atmosphereGold => 'Gold';
+
+  @override
+  String get atmosphereInk => 'Black & white';
+
+  @override
+  String get atmosphereBlue => 'Calm blue';
+
+  @override
+  String get atmosphereWood => 'Wood';
 
   @override
   String get jumpToPageTitle => 'Go to page';

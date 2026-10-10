@@ -10,9 +10,7 @@ const kFontUi = 'IBMPlexSansArabic';
 ThemeData buildIshamelaTheme(ReadingAtmosphere atmosphere) {
   final reader = ReaderThemeTokens.forAtmosphere(atmosphere);
   final chrome = _chromeFor(atmosphere);
-  final brightness = atmosphere == ReadingAtmosphere.night
-      ? Brightness.dark
-      : Brightness.light;
+  final brightness = atmosphere.isDark ? Brightness.dark : Brightness.light;
 
   final scheme = ColorScheme(
     brightness: brightness,
@@ -179,6 +177,46 @@ IshamelaTokens _chromeFor(ReadingAtmosphere atmosphere) {
         segmentTrack: const Color(0xFFE0D2AF),
         danger: const Color(0xFFB3402E),
       );
+    case ReadingAtmosphere.olive:
+      return _lightChrome(
+        ReaderThemeTokens.olive,
+        emphasis: const Color(0xFF3D4A32),
+        gold: const Color(0xFF6B7A4E),
+        green700: const Color(0xFF4E6240),
+        green100: const Color(0xFFDCE4D0),
+      );
+    case ReadingAtmosphere.gold:
+      return _lightChrome(
+        ReaderThemeTokens.gold,
+        emphasis: const Color(0xFF6A4E16),
+        gold: const Color(0xFFC4922A),
+        green700: const Color(0xFF8A6418),
+        green100: const Color(0xFFF3E4C0),
+      );
+    case ReadingAtmosphere.ink:
+      return _lightChrome(
+        ReaderThemeTokens.ink,
+        emphasis: const Color(0xFF111111),
+        gold: const Color(0xFF444444),
+        green700: const Color(0xFF222222),
+        green100: const Color(0xFFE8E8E8),
+      );
+    case ReadingAtmosphere.blue:
+      return _lightChrome(
+        ReaderThemeTokens.blue,
+        emphasis: const Color(0xFF2A4A62),
+        gold: const Color(0xFF5E88A8),
+        green700: const Color(0xFF3E6480),
+        green100: const Color(0xFFD4E4F0),
+      );
+    case ReadingAtmosphere.wood:
+      return _lightChrome(
+        ReaderThemeTokens.wood,
+        emphasis: const Color(0xFF5C3E28),
+        gold: const Color(0xFFA67C4E),
+        green700: const Color(0xFF6E4E32),
+        green100: const Color(0xFFEAD8C0),
+      );
     case ReadingAtmosphere.night:
       // green900 stays brand-deep (hero fill). emphasis = night titles mint
       // for selected chrome text (DESIGN-001 §2.1 fill vs §2.2 titles).
@@ -202,6 +240,32 @@ IshamelaTokens _chromeFor(ReadingAtmosphere atmosphere) {
         danger: const Color(0xFFE06A55),
       );
   }
+}
+
+IshamelaTokens _lightChrome(
+  ReaderThemeTokens reader, {
+  required Color emphasis,
+  required Color gold,
+  required Color green700,
+  required Color green100,
+}) {
+  return IshamelaTokens.paperLight.copyWith(
+    paper: reader.ground,
+    readerPaper: reader.ground,
+    card: reader.raised,
+    hairline: reader.hairline,
+    ink: reader.body,
+    muted: reader.muted,
+    emphasis: emphasis,
+    green700: green700,
+    green100: green100,
+    gold: gold,
+    goldSoft: gold,
+    goldPale: reader.highlight,
+    highlight: reader.highlight,
+    chipBg: reader.raised,
+    segmentTrack: reader.hairline,
+  );
 }
 
 TextTheme _textTheme(Color ink, Color muted) {

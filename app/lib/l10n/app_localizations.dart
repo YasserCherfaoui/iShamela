@@ -761,7 +761,7 @@ abstract class AppLocalizations {
   /// No description provided for @readingTheme.
   ///
   /// In ar, this message translates to:
-  /// **'سمة القراءة'**
+  /// **'لون الخلفية'**
   String get readingTheme;
 
   /// No description provided for @interfaceStyle.
@@ -794,6 +794,18 @@ abstract class AppLocalizations {
   /// **'تم تبسيط الزجاج للحفاظ على سلاسة التصفح'**
   String get glassSimplifiedNotice;
 
+  /// No description provided for @atmosphereShowMore.
+  ///
+  /// In ar, this message translates to:
+  /// **'ألوان أخرى'**
+  String get atmosphereShowMore;
+
+  /// No description provided for @atmosphereShowLess.
+  ///
+  /// In ar, this message translates to:
+  /// **'إخفاء'**
+  String get atmosphereShowLess;
+
   /// No description provided for @atmospherePaper.
   ///
   /// In ar, this message translates to:
@@ -811,6 +823,36 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'ليلي'**
   String get atmosphereNight;
+
+  /// No description provided for @atmosphereOlive.
+  ///
+  /// In ar, this message translates to:
+  /// **'زيتي'**
+  String get atmosphereOlive;
+
+  /// No description provided for @atmosphereGold.
+  ///
+  /// In ar, this message translates to:
+  /// **'ذهبي'**
+  String get atmosphereGold;
+
+  /// No description provided for @atmosphereInk.
+  ///
+  /// In ar, this message translates to:
+  /// **'أبيض وأسود'**
+  String get atmosphereInk;
+
+  /// No description provided for @atmosphereBlue.
+  ///
+  /// In ar, this message translates to:
+  /// **'أزرق هادئ'**
+  String get atmosphereBlue;
+
+  /// No description provided for @atmosphereWood.
+  ///
+  /// In ar, this message translates to:
+  /// **'خشبي'**
+  String get atmosphereWood;
 
   /// No description provided for @jumpToPageTitle.
   ///

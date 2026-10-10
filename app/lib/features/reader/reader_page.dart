@@ -37,6 +37,7 @@ import 'package:ishamela/ui/rosette_divider.dart';
 import 'package:ishamela/ui/segmented_pills.dart';
 import 'package:ishamela/ui/theme/ishamela_theme.dart';
 import 'package:ishamela/ui/theme/ishamela_tokens.dart';
+import 'package:ishamela/ui/theme/atmosphere_label.dart';
 import 'package:ishamela/ui/theme/reader_theme_tokens.dart';
 import 'package:ishamela/ui/tonal_icon_button.dart';
 
@@ -736,18 +737,12 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
               _setMode(ReadingMode.pagedV);
             case 'mode_c':
               _setMode(ReadingMode.continuousV);
-            case 'atm_paper':
-              ref
-                  .read(readingAtmosphereProvider.notifier)
-                  .save(ReadingAtmosphere.paper);
-            case 'atm_sepia':
-              ref
-                  .read(readingAtmosphereProvider.notifier)
-                  .save(ReadingAtmosphere.sepia);
-            case 'atm_night':
-              ref
-                  .read(readingAtmosphereProvider.notifier)
-                  .save(ReadingAtmosphere.night);
+            case _:
+              if (v.startsWith('atm_')) {
+                ref
+                    .read(readingAtmosphereProvider.notifier)
+                    .save(ReadingAtmosphere.fromId(v.substring(4)));
+              }
           }
         },
         itemBuilder: (_) {
@@ -771,18 +766,11 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
             PopupMenuItem(value: 'mode_v', child: Text(l10n.modePagedV)),
             PopupMenuItem(value: 'mode_c', child: Text(l10n.modeContinuousV)),
             const PopupMenuDivider(),
-            PopupMenuItem(
-              value: 'atm_paper',
-              child: Text(l10n.atmospherePaper),
-            ),
-            PopupMenuItem(
-              value: 'atm_sepia',
-              child: Text(l10n.atmosphereSepia),
-            ),
-            PopupMenuItem(
-              value: 'atm_night',
-              child: Text(l10n.atmosphereNight),
-            ),
+            for (final atmosphere in ReadingAtmosphere.pickerOrder)
+              PopupMenuItem(
+                value: 'atm_${atmosphere.id}',
+                child: Text(atmosphereLabel(l10n, atmosphere)),
+              ),
           ];
         },
       ),

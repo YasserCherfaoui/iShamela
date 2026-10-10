@@ -356,7 +356,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get browseCatalog => 'تصفح الفهرس';
 
   @override
-  String get readingTheme => 'سمة القراءة';
+  String get readingTheme => 'لون الخلفية';
 
   @override
   String get interfaceStyle => 'نمط الواجهة';
@@ -375,6 +375,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get glassSimplifiedNotice => 'تم تبسيط الزجاج للحفاظ على سلاسة التصفح';
 
   @override
+  String get atmosphereShowMore => 'ألوان أخرى';
+
+  @override
+  String get atmosphereShowLess => 'إخفاء';
+
+  @override
   String get atmospherePaper => 'ورق';
 
   @override
@@ -382,6 +388,21 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get atmosphereNight => 'ليلي';
+
+  @override
+  String get atmosphereOlive => 'زيتي';
+
+  @override
+  String get atmosphereGold => 'ذهبي';
+
+  @override
+  String get atmosphereInk => 'أبيض وأسود';
+
+  @override
+  String get atmosphereBlue => 'أزرق هادئ';
+
+  @override
+  String get atmosphereWood => 'خشبي';
 
   @override
   String get jumpToPageTitle => 'الانتقال إلى صفحة';

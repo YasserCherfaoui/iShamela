@@ -358,7 +358,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get browseCatalog => 'Parcourir le catalogue';
 
   @override
-  String get readingTheme => 'Thème de lecture';
+  String get readingTheme => 'Couleur de fond';
 
   @override
   String get interfaceStyle => 'Style d\'interface';
@@ -378,6 +378,12 @@ class AppLocalizationsFr extends AppLocalizations {
       'Le verre a été simplifié pour garder une navigation fluide';
 
   @override
+  String get atmosphereShowMore => 'Plus de couleurs';
+
+  @override
+  String get atmosphereShowLess => 'Réduire';
+
+  @override
   String get atmospherePaper => 'Papier';
 
   @override
@@ -385,6 +391,21 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get atmosphereNight => 'Nuit';
+
+  @override
+  String get atmosphereOlive => 'Olive';
+
+  @override
+  String get atmosphereGold => 'Or';
+
+  @override
+  String get atmosphereInk => 'Noir et blanc';
+
+  @override
+  String get atmosphereBlue => 'Bleu calme';
+
+  @override
+  String get atmosphereWood => 'Bois';
 
   @override
   String get jumpToPageTitle => 'Aller à la page';
