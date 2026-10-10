@@ -142,8 +142,12 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
   BookDatabase? _db;
   List<int> _ids = const [];
   List<TocEntry> _toc = const [];
+  List<int?> _tocParents = const [];
   List<BookPart> _parts = const [];
   final _tocExpanded = <int>{};
+  final _tocScroll = ScrollController();
+  final _tocActiveKey = GlobalKey();
+  int? _tocFollowIndex;
   String _tocQuery = '';
   int _notesTick = 0;
   int _bookmarksTick = 0;
@@ -265,8 +269,11 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
         _resumeProgressPageId = progressPage;
         _resumePrintPage = showChip ? resumePage?.pageNumber : null;
         _resumePart = showChip ? resumePage?.part : null;
-        _tocExpanded.clear();
+        _cacheTocParents();
+        _tocFollowIndex = null;
+        _followToc(index);
       });
+      _scheduleTocReveal();
       _scheduler = ref.read(syncSchedulerProvider);
       _scheduler!.setBookOpen(true);
       _dwellTimer?.cancel();
@@ -298,6 +305,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
     _scheduler?.setBookOpen(false);
     _closeHistorySession();
     _pageController?.dispose();
+    _tocScroll.dispose();
     _jumpCtrl.dispose();
     _searchCtrl.dispose();
     _db?.close();
@@ -425,11 +433,13 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
       ordinal: i,
       page: pageId,
     );
+    final headingChanged = _followToc(i);
     setState(() {
       _index = i;
       if (pageId == _resumeProgressPageId) _showResumeChip = false;
       _syncJumpField();
     });
+    if (headingChanged) _scheduleTocReveal();
     if (hid) _applySystemUi();
     _writeViewport(pageId);
     if (qualified) _qualify(pageId);
@@ -1379,19 +1389,10 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
             for (final entry in _toc)
               if (normalize(entry.title).contains(query)) entry.id,
           };
-    final headings = [
-      for (final entry in _toc)
-        TocHeading(
-          titleId: entry.id,
-          shamelaTitleId: entry.position,
-          parentId: entry.parentId,
-          title: entry.title,
-        ),
-    ];
-    final titleIds = [for (final heading in headings) heading.titleId];
+    final titleIds = [for (final entry in _toc) entry.id];
     final rows = visibleTocRows(
       ids: titleIds,
-      parentIds: tocTreeParentIds(buildTocTree(headings), titleIds),
+      parentIds: _tocParents,
       expandedIds: _tocExpanded,
       matchIds: matchIds,
     );
@@ -1400,6 +1401,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
     }
     final t = IshamelaTokens.of(context);
     return ListView.builder(
+      controller: _tocScroll,
       itemCount: rows.length,
       itemBuilder: (context, i) {
         final row = rows[i];
@@ -1418,6 +1420,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
             ? 14.0
             : 13.0;
         return Padding(
+          key: selected ? _tocActiveKey : null,
           padding: EdgeInsetsDirectional.only(start: 4.0 + depth * 18),
           child: Material(
             color: selected ? t.green100 : Colors.transparent,
@@ -1496,6 +1499,79 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
     setState(() {
       if (!_tocExpanded.add(id)) _tocExpanded.remove(id);
     });
+  }
+
+  void _cacheTocParents() {
+    final headings = [
+      for (final entry in _toc)
+        TocHeading(
+          titleId: entry.id,
+          shamelaTitleId: entry.position,
+          parentId: entry.parentId,
+          title: entry.title,
+        ),
+    ];
+    final titleIds = [for (final heading in headings) heading.titleId];
+    _tocParents = titleIds.isEmpty
+        ? const []
+        : tocTreeParentIds(buildTocTree(headings), titleIds);
+  }
+
+  /// Expands the branch of the heading that contains this page, and closes
+  /// every other branch. Returns whether the heading changed.
+  bool _followToc(int pageIndex) {
+    if (_toc.isEmpty || _ids.isEmpty || _tocParents.length != _toc.length) {
+      return false;
+    }
+    final active = stickyTocIndex([
+      for (final entry in _toc) entry.pageId,
+    ], _ids[pageIndex]);
+    if (active == _tocFollowIndex) return false;
+    _tocFollowIndex = active;
+    _tocExpanded
+      ..clear()
+      ..addAll(
+        tocPathIds(
+          ids: [for (final entry in _toc) entry.id],
+          parentIds: _tocParents,
+          index: active,
+        ),
+      );
+    return true;
+  }
+
+  void _scheduleTocReveal() {
+    var tries = 0;
+    void reveal() {
+      if (!mounted) return;
+      if (_tocFollowIndex == null || tries++ > 2) return;
+      final current = _tocActiveKey.currentContext;
+      if (current != null && Scrollable.maybeOf(current) != null) {
+        Scrollable.ensureVisible(
+          current,
+          alignment: 0.3,
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+        );
+        return;
+      }
+      if (!_tocScroll.hasClients) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => reveal());
+        return;
+      }
+      final rows = visibleTocRows(
+        ids: [for (final entry in _toc) entry.id],
+        parentIds: _tocParents,
+        expandedIds: _tocExpanded,
+      );
+      final pos = rows.indexWhere((row) => row.index == _tocFollowIndex);
+      if (pos < 0) return;
+      final max = _tocScroll.position.maxScrollExtent;
+      _tocScroll.jumpTo((pos * 52.0).clamp(0.0, max));
+      WidgetsBinding.instance.addPostFrameCallback((_) => reveal());
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => reveal());
   }
 
   Widget _bookmarksList(AppLocalizations l10n) {

@@ -241,6 +241,27 @@ void main() {
     expect(roots[0].children, isEmpty);
   });
 
+  test('moving to another heading keeps only that branch open', () {
+    const ids = [1, 2, 3, 4, 5];
+    const parents = <int?>[null, 1, 2, 1, 4];
+    expect(tocPathIds(ids: ids, parentIds: parents, index: 2), {3, 2, 1});
+    expect(tocPathIds(ids: ids, parentIds: parents, index: 4), {5, 4, 1});
+
+    final there = visibleTocRows(
+      ids: ids,
+      parentIds: parents,
+      expandedIds: tocPathIds(ids: ids, parentIds: parents, index: 2),
+    );
+    expect(there.map((row) => ids[row.index]), [1, 2, 3, 4]);
+
+    final next = visibleTocRows(
+      ids: ids,
+      parentIds: parents,
+      expandedIds: tocPathIds(ids: ids, parentIds: parents, index: 4),
+    );
+    expect(next.map((row) => ids[row.index]), [1, 2, 4, 5]);
+  });
+
   test('a search shows the match and its ancestors', () {
     const ids = [1, 2, 3, 4];
     const parents = <int?>[null, 1, 1, 2];
