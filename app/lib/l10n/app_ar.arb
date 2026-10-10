@@ -472,6 +472,7 @@
   "librarySyncSection": "مزامنة المكتبة",
   "libraryWaitingWifi": "بانتظار شبكة Wi-Fi",
   "librarySetupTitle": "تنزيل مكتبتك",
+  "librarySetupHint": "يمكنك متابعة القراءة. التنزيل يجري في الخلفية.",
   "librarySetupBody": "{count} كتابًا · {size}",
   "@librarySetupBody": {
     "placeholders": {

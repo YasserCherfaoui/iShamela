@@ -1616,6 +1616,12 @@ abstract class AppLocalizations {
   /// **'تنزيل مكتبتك'**
   String get librarySetupTitle;
 
+  /// No description provided for @librarySetupHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'يمكنك متابعة القراءة. التنزيل يجري في الخلفية.'**
+  String get librarySetupHint;
+
   /// No description provided for @librarySetupBody.
   ///
   /// In ar, this message translates to:

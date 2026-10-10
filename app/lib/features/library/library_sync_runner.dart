@@ -50,7 +50,9 @@ Future<void> applyLibraryPlan({
     state.markLibraryHeld(id, on: false);
     state.markLibraryDeferred(id, on: false);
     state.markLibraryAuto(id, on: true);
-    await downloads.enqueue(id);
+  }
+  if (plan.enqueue.isNotEmpty) {
+    await downloads.enqueueIds(plan.enqueue);
   }
 }
 
@@ -64,9 +66,13 @@ LibrarySyncRequest librarySyncRequest({
 }) {
   final version = catalog.catalogVersion ?? 0;
   final installed = state.installedBookIds().toSet();
+  final ids = {...remote.map((d) => d.bookId), ...installed};
+  final books = {
+    for (final book in catalog.booksByIds(ids)) book.bookId: book,
+  };
   final localInstalls = <LocalShelfInstall>[];
   for (final id in installed) {
-    final book = catalog.bookById(id);
+    final book = books[id];
     localInstalls.add(
       LocalShelfInstall(
         bookId: id,
@@ -77,10 +83,9 @@ LibrarySyncRequest librarySyncRequest({
       ),
     );
   }
-  final ids = {...remote.map((d) => d.bookId), ...installed};
   final catalogHits = <int, CatalogShelfBook?>{};
   for (final id in ids) {
-    final book = catalog.bookById(id);
+    final book = books[id];
     if (book == null) {
       catalogHits[id] = null;
     } else {
@@ -92,10 +97,7 @@ LibrarySyncRequest librarySyncRequest({
       );
     }
   }
-  final queued = state
-      .listDownloads()
-      .map((r) => r['book_id'] as int)
-      .toSet();
+  final queued = state.listDownloads().map((r) => r['book_id'] as int).toSet();
   final sync = state.getSyncState();
   return LibrarySyncRequest(
     signedIn: signedIn,

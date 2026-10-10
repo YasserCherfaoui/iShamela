@@ -55,7 +55,8 @@ class DownloadService {
   static int _defaultNow() => DateTime.now().millisecondsSinceEpoch;
 
   void addListener(void Function() listener) => _controllers.add(listener);
-  void removeListener(void Function() listener) => _controllers.remove(listener);
+  void removeListener(void Function() listener) =>
+      _controllers.remove(listener);
   void _notify() {
     for (final l in List.of(_controllers)) {
       l();
@@ -152,6 +153,13 @@ class DownloadService {
     _notify();
     await _pump();
     return EnqueueResult.started;
+  }
+
+  /// Enqueue a shelf in one catalog read and one UI update.
+  Future<void> enqueueIds(Iterable<int> ids) async {
+    final books = catalog.booksByIds(ids);
+    if (books.isEmpty) return;
+    await enqueueMany(books);
   }
 
   /// Enqueue many books; skips installed, in-flight, and uninstallable (SPEC-007/008).
@@ -331,7 +339,9 @@ class DownloadService {
       await _install(book, token);
       if (token.isCancelled) return;
       final destPath = paths.bookSqlite(bookId);
-      final destLen = appFileExistsSync(destPath) ? appFileLengthSync(destPath) : 0;
+      final destLen = appFileExistsSync(destPath)
+          ? appFileLengthSync(destPath)
+          : 0;
       state.upsertDownload(
         bookId: bookId,
         status: DownloadStatus.done.name,
@@ -348,7 +358,10 @@ class DownloadService {
       // cancelled — status already cleared by cancel()
     } on DioException catch (e) {
       if (CancelToken.isCancel(e) || token.isCancelled) {
-        developer.log('download paused/cancelled book=$bookId', name: 'DownloadService');
+        developer.log(
+          'download paused/cancelled book=$bookId',
+          name: 'DownloadService',
+        );
         // paused/cancelled — status already set by pause/cancel
       } else {
         developer.log(

@@ -3,6 +3,10 @@
 /// First-sign-in sheet threshold (SPEC-025 §3.4).
 const int kLibrarySetupBytes = 150 * 1024 * 1024;
 
+/// A long uninstalled shelf asks before downloading, so the first sync
+/// does not start dozens of installs while the reader is still opening.
+const int kLibrarySetupCount = 12;
+
 enum LibraryLink { wifi, cellular, offline }
 
 enum LibraryStatus { installed, removed }
@@ -46,13 +50,13 @@ class LibraryDoc {
   }
 
   Map<String, Object?> toMap() => {
-        'title': title,
-        'sizeBytes': sizeBytes,
-        'catalogVersion': catalogVersion,
-        'status': status.name,
-        'installedAt': installedAt,
-        'updatedAt': updatedAt,
-      };
+    'title': title,
+    'sizeBytes': sizeBytes,
+    'catalogVersion': catalogVersion,
+    'status': status.name,
+    'installedAt': installedAt,
+    'updatedAt': updatedAt,
+  };
 
   static LibraryDoc? parse(String id, Map<String, dynamic> data) {
     final bookId = int.tryParse(id);
@@ -299,9 +303,11 @@ LibrarySyncPlan planLibrarySync(LibrarySyncRequest req) {
   }
 
   final desiredBytes = remote.values
-      .where((d) =>
-          d.status == LibraryStatus.installed &&
-          !req.excluded.contains(d.bookId))
+      .where(
+        (d) =>
+            d.status == LibraryStatus.installed &&
+            !req.excluded.contains(d.bookId),
+      )
       .fold<int>(0, (sum, d) => sum + d.sizeBytes);
 
   final manual = <int>{};
@@ -329,14 +335,17 @@ LibrarySyncPlan planLibrarySync(LibrarySyncRequest req) {
   if (!req.autoDownload) {
     manual.addAll(needsDownload);
   } else if (!req.setupDone &&
-      desiredBytes > kLibrarySetupBytes &&
-      missing.isNotEmpty) {
+      missing.isNotEmpty &&
+      (desiredBytes > kLibrarySetupBytes ||
+          missing.length >= kLibrarySetupCount)) {
     showSetup = true;
     setupIds.addAll(missing.keys);
     setupBytes = desiredBytes;
   } else {
-    final pendingBytes =
-        needsDownload.fold<int>(0, (sum, id) => sum + (missing[id] ?? 0));
+    final pendingBytes = needsDownload.fold<int>(
+      0,
+      (sum, id) => sum + (missing[id] ?? 0),
+    );
     if (req.freeBytes != null && pendingBytes > req.freeBytes!) {
       showStorage = true;
       storageIds.addAll(needsDownload);

@@ -860,6 +860,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get librarySetupTitle => 'Download your library';
 
   @override
+  String get librarySetupHint =>
+      'You can keep reading. Downloads stay in the background.';
+
+  @override
   String librarySetupBody(String count, String size) {
     return '$count books · $size';
   }

@@ -18,7 +18,9 @@ String libraryByteLabel(int bytes, {required bool arabic}) {
   if (!arabic) return '$raw $unit';
   final buf = StringBuffer();
   for (final ch in raw.split('')) {
-    buf.write(RegExp(r'\d').hasMatch(ch) ? toArabicIndicDigits(int.parse(ch)) : ch);
+    buf.write(
+      RegExp(r'\d').hasMatch(ch) ? toArabicIndicDigits(int.parse(ch)) : ch,
+    );
   }
   return '${buf.toString()} $unit';
 }
@@ -67,10 +69,7 @@ Future<BookRemovalChoice?> showBookRemovalSheet(
             ),
             onTap: () => Navigator.pop(ctx, BookRemovalChoice.allDevices),
           ),
-          ListTile(
-            title: Text(l10n.cancel),
-            onTap: () => Navigator.pop(ctx),
-          ),
+          ListTile(title: Text(l10n.cancel), onTap: () => Navigator.pop(ctx)),
         ],
       ),
     ),
@@ -142,6 +141,16 @@ Future<LibrarySetupResult?> showLibrarySetupSheet(
             ),
             const SizedBox(height: 8),
             Text(l10n.librarySetupBody(count, size)),
+            const SizedBox(height: 8),
+            Text(
+              l10n.librarySetupHint,
+              style: TextStyle(
+                fontFamily: kFontUi,
+                fontSize: 13,
+                height: 1.4,
+                color: t.muted,
+              ),
+            ),
             const SizedBox(height: 12),
             FilledButton(
               onPressed: () => Navigator.pop(

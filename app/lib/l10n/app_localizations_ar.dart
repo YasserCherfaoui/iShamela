@@ -856,6 +856,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get librarySetupTitle => 'تنزيل مكتبتك';
 
   @override
+  String get librarySetupHint =>
+      'يمكنك متابعة القراءة. التنزيل يجري في الخلفية.';
+
+  @override
   String librarySetupBody(String count, String size) {
     return '$count كتابًا · $size';
   }

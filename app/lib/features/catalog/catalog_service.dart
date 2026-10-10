@@ -103,7 +103,10 @@ class CatalogSync {
     if (kIsWeb) {
       // Plain sqlite asset (no zstd FFI on web).
       final data = await rootBundle.load('assets/catalog/catalog.sqlite');
-      final plain = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+      final plain = data.buffer.asUint8List(
+        data.offsetInBytes,
+        data.lengthInBytes,
+      );
       await _swapPlainCatalog(plain);
       return manifest;
     }
@@ -314,23 +317,9 @@ class CatalogRepository {
   }
 
   Book? bookById(int bookId) {
-    final db = openReadonlySqlite(paths.catalogSqlite);
-    try {
-      final rows = db.select(
-        '''
-        SELECT b.*, a.name AS author_name, a.death_year_hijri AS author_death_year, c.name AS category_name
-        FROM books b
-        LEFT JOIN authors a ON a.id = b.author_id
-        JOIN categories c ON c.id = b.category_id
-        WHERE b.book_id = ?
-        ''',
-        [bookId],
-      );
-      if (rows.isEmpty) return null;
-      return _bookFromRow(rows.first);
-    } finally {
-      db.dispose();
-    }
+    final books = booksByIds([bookId]);
+    if (books.isEmpty) return null;
+    return books.first;
   }
 
   Author? authorById(int authorId) {
@@ -359,10 +348,9 @@ class CatalogRepository {
       final cols = db.select('PRAGMA table_info(authors)');
       final hasBio = cols.any((c) => c['name'] == 'bio');
       if (!hasBio) return null;
-      final rows = db.select(
-        'SELECT bio FROM authors WHERE id = ? LIMIT 1',
-        [authorId],
-      );
+      final rows = db.select('SELECT bio FROM authors WHERE id = ? LIMIT 1', [
+        authorId,
+      ]);
       if (rows.isEmpty) return null;
       final bio = rows.first['bio'] as String?;
       if (bio == null || bio.trim().isEmpty) return null;
@@ -383,17 +371,14 @@ class CatalogRepository {
     try {
       for (final chunk in _chunkIds(ids, 400)) {
         final placeholders = List.filled(chunk.length, '?').join(',');
-        final rows = db.select(
-          '''
+        final rows = db.select('''
           SELECT b.*, a.name AS author_name, a.death_year_hijri AS author_death_year, c.name AS category_name
           FROM books b
           LEFT JOIN authors a ON a.id = b.author_id
           JOIN categories c ON c.id = b.category_id
           WHERE b.book_id IN ($placeholders)
           ORDER BY b.title
-          ''',
-          chunk,
-        );
+          ''', chunk);
         out.addAll(rows.map(_bookFromRow));
       }
     } finally {
@@ -412,15 +397,12 @@ class CatalogRepository {
     try {
       for (final chunk in _chunkIds(installedIds.toList(), 400)) {
         final placeholders = List.filled(chunk.length, '?').join(',');
-        final rows = db.select(
-          '''
+        final rows = db.select('''
           SELECT b.category_id AS id, COUNT(*) AS cnt
           FROM books b
           WHERE b.book_id IN ($placeholders)
           GROUP BY b.category_id
-          ''',
-          chunk,
-        );
+          ''', chunk);
         for (final r in rows) {
           final id = r['id'] as int;
           counts[id] = (counts[id] ?? 0) + (r['cnt'] as int);
@@ -431,14 +413,11 @@ class CatalogRepository {
       final out = <({Category category, int count})>[];
       for (final chunk in _chunkIds(catIds, 400)) {
         final placeholders = List.filled(chunk.length, '?').join(',');
-        final rows = db.select(
-          '''
+        final rows = db.select('''
           SELECT id, name, position FROM categories
           WHERE id IN ($placeholders)
           ORDER BY position, id
-          ''',
-          chunk,
-        );
+          ''', chunk);
         for (final r in rows) {
           final id = r['id'] as int;
           out.add((
@@ -468,15 +447,12 @@ class CatalogRepository {
     try {
       for (final chunk in _chunkIds(installedIds.toList(), 400)) {
         final placeholders = List.filled(chunk.length, '?').join(',');
-        final rows = db.select(
-          '''
+        final rows = db.select('''
           SELECT b.author_id AS id, COUNT(*) AS cnt
           FROM books b
           WHERE b.book_id IN ($placeholders) AND b.author_id IS NOT NULL
           GROUP BY b.author_id
-          ''',
-          chunk,
-        );
+          ''', chunk);
         for (final r in rows) {
           final id = r['id'] as int;
           counts[id] = (counts[id] ?? 0) + (r['cnt'] as int);
@@ -486,14 +462,11 @@ class CatalogRepository {
       final out = <({Author author, int count})>[];
       for (final chunk in _chunkIds(counts.keys.toList(), 400)) {
         final placeholders = List.filled(chunk.length, '?').join(',');
-        final rows = db.select(
-          '''
+        final rows = db.select('''
           SELECT id, name, death_year_hijri FROM authors
           WHERE id IN ($placeholders)
           ORDER BY name
-          ''',
-          chunk,
-        );
+          ''', chunk);
         for (final r in rows) {
           final id = r['id'] as int;
           out.add((
@@ -730,8 +703,7 @@ class CatalogSearchResults {
   final List<Author> authors;
   final List<Category> categories;
 
-  bool get isEmpty =>
-      books.isEmpty && authors.isEmpty && categories.isEmpty;
+  bool get isEmpty => books.isEmpty && authors.isEmpty && categories.isEmpty;
 }
 
 /// Parse optional `كتاب:` / `مؤلف:` / `قسم:` prefixes (SPEC-009).

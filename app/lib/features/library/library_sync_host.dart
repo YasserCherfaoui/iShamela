@@ -9,6 +9,7 @@ import 'package:ishamela/core/db/state_database.dart';
 import 'package:ishamela/core/library/library_plan.dart';
 import 'package:ishamela/core/providers.dart';
 import 'package:ishamela/core/storage_size.dart';
+import 'package:ishamela/features/catalog/catalog_service.dart';
 import 'package:ishamela/features/library/library_sync_runner.dart';
 import 'package:ishamela/features/library/library_sync_sheets.dart';
 import 'package:ishamela/features/settings/storage_page.dart';
@@ -116,7 +117,7 @@ class _LibrarySyncHostState extends ConsumerState<LibrarySyncHost>
           bookCount: plan.setupBookIds.length,
           bytes: plan.setupBytes,
           bookIds: plan.setupBookIds,
-          titleOf: (id) => catalog.bookById(id)?.title ?? '$id',
+          titleOf: _titleOf(catalog, plan.setupBookIds),
         );
         _sheet = false;
         if (result != null) {
@@ -138,7 +139,7 @@ class _LibrarySyncHostState extends ConsumerState<LibrarySyncHost>
           nav,
           requiredBytes: plan.requiredBytes,
           bookIds: plan.storageBookIds,
-          titleOf: (id) => catalog.bookById(id)?.title ?? '$id',
+          titleOf: _titleOf(catalog, plan.storageBookIds),
           onManageStorage: () {
             final ctx = appNavigatorKey.currentContext;
             if (ctx != null) StoragePage.open(ctx);
@@ -162,6 +163,16 @@ class _LibrarySyncHostState extends ConsumerState<LibrarySyncHost>
     } finally {
       _busy = false;
     }
+  }
+
+  String Function(int bookId) _titleOf(
+    CatalogRepository catalog,
+    List<int> ids,
+  ) {
+    final books = {
+      for (final book in catalog.booksByIds(ids)) book.bookId: book,
+    };
+    return (id) => books[id]?.title ?? '$id';
   }
 
   List<LibraryDoc> _withShelf(List<LibraryDoc> remote, StateDatabase db) {

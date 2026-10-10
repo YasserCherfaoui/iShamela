@@ -466,6 +466,7 @@
   "profileAutoDownload": "Automatically download my library",
   "librarySyncSection": "Library sync",
   "libraryWaitingWifi": "Waiting for Wi-Fi",
+  "librarySetupHint": "You can keep reading. Downloads stay in the background.",
   "librarySetupTitle": "Download your library",
   "librarySetupBody": "{count} books · {size}",
   "@librarySetupBody": {

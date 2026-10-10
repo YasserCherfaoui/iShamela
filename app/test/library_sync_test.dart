@@ -123,13 +123,46 @@ void main() {
     expect(plan.upserts.single.title, 'الرسالة');
   });
 
+  test('a few missing books on first sign-in still download', () {
+    final plan = planLibrarySync(
+      _req(
+        remote: [_doc(1, size: 1000), _doc(2, size: 1000)],
+        setupDone: false,
+        catalog: {1: _book(size: 1000), 2: _book(size: 1000)},
+      ),
+    );
+    expect(plan.showSetupSheet, isFalse);
+    expect(plan.enqueue, {1, 2});
+  });
+
+  test('many missing books on first sign-in ask before downloading', () {
+    final remote = List.generate(
+      kLibrarySetupCount,
+      (i) => _doc(i + 1, size: 1000),
+    );
+    final plan = planLibrarySync(
+      _req(
+        remote: remote,
+        setupDone: false,
+        catalog: {
+          for (final doc in remote) doc.bookId: _book(size: doc.sizeBytes),
+        },
+      ),
+    );
+    expect(plan.showSetupSheet, isTrue);
+    expect(plan.setupBookIds, hasLength(kLibrarySetupCount));
+    expect(plan.enqueue, isEmpty);
+  });
+
   test('shelf over 150 MB on first sign-in shows the setup sheet', () {
     final big = kLibrarySetupBytes + 1;
     final remote = List.generate(12, (i) => _doc(i + 1, size: big ~/ 12 + 1));
     final plan = planLibrarySync(
-      _req(remote: remote, setupDone: false, catalog: {
-        for (final d in remote) d.bookId: _book(size: d.sizeBytes),
-      }),
+      _req(
+        remote: remote,
+        setupDone: false,
+        catalog: {for (final d in remote) d.bookId: _book(size: d.sizeBytes)},
+      ),
     );
     expect(plan.showSetupSheet, isTrue);
     expect(plan.setupBookIds, hasLength(12));
@@ -193,12 +226,7 @@ void main() {
 
   test('wifi clears a held queue', () {
     final plan = planLibrarySync(
-      _req(
-        remote: [_doc(1)],
-        held: {1},
-        queued: {1},
-        link: LibraryLink.wifi,
-      ),
+      _req(remote: [_doc(1)], held: {1}, queued: {1}, link: LibraryLink.wifi),
     );
     expect(plan.enqueue, isEmpty);
     expect(plan.clearHolds, {1});
@@ -270,51 +298,50 @@ void main() {
   });
 
   test('missing catalog book is unavailable and not retried', () {
-    final plan = planLibrarySync(
-      _req(
-        remote: [_doc(8)],
-        catalog: {8: null},
-      ),
-    );
+    final plan = planLibrarySync(_req(remote: [_doc(8)], catalog: {8: null}));
     expect(plan.unavailable, {8});
     expect(plan.enqueue, isEmpty);
   });
 
-  test('catalog version drift downloads the current edition and updates the doc', () {
-    final plan = planLibrarySync(
-      _req(
-        remote: [_doc(3, catalogVersion: 1, size: 10)],
-        catalog: {
-          3: const CatalogShelfBook(
-            title: 'طبعة جديدة',
-            sizeBytes: 12,
-            catalogVersion: 4,
-            installable: true,
-          ),
-        },
-        nowMs: 80,
-      ),
-    );
-    expect(plan.enqueue, {3});
-    expect(plan.upserts.single.catalogVersion, 4);
-    expect(plan.upserts.single.title, 'طبعة جديدة');
-    expect(plan.upserts.single.updatedAt, 80);
-  });
+  test(
+    'catalog version drift downloads the current edition and updates the doc',
+    () {
+      final plan = planLibrarySync(
+        _req(
+          remote: [_doc(3, catalogVersion: 1, size: 10)],
+          catalog: {
+            3: const CatalogShelfBook(
+              title: 'طبعة جديدة',
+              sizeBytes: 12,
+              catalogVersion: 4,
+              installable: true,
+            ),
+          },
+          nowMs: 80,
+        ),
+      );
+      expect(plan.enqueue, {3});
+      expect(plan.upserts.single.catalogVersion, 4);
+      expect(plan.upserts.single.title, 'طبعة جديدة');
+      expect(plan.upserts.single.updatedAt, 80);
+    },
+  );
 
   test('library union is commutative under per-doc LWW', () {
     final a = [_doc(1, updatedAt: 1, title: 'أ'), _doc(2, updatedAt: 5)];
     final b = [_doc(1, updatedAt: 9, title: 'ب'), _doc(3, updatedAt: 2)];
     final left = unionLibraryDocs(a, b);
     final right = unionLibraryDocs(b, a);
-    expect(left.map((d) => d.bookId).toList(), right.map((d) => d.bookId).toList());
+    expect(
+      left.map((d) => d.bookId).toList(),
+      right.map((d) => d.bookId).toList(),
+    );
     expect(left.firstWhere((d) => d.bookId == 1).title, 'ب');
     expect(left.map((d) => d.bookId), [1, 2, 3]);
   });
 
   test('auto-download off keeps the manifest but does not enqueue', () {
-    final plan = planLibrarySync(
-      _req(remote: [_doc(1)], autoDownload: false),
-    );
+    final plan = planLibrarySync(_req(remote: [_doc(1)], autoDownload: false));
     expect(plan.enqueue, isEmpty);
     expect(plan.manual, {1});
   });
