@@ -43,8 +43,6 @@ class AccountSession {
   }
 
   Future<void> registerDevice() async {
-    final access = await tokens.readAccess();
-    if (access == null || access.isEmpty) return;
     final db = await database();
     final device = await _device(db);
     await api.registerDevice(
@@ -64,6 +62,17 @@ class AccountSession {
       device: await _device(db),
     );
     await adopt(session);
+  }
+
+  /// Firebase session (SPEC-032). Replays local rows without a project JWT.
+  Future<void> adoptFirebase() async {
+    final db = await database();
+    db.prepareSignInReplay(
+      deviceId: db.ensureDeviceId(),
+      nowMs: DateTime.now().millisecondsSinceEpoch,
+    );
+    await flush();
+    await registerDevice();
   }
 
   Future<void> adopt(ProjectSession session) async {

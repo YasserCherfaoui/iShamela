@@ -1,6 +1,6 @@
 # SPEC-031 — Web Google & Apple sign-in
 
-**Status:** Implemented (client). Operator checklist below is still required before the buttons succeed in production. · **Depends on:** ADR-003, SPEC-027 §5.1, SPEC-028 §7 · **Deliverable:** the web app can obtain a Google ID token and an Apple identity token and post them to the existing API
+**Status:** Withdrawn by ADR-004 and SPEC-032. Web Google and Apple sign in through Firebase Auth. The operator checklist below is not the client session. · **Depends on:** ADR-003, SPEC-027 §5.1, SPEC-028 §7 · **Deliverable:** superseded. The web app does not post a Google ID token or an Apple identity token to `POST /v1/auth/*`.
 
 ## Problem
 

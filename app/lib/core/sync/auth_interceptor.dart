@@ -9,12 +9,18 @@ class AuthInterceptor extends Interceptor {
     required this.dio,
     required this.refreshPath,
     required this.onSignedOut,
+    this.readFirebaseToken,
+    this.readDeviceId,
   });
 
   final TokenStore tokens;
   final Dio dio;
   final String refreshPath;
   final Future<void> Function() onSignedOut;
+
+  /// SPEC-032. When this returns a token, it replaces the project access JWT.
+  final Future<String?> Function()? readFirebaseToken;
+  final Future<String?> Function()? readDeviceId;
 
   Future<bool>? _refreshing;
 
@@ -24,6 +30,17 @@ class AuthInterceptor extends Interceptor {
     RequestInterceptorHandler handler,
   ) async {
     if (options.extra['skipAuth'] == true) {
+      handler.next(options);
+      return;
+    }
+    final firebaseToken = await readFirebaseToken?.call();
+    if (firebaseToken != null && firebaseToken.isNotEmpty) {
+      options.extra['firebaseAuth'] = true;
+      options.headers['Authorization'] = 'Bearer $firebaseToken';
+      final deviceId = await readDeviceId?.call();
+      if (deviceId != null && deviceId.isNotEmpty) {
+        options.headers['X-Device-Id'] = deviceId;
+      }
       handler.next(options);
       return;
     }
@@ -41,6 +58,12 @@ class AuthInterceptor extends Interceptor {
   ) async {
     final status = err.response?.statusCode;
     final options = err.requestOptions;
+    if (status == 401 && options.extra['firebaseAuth'] == true) {
+      await tokens.clear();
+      await onSignedOut();
+      handler.next(err);
+      return;
+    }
     if (status != 401 ||
         options.extra['skipAuth'] == true ||
         options.extra['retried'] == true) {

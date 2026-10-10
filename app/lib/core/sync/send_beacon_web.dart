@@ -4,6 +4,9 @@ import 'dart:js_interop_unsafe';
 @JS('document.addEventListener')
 external void _docListen(JSString type, JSFunction fn);
 
+@JS('document.removeEventListener')
+external void _docUnlisten(JSString type, JSFunction fn);
+
 @JS('document.visibilityState')
 external JSString get _visibilityState;
 
@@ -13,14 +16,17 @@ external JSBoolean _sendBeacon(JSString url, JSString body);
 @JS('fetch')
 external JSPromise<JSAny?> _fetch(JSString url, JSObject init);
 
-void bindPageHide(void Function() onHide) {
-  _docListen(
-    'visibilitychange'.toJS,
-    ((JSAny? _) {
-      if (_visibilityState.toDart == 'hidden') onHide();
-    }).toJS,
-  );
-  _docListen('pagehide'.toJS, ((JSAny? _) => onHide()).toJS);
+void Function() bindPageHide(void Function() onHide) {
+  final onVisibility = ((JSAny? _) {
+    if (_visibilityState.toDart == 'hidden') onHide();
+  }).toJS;
+  final onPageHide = ((JSAny? _) => onHide()).toJS;
+  _docListen('visibilitychange'.toJS, onVisibility);
+  _docListen('pagehide'.toJS, onPageHide);
+  return () {
+    _docUnlisten('visibilitychange'.toJS, onVisibility);
+    _docUnlisten('pagehide'.toJS, onPageHide);
+  };
 }
 
 /// Tab close cannot wait on XHR. A bearer token needs `fetch` keepalive;

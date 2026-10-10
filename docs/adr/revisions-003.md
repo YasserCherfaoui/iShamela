@@ -1,5 +1,7 @@
 # REVISIONS-ADR-003 — Changes to SPEC-022, SPEC-024, SPEC-025
 
+Auth rows below that say "Superseded by ADR-004" are withdrawn. Firestore stays off the client. The API still owns sync and profile data.
+
 Apply these edits to the existing specs. Product behaviour is unchanged unless stated; only the Firebase implementation sections are replaced. Where a section says "see SPEC-027 / SPEC-028", delete the Firebase text and reference the new spec.
 
 ## SPEC-022 — Authentication
@@ -7,10 +9,10 @@ Apply these edits to the existing specs. Product behaviour is unchanged unless s
 | Section | Change |
 |---|---|
 | Providers | Unchanged: Apple, Google, email + OTP. Guest mode stays first-class. |
-| Firebase Auth SDK | **Remove** `firebase_auth`. Keep `sign_in_with_apple` and `google_sign_in` packages; they yield the `identityToken` / `idToken` sent to `POST /auth/apple` and `/auth/google` (SPEC-027 §5.1). |
-| Email OTP via Cloud Function | **Replace** with `POST /auth/otp/request` + `/auth/otp/verify`. UI unchanged (email entry → 6-digit code). Error codes map from SPEC-027 `error.code`. |
-| Session | Firebase ID-token refresh **replaced** by project JWT + refresh token per SPEC-028 §8. |
-| Web | Google/Apple web sign-in return the same tokens; Apple web requires the Service ID `online.ishamela.web` (name TBD) whose return URL is `https://app.ishamela.online`. Add `api.ishamela.online` to Apple's "Domains and Subdomains" for email relay. |
+| Firebase Auth SDK | Superseded by ADR-004. Keep `firebase_auth`. Google and Apple sign in through Firebase. Do not post provider tokens to `POST /auth/google` or `POST /auth/apple`. |
+| Email OTP via Cloud Function | Superseded by ADR-004. Email sign-in is Firebase Auth again, as in SPEC-022. |
+| Session | Superseded by ADR-004. The client session is the Firebase ID token. The API accepts that token on data routes. |
+| Web | Superseded by ADR-004. Web Google and Apple use Firebase Auth (`signInWithPopup`), as in SPEC-022. |
 | Account linking | New rule: a provider email matching an existing account links to it (SPEC-027 §5.1). Spec the "Linked sign-in methods" list in Profile as read-only for now. |
 
 ## SPEC-024 — Profile, sync, account deletion
@@ -36,7 +38,7 @@ Apply these edits to the existing specs. Product behaviour is unchanged unless s
 
 ## Cross-cutting
 
-- `CLAUDE.md` / Cursor rules: add the backend directory, "never call Firebase Auth/Firestore", and the local-first rule from SPEC-028 §2.
+- `CLAUDE.md` / Cursor rules: add the backend directory, "never call Firestore", and the local-first rule from SPEC-028 §2. Firebase Auth is allowed again (ADR-004).
 - `LICENSING.md` / acknowledgements page (SPEC-021): drop Firebase Auth/Firestore mentions; add NestJS, PostgreSQL, Drizzle, Resend (service), Railway (hosting).
 - Privacy policy on ishamela.online: update data processor list (Railway, Resend), data location (Railway region chosen — recommend EU West), and retention ("deleted immediately on account deletion; backups purged within 30 days").
 - CI (SPEC-007): add the `backend/` test job and a deploy job gated on `main`.

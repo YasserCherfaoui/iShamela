@@ -1,9 +1,9 @@
 # ADR-003 — Project-owned backend (NestJS + Postgres) replaces Firebase Auth/Firestore
 
-- **Status:** Accepted — supersedes the backend section of ADR-002
+- **Status:** Accepted for the API, database, and sync. The Auth row is superseded by ADR-004 (2026-10-08).
 - **Date:** 2026-09-28
 - **Deciders:** Ladj (PM)
-- **Related:** ADR-001 (offline-first), ADR-002 (optional accounts), SPEC-022, SPEC-024, SPEC-025, SPEC-027, SPEC-028
+- **Related:** ADR-001 (offline-first), ADR-002 (optional accounts), ADR-004 (Firebase Auth session), SPEC-022, SPEC-024, SPEC-025, SPEC-027, SPEC-028
 
 ## Context
 
@@ -22,7 +22,7 @@ Replace Firebase Auth, Firestore and Cloud Functions with a **project-owned HTTP
 |---|---|
 | API framework | NestJS (TypeScript), REST + JSON |
 | Database | PostgreSQL — single source of truth for accounts and user data |
-| Auth | Server-side verification of Apple / Google ID tokens; email OTP sent via a transactional mail provider; project-issued access JWT + rotating refresh tokens |
+| Auth | Superseded by ADR-004. Firebase Auth is the session. This API does not verify Apple or Google tokens and does not issue the access JWT. |
 | Sync | Cursor-based delta sync over plain HTTP (no realtime listeners); last-writer-wins per record with tombstones |
 | Progress tracking | Dedicated lightweight "progress beacon" endpoint + client outbox (SPEC-028) |
 | Hosting | Railway (API service from Dockerfile + managed Postgres). Docker Compose reproduces the same stack locally |

@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Fixed
 
+- Google and Apple sign-in open a Firebase session (SPEC-032). The web app no longer posts a Google ID token from `GoogleSignIn.signIn()`, which only returned an access token. Data requests send that Firebase ID token and the local device id.
 - Web shell freshness (SPEC-030): each Vercel and GitHub Pages build is stamped with its git SHA. A cached service worker drops its Flutter caches and reloads once when that SHA changes. Vercel no longer marks `main.dart.js` immutable.
 - Web Google and Apple sign-in (SPEC-031): the page loads Apple’s JS and names the web Google client. Apple on the web sends Services ID `online.ishamela.web` and the current HTTPS origin as the return URL. Localhost stays unavailable for Apple on the web.
 - Reader side panes sit flush with the top of the window. The contents close control sits on the tab row. Previous and next keep the bars on screen, point along the reading direction, and still turn the page on the web. Contents tabs keep their full titles in the wide sidebar. Showing the bars again stays on the page reached while they were hidden.

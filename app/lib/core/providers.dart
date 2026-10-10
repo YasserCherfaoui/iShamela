@@ -1,9 +1,11 @@
 import 'package:dio/dio.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ishamela/core/auth/auth_controller.dart';
+import 'package:ishamela/core/auth/firebase_bootstrap.dart';
 import 'package:ishamela/core/auth/auth_state.dart';
 import 'package:ishamela/core/compress/zstd.dart';
 import 'package:ishamela/core/config.dart';
@@ -77,7 +79,18 @@ final syncApiProvider = Provider<IshamelaApi>((ref) {
       tokens: tokens,
       dio: dio,
       refreshPath: '/v1/auth/refresh',
+      readFirebaseToken: () async {
+        if (!firebaseReady) return null;
+        return FirebaseAuth.instance.currentUser?.getIdToken();
+      },
+      readDeviceId: () async {
+        final db = await ref.read(stateDatabaseProvider.future);
+        return db.ensureDeviceId();
+      },
       onSignedOut: () async {
+        try {
+          if (firebaseReady) await FirebaseAuth.instance.signOut();
+        } catch (_) {}
         final db = await ref.read(stateDatabaseProvider.future);
         db.clearSyncSession();
       },

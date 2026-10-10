@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,8 +6,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import 'package:ishamela/core/auth/auth_errors.dart';
+import 'package:ishamela/core/auth/firebase_bootstrap.dart';
 import 'package:ishamela/core/auth/auth_state.dart';
-import 'package:ishamela/core/auth/provider_sign_in.dart';
 import 'package:ishamela/core/auth/user_profile.dart';
 import 'package:ishamela/core/config.dart';
 import 'package:ishamela/core/providers.dart';
@@ -30,6 +31,13 @@ class AuthController extends Notifier<AuthStatus> {
 
   Future<void> _restore() async {
     try {
+      if (firebaseReady && FirebaseAuth.instance.currentUser != null) {
+        final profile = await ref.read(syncApiProvider).getMe();
+        if (!ref.mounted) return;
+        state = AuthSignedIn(_profile(profile));
+        await ref.read(accountSessionProvider).registerDevice();
+        return;
+      }
       final refresh = await ref.read(tokenStoreProvider).readRefresh();
       if (!ref.mounted) return;
       if (refresh == null || refresh.isEmpty) {
@@ -80,25 +88,37 @@ class AuthController extends Notifier<AuthStatus> {
   }
 
   Future<void> signInGoogle() async {
-    final applePlatform =
-        defaultTargetPlatform == TargetPlatform.iOS ||
-        defaultTargetPlatform == TargetPlatform.macOS;
-    _google ??= GoogleSignIn(
-      clientId: kIsWeb
-          ? googleWebClientId
-          : (applePlatform ? googleIosClientId : null),
-      // Web ignores this. Android and Apple platforms mint the ID token for it.
-      // iOS still puts the iOS client ID in `aud`, so the API must allow all three.
-      serverClientId: kIsWeb ? null : googleWebClientId,
-      scopes: const ['email', 'profile'],
-    );
-    final account = await _google!.signIn();
-    if (account == null) return;
-    final idToken = (await account.authentication).idToken;
-    if (idToken == null || idToken.isEmpty) {
-      throw AuthUnavailable('Google Sign-In did not return an ID token');
+    if (!firebaseReady) {
+      throw AuthUnavailable('Authentication is unavailable');
     }
-    await ref.read(accountSessionProvider).signInWithGoogle(idToken);
+    if (kIsWeb) {
+      await FirebaseAuth.instance.signInWithPopup(GoogleAuthProvider());
+    } else {
+      final applePlatform =
+          defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.macOS;
+      _google ??= GoogleSignIn(
+        clientId: applePlatform ? googleIosClientId : null,
+        // Android and Apple platforms mint the ID token for the web client.
+        // iOS still puts the iOS client ID in `aud`.
+        serverClientId: googleWebClientId,
+        scopes: const ['email', 'profile'],
+      );
+      final account = await _google!.signIn();
+      if (account == null) return;
+      final googleAuth = await account.authentication;
+      final idToken = googleAuth.idToken;
+      if (idToken == null || idToken.isEmpty) {
+        throw AuthUnavailable('Google Sign-In did not return an ID token');
+      }
+      await FirebaseAuth.instance.signInWithCredential(
+        GoogleAuthProvider.credential(
+          idToken: idToken,
+          accessToken: googleAuth.accessToken,
+        ),
+      );
+    }
+    await ref.read(accountSessionProvider).adoptFirebase();
     await _adopted();
   }
 
@@ -106,27 +126,34 @@ class AuthController extends Notifier<AuthStatus> {
     if (!supportsAppleSignIn) {
       throw AuthUnavailable('Apple Sign In is not available on this platform');
     }
-    final web = appleWebAuthentication(isWeb: kIsWeb, page: Uri.base);
+    if (!firebaseReady) {
+      throw AuthUnavailable('Authentication is unavailable');
+    }
+    if (kIsWeb) {
+      final apple = OAuthProvider('apple.com')
+        ..addScope('email')
+        ..addScope('name');
+      await FirebaseAuth.instance.signInWithPopup(apple);
+      await ref.read(accountSessionProvider).adoptFirebase();
+      await _adopted();
+      return;
+    }
     final apple = await SignInWithApple.getAppleIDCredential(
       scopes: [
         AppleIDAuthorizationScopes.email,
         AppleIDAuthorizationScopes.fullName,
       ],
-      webAuthenticationOptions: web == null
-          ? null
-          : WebAuthenticationOptions(
-              clientId: web.clientId,
-              redirectUri: web.redirectUri,
-            ),
     );
     final identity = apple.identityToken;
     if (identity == null || identity.isEmpty) {
       throw AuthUnavailable('Apple Sign-In did not return an identity token');
     }
-    await ref.read(accountSessionProvider).signInWithApple(
-      identityToken: identity,
-      authorizationCode: apple.authorizationCode,
+    final credential = OAuthProvider('apple.com').credential(
+      idToken: identity,
+      accessToken: apple.authorizationCode,
     );
+    await FirebaseAuth.instance.signInWithCredential(credential);
+    await ref.read(accountSessionProvider).adoptFirebase();
     await _adopted();
     final given = apple.givenName;
     final family = apple.familyName;
@@ -143,6 +170,9 @@ class AuthController extends Notifier<AuthStatus> {
     } catch (_) {}
     try {
       await _google?.signOut();
+    } catch (_) {}
+    try {
+      if (firebaseReady) await FirebaseAuth.instance.signOut();
     } catch (_) {}
     state = const AuthGuest();
   }

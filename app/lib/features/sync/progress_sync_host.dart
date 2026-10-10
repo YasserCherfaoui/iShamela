@@ -22,13 +22,16 @@ class ProgressSyncHost extends ConsumerStatefulWidget {
 class _ProgressSyncHostState extends ConsumerState<ProgressSyncHost>
     with WidgetsBindingObserver {
   StreamSubscription<List<ConnectivityResult>>? _link;
+  SyncScheduler? _scheduler;
+  void Function()? _unbindPageHide;
   bool _offline = true;
 
   @override
   void initState() {
     super.initState();
+    _scheduler = ref.read(syncSchedulerProvider);
     WidgetsBinding.instance.addObserver(this);
-    bindPageHide(_flushLifecycle);
+    _unbindPageHide = bindPageHide(_flushLifecycle);
     _link = Connectivity().onConnectivityChanged.listen((results) {
       final offline = _isOffline(results);
       final restored = _offline && !offline;
@@ -40,6 +43,8 @@ class _ProgressSyncHostState extends ConsumerState<ProgressSyncHost>
 
   @override
   void dispose() {
+    _unbindPageHide?.call();
+    _unbindPageHide = null;
     WidgetsBinding.instance.removeObserver(this);
     unawaited(_link?.cancel());
     super.dispose();
@@ -59,15 +64,19 @@ class _ProgressSyncHostState extends ConsumerState<ProgressSyncHost>
   }
 
   void _flushLifecycle() {
+    final scheduler = _scheduler;
+    if (scheduler == null) return;
     if (kIsWeb) {
-      ref.read(syncSchedulerProvider).hidePage();
+      scheduler.hidePage();
       return;
     }
-    unawaited(_flush(SyncScheduler.lifecycleTimeout));
+    unawaited(scheduler.flush(timeout: SyncScheduler.lifecycleTimeout));
   }
 
   Future<void> _flush([Duration timeout = SyncScheduler.httpTimeout]) {
-    return ref.read(syncSchedulerProvider).flush(timeout: timeout);
+    final scheduler = _scheduler;
+    if (scheduler == null) return Future<void>.value();
+    return scheduler.flush(timeout: timeout);
   }
 
   bool _isOffline(List<ConnectivityResult> results) =>

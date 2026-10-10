@@ -82,6 +82,17 @@ void main() {
     );
   });
 
+  test('web Google and Apple use the Firebase popup', () {
+    final source = File(
+      'lib/core/auth/auth_controller.dart',
+    ).readAsStringSync();
+    expect(source, contains('signInWithPopup(GoogleAuthProvider())'));
+    expect(source, contains("OAuthProvider('apple.com')"));
+    expect(source, contains('signInWithPopup(apple)'));
+    expect(source, isNot(contains('signInWithGoogle')));
+    expect(source, isNot(contains('signInWithApple')));
+  });
+
   test('index.html names the web Google client and loads Apple JS', () {
     final html = File('web/index.html').readAsStringSync();
     expect(html, contains('name="google-signin-client_id"'));

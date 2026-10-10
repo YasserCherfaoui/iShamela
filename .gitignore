@@ -45,3 +45,6 @@ app/lib/firebase_local_secrets.dart
 app/ios/Runner/GoogleService-Info.plist
 app/macos/Runner/GoogleService-Info.plist
 app/android/app/google-services.json
+
+# Local Cursor MCP config
+.mcp.json
