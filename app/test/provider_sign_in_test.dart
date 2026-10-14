@@ -82,6 +82,15 @@ void main() {
     );
   });
 
+  test('apple nonce is a sha256 hex of the raw value', () {
+    final raw = generateAppleNonce();
+    expect(raw.length, 32);
+    final hash = sha256OfNonce(raw);
+    expect(hash, isNot(raw));
+    expect(hash, hasLength(64));
+    expect(hash, sha256OfNonce(raw));
+  });
+
   test('web Google and Apple use the Firebase popup', () {
     final source = File(
       'lib/core/auth/auth_controller.dart',
@@ -89,6 +98,8 @@ void main() {
     expect(source, contains('signInWithPopup(GoogleAuthProvider())'));
     expect(source, contains("OAuthProvider('apple.com')"));
     expect(source, contains('signInWithPopup(apple)'));
+    expect(source, contains('rawNonce: rawNonce'));
+    expect(source, contains('nonce: sha256OfNonce(rawNonce)'));
     expect(source, isNot(contains('signInWithGoogle')));
     expect(source, isNot(contains('signInWithApple')));
   });

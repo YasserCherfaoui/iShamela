@@ -64,15 +64,19 @@ class AccountSession {
     await adopt(session);
   }
 
-  /// Firebase session (SPEC-032). Replays local rows without a project JWT.
+  /// Firebase session (SPEC-032). Queues local rows. The upload is [replayInBackground]
+  /// so sign-in does not wait on the outbox.
   Future<void> adoptFirebase() async {
     final db = await database();
     db.prepareSignInReplay(
       deviceId: db.ensureDeviceId(),
       nowMs: DateTime.now().millisecondsSinceEpoch,
     );
-    await flush();
-    await registerDevice();
+  }
+
+  /// Uploads the replay queued by [adoptFirebase]. Safe to call after `GET /v1/me`.
+  void replayInBackground() {
+    unawaited(flush());
   }
 
   Future<void> adopt(ProjectSession session) async {

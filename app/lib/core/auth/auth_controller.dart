@@ -8,6 +8,7 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:ishamela/core/auth/auth_errors.dart';
 import 'package:ishamela/core/auth/firebase_bootstrap.dart';
 import 'package:ishamela/core/auth/auth_state.dart';
+import 'package:ishamela/core/auth/provider_sign_in.dart';
 import 'package:ishamela/core/auth/user_profile.dart';
 import 'package:ishamela/core/config.dart';
 import 'package:ishamela/core/providers.dart';
@@ -64,12 +65,26 @@ class AuthController extends Notifier<AuthStatus> {
     );
   }
 
-  Future<void> _adopted() async {
+  /// Profile first, then the library upload. The button returns after `GET /v1/me`.
+  Future<void> _finishProviderSignIn() async {
+    final session = ref.read(accountSessionProvider);
+    await session.adoptFirebase();
     final profile = await ref.read(syncApiProvider).getMe();
     state = AuthSignedIn(_profile(profile));
+    session.replayInBackground();
+    unawaited(_registerDevice());
+  }
+
+  Future<void> _registerDevice() async {
     try {
       await ref.read(accountSessionProvider).registerDevice();
     } catch (_) {}
+  }
+
+  Future<void> _adopted() async {
+    final profile = await ref.read(syncApiProvider).getMe();
+    state = AuthSignedIn(_profile(profile));
+    await _registerDevice();
   }
 
   Future<void> requestEmailCode(String email) {
@@ -118,8 +133,7 @@ class AuthController extends Notifier<AuthStatus> {
         ),
       );
     }
-    await ref.read(accountSessionProvider).adoptFirebase();
-    await _adopted();
+    await _finishProviderSignIn();
   }
 
   Future<void> signInApple() async {
@@ -134,15 +148,18 @@ class AuthController extends Notifier<AuthStatus> {
         ..addScope('email')
         ..addScope('name');
       await FirebaseAuth.instance.signInWithPopup(apple);
-      await ref.read(accountSessionProvider).adoptFirebase();
-      await _adopted();
+      await _finishProviderSignIn();
       return;
     }
+    // Firebase rejects an Apple credential that has no nonce, and the call
+    // sits until that check times out. Apple gets the hash; Firebase gets the raw value.
+    final rawNonce = generateAppleNonce();
     final apple = await SignInWithApple.getAppleIDCredential(
       scopes: [
         AppleIDAuthorizationScopes.email,
         AppleIDAuthorizationScopes.fullName,
       ],
+      nonce: sha256OfNonce(rawNonce),
     );
     final identity = apple.identityToken;
     if (identity == null || identity.isEmpty) {
@@ -150,11 +167,10 @@ class AuthController extends Notifier<AuthStatus> {
     }
     final credential = OAuthProvider('apple.com').credential(
       idToken: identity,
-      accessToken: apple.authorizationCode,
+      rawNonce: rawNonce,
     );
     await FirebaseAuth.instance.signInWithCredential(credential);
-    await ref.read(accountSessionProvider).adoptFirebase();
-    await _adopted();
+    await _finishProviderSignIn();
     final given = apple.givenName;
     final family = apple.familyName;
     final name = [given, family].whereType<String>().join(' ').trim();

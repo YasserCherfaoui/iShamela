@@ -1,5 +1,26 @@
+import 'dart:convert';
+import 'dart:math';
+
+import 'package:crypto/crypto.dart';
+
 import 'package:ishamela/core/auth/auth_errors.dart';
 import 'package:ishamela/core/config.dart';
+
+/// Raw nonce for Firebase Apple sign-in. Apple receives [sha256OfNonce] of this.
+String generateAppleNonce([int length = 32]) {
+  const charset =
+      '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+  final random = Random.secure();
+  return List.generate(
+    length,
+    (_) => charset[random.nextInt(charset.length)],
+  ).join();
+}
+
+/// Hex SHA-256. Apple puts this in the identity token; Firebase checks the raw nonce.
+String sha256OfNonce(String rawNonce) {
+  return sha256.convert(utf8.encode(rawNonce)).toString();
+}
 
 /// Apple’s web return URL for [page] (SPEC-031). Query and fragment are dropped.
 Uri appleWebRedirectUri(Uri page) {
