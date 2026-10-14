@@ -1300,7 +1300,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
           child: IndexedStack(
             index: _paneTab,
             children: [
-              _tocList(l10n),
+              _tocList(l10n, onSheetTick: onSheetTick),
               _bookmarksList(l10n),
               _highlightsList(l10n),
               _notesList(l10n),
@@ -1311,7 +1311,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
     );
   }
 
-  Widget _tocList(AppLocalizations l10n) {
+  Widget _tocList(AppLocalizations l10n, {VoidCallback? onSheetTick}) {
     if (_toc.isEmpty && _parts.length < 2) {
       return Center(child: Text(l10n.tocEmpty));
     }
@@ -1323,10 +1323,13 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
             padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
             child: AppSearchField(
               hintText: l10n.tocSearch,
-              onChanged: (value) => setState(() => _tocQuery = value),
+              onChanged: (value) {
+                setState(() => _tocQuery = value);
+                onSheetTick?.call();
+              },
             ),
           ),
-        Expanded(child: _tocRows(l10n)),
+        Expanded(child: _tocRows(l10n, onSheetTick: onSheetTick)),
       ],
     );
   }
@@ -1373,7 +1376,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
     );
   }
 
-  Widget _tocRows(AppLocalizations l10n) {
+  Widget _tocRows(AppLocalizations l10n, {VoidCallback? onSheetTick}) {
     if (_toc.isEmpty) {
       return Center(child: Text(l10n.tocEmpty));
     }
@@ -1441,7 +1444,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
                       size: 18,
                       color: t.muted,
                     ),
-                    onPressed: () => _toggleToc(e.id),
+                    onPressed: () => _toggleToc(e.id, onSheetTick: onSheetTick),
                   )
                 else
                   const SizedBox(width: 28),
@@ -1495,10 +1498,13 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
     );
   }
 
-  void _toggleToc(int id) {
+  void _toggleToc(int id, {VoidCallback? onSheetTick}) {
     setState(() {
       if (!_tocExpanded.add(id)) _tocExpanded.remove(id);
     });
+    // The phone contents list is a modal sheet. Parent setState does not
+    // rebuild it, so the chevron has to refresh the sheet itself.
+    onSheetTick?.call();
   }
 
   void _cacheTocParents() {
