@@ -27,7 +27,7 @@ String get pagesBaseUrl {
 /// Project API (SPEC-027). Override with `--dart-define=API_BASE_URL=...`.
 const String apiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
-  defaultValue: 'https://ishamelabackend-940987204287.europe-west1.run.app',
+  defaultValue: 'https://api.ishamela.online',
 );
 
 /// Git SHA of this web build (SPEC-030). Empty for local `flutter run`.
