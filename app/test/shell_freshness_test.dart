@@ -22,6 +22,9 @@ void main() {
     expect(html, contains('content="__ISHAMELA_BUILD_ID__"'));
     expect(html, contains('ishamela-build-id'));
     expect(html, contains('ishamela-shell-reloaded'));
+    expect(html, contains('ishamela-boot-shown'));
+    expect(html, contains('id="boot-label"'));
+    expect(html, contains('[file.id, file.length]'));
     expect(html, contains("flutter-"));
     final gate = html.indexOf('ishamela-build-id');
     final bootstrap = html.indexOf('flutter_bootstrap.js');

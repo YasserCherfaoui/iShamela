@@ -92,11 +92,43 @@
       bottom: 0;
       right: 0;
     }
+
+    .boot-progress {
+      position: absolute;
+      bottom: 12%;
+      left: 50%;
+      width: min(240px, 70vw);
+      transform: translateX(-50%);
+      text-align: center;
+      font-family: -apple-system, "Segoe UI", sans-serif;
+      color: #F4E7C8;
+    }
+
+    .boot-track {
+      height: 4px;
+      border-radius: 999px;
+      background: rgba(244, 231, 200, 0.28);
+      overflow: hidden;
+    }
+
+    .boot-fill {
+      height: 100%;
+      width: 0%;
+      background: #C6A15B;
+    }
+
+    .boot-label {
+      margin-top: 8px;
+      font-size: 13px;
+      letter-spacing: 0.04em;
+    }
   </style>
   <script id="splash-screen-script">
     function removeSplashFromWeb() {
+      if (window.ishamelaBootDone) window.ishamelaBootDone();
       document.getElementById("splash")?.remove();
       document.getElementById("splash-branding")?.remove();
+      document.getElementById("boot-progress")?.remove();
       document.body.style.background = "transparent";
     }
   </script>
@@ -107,42 +139,270 @@
       <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
       <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="">
   </picture>
+  <div id="boot-progress" class="boot-progress" hidden>
+    <div class="boot-track" aria-hidden="true"><div id="boot-fill" class="boot-fill"></div></div>
+    <div id="boot-label" class="boot-label" aria-live="polite">0%</div>
+  </div>
   
   <script>
     (function () {
+      var bootFiles = {};
+      var bootShown = 0;
+      var wasmStash = {};
+      var mainBlobUrl = null;
+
+      function renderBoot(pct) {
+        var next = Math.max(bootShown, Math.min(100, pct));
+        bootShown = next;
+        var fill = document.getElementById('boot-fill');
+        var label = document.getElementById('boot-label');
+        var host = document.getElementById('boot-progress');
+        if (host) host.hidden = false;
+        if (fill) fill.style.width = next + '%';
+        if (label) label.textContent = next + '%';
+      }
+
+      function noteBoot(name, loaded, total) {
+        bootFiles[name] = {
+          loaded: loaded,
+          total: total > 0 ? total : loaded
+        };
+        var got = 0;
+        var sum = 0;
+        for (var key in bootFiles) {
+          got += bootFiles[key].loaded;
+          sum += bootFiles[key].total;
+        }
+        if (sum > 0) renderBoot(Math.round(got / sum * 90));
+      }
+
+      window.ishamelaBootDone = function () {
+        renderBoot(100);
+      };
+
+      function trackFreshDownload() {
+        var origAppend = Node.prototype.append;
+        Node.prototype.append = function () {
+          var node = arguments[0];
+          if (node && node.nodeType === 1 && node.tagName === 'SCRIPT' &&
+              /main\.dart\.js(\?|$)/.test(node.src || '') && !node.dataset.boot) {
+            var parent = this;
+            var args = arguments;
+            var start = mainBlobUrl
+              ? Promise.resolve(mainBlobUrl)
+              : Promise.reject();
+            start.then(function (url) {
+              node.dataset.boot = '1';
+              try {
+                node.src = url;
+              } catch (e) {}
+              return origAppend.apply(parent, args);
+            }).catch(function () {
+              node.dataset.boot = '1';
+              return origAppend.apply(parent, args);
+            });
+            return node;
+          }
+          return origAppend.apply(this, arguments);
+        };
+
+        var origFetch = window.fetch;
+        window.fetch = function (input, init) {
+          var url = typeof input === 'string' ? input : (input && input.url) || '';
+          var name = null;
+          if (url.indexOf('canvaskit.wasm') !== -1) name = 'canvaskit/canvaskit.wasm';
+          else if (url.indexOf('sqlite3.wasm') !== -1) name = 'sqlite3.wasm';
+          if (name && wasmStash[name]) {
+            return Promise.resolve(new Response(wasmStash[name].slice(0), {
+              status: 200,
+              headers: { 'Content-Type': 'application/wasm' }
+            }));
+          }
+          return origFetch.apply(this, arguments);
+        };
+      }
+
+      function downloadFreshShell() {
+        renderBoot(0);
+        trackFreshDownload();
+        var jobs = [];
+        jobs.push(new Promise(function (resolve) {
+          var xhr = new XMLHttpRequest();
+          xhr.open('GET', new URL('main.dart.js', document.baseURI).toString());
+          xhr.responseType = 'blob';
+          xhr.onprogress = function (ev) {
+            if (ev.lengthComputable) noteBoot('main.dart.js', ev.loaded, ev.total);
+          };
+          xhr.onload = function () {
+            if (xhr.status >= 200 && xhr.status < 300 && xhr.response) {
+              noteBoot('main.dart.js', xhr.response.size, xhr.response.size);
+              mainBlobUrl = URL.createObjectURL(xhr.response);
+            }
+            resolve();
+          };
+          xhr.onerror = function () { resolve(); };
+          xhr.send();
+        }));
+        ['canvaskit/canvaskit.wasm', 'sqlite3.wasm'].forEach(function (name) {
+          jobs.push(fetch(new URL(name, document.baseURI).toString()).then(function (res) {
+            if (!res.ok || !res.body) return;
+            var total = Number(res.headers.get('Content-Length')) || 0;
+            var reader = res.body.getReader();
+            var chunks = [];
+            var got = 0;
+            function pump() {
+              return reader.read().then(function (result) {
+                if (result.done) {
+                  return new Blob(chunks).arrayBuffer().then(function (buf) {
+                    wasmStash[name] = buf;
+                    noteBoot(name, buf.byteLength, buf.byteLength);
+                  });
+                }
+                chunks.push(result.value);
+                got += result.value.byteLength;
+                noteBoot(name, got, total || got);
+                return pump();
+              });
+            }
+            return pump();
+          }).catch(function () {}));
+        });
+        return Promise.all(jobs).then(function () {
+          var timer = setInterval(function () {
+            if (bootShown < 99) renderBoot(bootShown + 1);
+          }, 400);
+          var prev = window.ishamelaBootDone;
+          window.ishamelaBootDone = function () {
+            clearInterval(timer);
+            if (prev) prev();
+          };
+        });
+      }
+
+      // Older web builds left IndexedDB blocks past the end of a file.
+      // Reading one asks for a negative byte length and throws in Uint8Array.
+      function scrubIndexedDb() {
+        var scrub = new Promise(function (resolve) {
+          if (!window.indexedDB || !indexedDB.databases) {
+            resolve();
+            return;
+          }
+          indexedDB.databases().then(function (list) {
+            var exists = list.some(function (db) { return db && db.name === 'ishamela'; });
+            if (!exists) {
+              resolve();
+              return;
+            }
+            var openReq = indexedDB.open('ishamela');
+            openReq.onerror = function () { resolve(); };
+            openReq.onupgradeneeded = function (event) {
+              try { openReq.transaction.abort(); } catch (e) {}
+              try { event.target.result.close(); } catch (e) {}
+              resolve();
+            };
+            openReq.onsuccess = function () {
+              var db = openReq.result;
+              if (!db.objectStoreNames.contains('files') || !db.objectStoreNames.contains('blocks')) {
+                db.close();
+                resolve();
+                return;
+              }
+              var readTx = db.transaction('files', 'readonly');
+              var files = [];
+              var cursorReq = readTx.objectStore('files').openCursor();
+              cursorReq.onerror = function () { db.close(); resolve(); };
+              cursorReq.onsuccess = function () {
+                var cursor = cursorReq.result;
+                if (!cursor) return;
+                var length = cursor.value && typeof cursor.value.length === 'number'
+                  ? cursor.value.length
+                  : 0;
+                files.push({ id: cursor.primaryKey, length: length });
+                cursor.continue();
+              };
+              readTx.oncomplete = function () {
+                var tx = db.transaction('blocks', 'readwrite');
+                var store = tx.objectStore('blocks');
+                files.forEach(function (file) {
+                  if (typeof file.length !== 'number') return;
+                  try {
+                    store.delete(IDBKeyRange.bound(
+                      [file.id, file.length],
+                      [file.id, 9007199254740992]
+                    ));
+                  } catch (e) {}
+                });
+                tx.oncomplete = function () { db.close(); resolve(); };
+                tx.onerror = function () { db.close(); resolve(); };
+              };
+              readTx.onerror = function () { db.close(); resolve(); };
+            };
+          }).catch(function () { resolve(); });
+        });
+        return Promise.race([
+          scrub,
+          new Promise(function (resolve) { setTimeout(resolve, 4000); })
+        ]);
+      }
+
       function loadBootstrap() {
         var script = document.createElement('script');
         script.src = 'flutter_bootstrap.js';
         script.async = true;
         document.body.appendChild(script);
       }
+
+      function wantsFreshDownload(buildId) {
+        try {
+          return sessionStorage.getItem('ishamela-shell-reloaded') === buildId &&
+            sessionStorage.getItem('ishamela-boot-shown') !== buildId;
+        } catch (e) {
+          return false;
+        }
+      }
+
+      function startApp(fresh) {
+        scrubIndexedDb().then(function () {
+          if (!fresh) {
+            loadBootstrap();
+            return;
+          }
+          try {
+            sessionStorage.setItem('ishamela-boot-shown', id);
+          } catch (e) {}
+          return downloadFreshShell().then(loadBootstrap);
+        }).catch(function () {
+          loadBootstrap();
+        });
+      }
       var meta = document.querySelector('meta[name="ishamela-build-id"]');
       var id = meta ? (meta.getAttribute('content') || '') : '';
       if (!id || id.indexOf('__ISHAMELA_BUILD_ID__') !== -1) {
-        loadBootstrap();
+        startApp(false);
         return;
       }
       var seen;
       try {
         seen = localStorage.getItem('ishamela-build-id');
       } catch (e) {
-        loadBootstrap();
+        startApp(false);
         return;
       }
       if (seen === id) {
-        loadBootstrap();
+        startApp(wantsFreshDownload(id));
         return;
       }
       try {
         localStorage.setItem('ishamela-build-id', id);
       } catch (e) {
-        loadBootstrap();
+        startApp(false);
         return;
       }
       if (!navigator.serviceWorker || !navigator.serviceWorker.controller) {
-        loadBootstrap();
+        startApp(true);
         return;
       }
+      renderBoot(0);
       Promise.all([
         navigator.serviceWorker.getRegistrations().then(function (regs) {
           return Promise.all(regs.map(function (reg) { return reg.unregister(); }));
@@ -155,17 +415,17 @@
       ]).then(function () {
         try {
           if (sessionStorage.getItem('ishamela-shell-reloaded') === id) {
-            loadBootstrap();
+            startApp(true);
             return;
           }
           sessionStorage.setItem('ishamela-shell-reloaded', id);
         } catch (e) {
-          loadBootstrap();
+          startApp(true);
           return;
         }
         location.reload();
       }).catch(function () {
-        loadBootstrap();
+        startApp(true);
       });
     })();
   </script>
