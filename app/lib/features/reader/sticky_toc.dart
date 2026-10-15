@@ -252,6 +252,27 @@ List<TocVisibleRow> visibleTocRows({
   return rows;
 }
 
+/// Offset that brings the visible row [visibleIndex] into the list.
+///
+/// [builtMax] is the last row already laid out. Past that, the offset grows
+/// from the current scroll position so a lazy list can reach the row.
+double tocRevealOffset({
+  required int visibleIndex,
+  required double rowExtent,
+  required double pixels,
+  required double maxExtent,
+  int? builtMax,
+}) {
+  final extent = rowExtent <= 0 ? 56.0 : rowExtent;
+  var target = visibleIndex * extent;
+  if (builtMax != null && visibleIndex > builtMax) {
+    target = pixels + (visibleIndex - builtMax) * extent;
+  }
+  if (target < 0) return 0;
+  if (maxExtent.isFinite && target > maxExtent) return maxExtent;
+  return target;
+}
+
 Map<int, int> _indexById(List<int> ids) {
   final byId = <int, int>{};
   for (var i = 0; i < ids.length; i++) {

@@ -147,7 +147,13 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
   final _tocExpanded = <int>{};
   final _tocScroll = ScrollController();
   final _tocActiveKey = GlobalKey();
+  final _tocProbeKey = GlobalKey();
   int? _tocFollowIndex;
+  int? _tocBuiltMax;
+  double _tocRowExtent = 56;
+  int _tocRevealGen = 0;
+  bool _tocRevealArmed = false;
+  bool _tocRevealRunning = false;
   String _tocQuery = '';
   int _notesTick = 0;
   int _bookmarksTick = 0;
@@ -861,7 +867,11 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
                         child: _PaneEdgeButton(
                           tooltip: l10n.toc,
                           icon: Icons.list_alt,
-                          onPressed: () => setState(() => _showToc = true),
+                          onPressed: () {
+                            _expandCurrentTocPath();
+                            setState(() => _showToc = true);
+                            _scheduleTocReveal();
+                          },
                         ),
                       ),
                     if (wide && chromeVisible && !showCard)
@@ -1403,13 +1413,24 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
       return Center(child: Text(l10n.tocSearchEmpty));
     }
     final t = IshamelaTokens.of(context);
+    _tocBuiltMax = null;
+    if (_tocRevealArmed && !_tocRevealRunning) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _tocRevealArmed && !_tocRevealRunning) {
+          _scheduleTocReveal();
+        }
+      });
+    }
     return ListView.builder(
       controller: _tocScroll,
+      cacheExtent: 1600,
       itemCount: rows.length,
       itemBuilder: (context, i) {
         final row = rows[i];
         final e = _toc[row.index];
         final selected = row.index == active;
+        final builtMax = _tocBuiltMax;
+        if (builtMax == null || i > builtMax) _tocBuiltMax = i;
         final page = _db?.pageById(e.pageId);
         final printNo = page?.pageNumber?.toString() ?? '—';
         final part = page?.part;
@@ -1423,7 +1444,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
             ? 14.0
             : 13.0;
         return Padding(
-          key: selected ? _tocActiveKey : null,
+          key: selected
+              ? _tocActiveKey
+              : (i == 0 ? _tocProbeKey : null),
           padding: EdgeInsetsDirectional.only(start: 4.0 + depth * 18),
           child: Material(
             color: selected ? t.green100 : Colors.transparent,
@@ -1546,23 +1569,64 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
     return true;
   }
 
+  /// Opens every heading above the current page so that row can be scrolled to.
+  void _expandCurrentTocPath() {
+    if (_toc.isEmpty || _ids.isEmpty || _tocParents.length != _toc.length) {
+      return;
+    }
+    final active = stickyTocIndex([
+      for (final entry in _toc) entry.pageId,
+    ], _ids[_index]);
+    _tocFollowIndex = active;
+    _tocExpanded.addAll(
+      tocPathIds(
+        ids: [for (final entry in _toc) entry.id],
+        parentIds: _tocParents,
+        index: active,
+      ),
+    );
+  }
+
   void _scheduleTocReveal() {
-    var tries = 0;
-    void reveal() {
-      if (!mounted) return;
-      if (_tocFollowIndex == null || tries++ > 2) return;
-      final current = _tocActiveKey.currentContext;
-      if (current != null && Scrollable.maybeOf(current) != null) {
-        Scrollable.ensureVisible(
-          current,
-          alignment: 0.3,
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOut,
-        );
+    _tocRevealArmed = true;
+    if (_tocRevealRunning) return;
+    _tocRevealRunning = true;
+    final generation = ++_tocRevealGen;
+    var idle = 0;
+    var moves = 0;
+
+    Future<void> step() async {
+      if (!mounted || generation != _tocRevealGen) {
+        if (!mounted && generation == _tocRevealGen) _tocRevealRunning = false;
         return;
       }
-      if (!_tocScroll.hasClients) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => reveal());
+      final scroll = _tocScroll;
+      final ready = scroll.hasClients && scroll.position.hasContentDimensions;
+      if (!ready) {
+        if (idle++ > 24) {
+          _tocRevealRunning = false;
+          return;
+        }
+        WidgetsBinding.instance.addPostFrameCallback((_) => step());
+        return;
+      }
+      if (_tocFollowIndex == null || moves > 6) {
+        _tocRevealArmed = false;
+        _tocRevealRunning = false;
+        return;
+      }
+      final current = _tocActiveKey.currentContext;
+      if (current != null && Scrollable.maybeOf(current) != null) {
+        _tocRevealArmed = false;
+        _tocRevealRunning = false;
+        if (!_tocRowIsVisible(current)) {
+          await Scrollable.ensureVisible(
+            current,
+            alignment: 0.35,
+            duration: const Duration(milliseconds: 320),
+            curve: Curves.easeOutCubic,
+          );
+        }
         return;
       }
       final rows = visibleTocRows(
@@ -1571,13 +1635,100 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
         expandedIds: _tocExpanded,
       );
       final pos = rows.indexWhere((row) => row.index == _tocFollowIndex);
-      if (pos < 0) return;
-      final max = _tocScroll.position.maxScrollExtent;
-      _tocScroll.jumpTo((pos * 52.0).clamp(0.0, max));
-      WidgetsBinding.instance.addPostFrameCallback((_) => reveal());
+      if (pos < 0) {
+        _tocRevealArmed = false;
+        _tocRevealRunning = false;
+        return;
+      }
+      final position = scroll.position;
+      final dest = tocRevealOffset(
+        visibleIndex: pos,
+        rowExtent: _measureTocRow(),
+        pixels: position.pixels,
+        maxExtent: position.maxScrollExtent,
+        builtMax: _tocBuiltMax,
+      );
+      if (position.maxScrollExtent <= 0 && pos > 0) {
+        if (idle++ > 24) {
+          _tocRevealRunning = false;
+          return;
+        }
+        WidgetsBinding.instance.addPostFrameCallback((_) => step());
+        return;
+      }
+      final short = dest + 1 < pos * _tocRowExtent &&
+          position.pixels >= position.maxScrollExtent - 1;
+      if (short) {
+        if (idle++ > 24) {
+          _tocRevealArmed = false;
+          _tocRevealRunning = false;
+          return;
+        }
+        WidgetsBinding.instance.addPostFrameCallback((_) => step());
+        return;
+      }
+      if ((position.pixels - dest).abs() < 1) {
+        moves++;
+        final further = (position.pixels + position.viewportDimension).clamp(
+          0.0,
+          position.maxScrollExtent,
+        );
+        if (further > position.pixels + 1 && pos > (_tocBuiltMax ?? -1)) {
+          try {
+            await scroll.animateTo(
+              further,
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+            );
+          } catch (_) {
+            if (generation == _tocRevealGen) _tocRevealRunning = false;
+            return;
+          }
+        }
+        if (!mounted || generation != _tocRevealGen) return;
+        WidgetsBinding.instance.addPostFrameCallback((_) => step());
+        return;
+      }
+      _tocRevealArmed = false;
+      moves++;
+      try {
+        await scroll.animateTo(
+          dest,
+          duration: const Duration(milliseconds: 320),
+          curve: Curves.easeOutCubic,
+        );
+      } catch (_) {
+        _tocRevealRunning = false;
+        return;
+      }
+      if (!mounted || generation != _tocRevealGen || !scroll.hasClients) {
+        if (generation == _tocRevealGen) _tocRevealRunning = false;
+        return;
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) => step());
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => reveal());
+    WidgetsBinding.instance.addPostFrameCallback((_) => step());
+  }
+
+  double _measureTocRow() {
+    final probe = _tocProbeKey.currentContext ?? _tocActiveKey.currentContext;
+    final box = probe?.findRenderObject();
+    if (box is RenderBox && box.hasSize && box.size.height > 0) {
+      _tocRowExtent = box.size.height;
+    }
+    return _tocRowExtent;
+  }
+
+  bool _tocRowIsVisible(BuildContext rowContext) {
+    final box = rowContext.findRenderObject();
+    final viewport = _tocScroll.position.context.notificationContext
+        ?.findRenderObject();
+    if (box is! RenderBox || viewport is! RenderBox) return false;
+    if (!box.hasSize || !box.attached || !viewport.hasSize) return false;
+    final top = box.localToGlobal(Offset.zero, ancestor: viewport).dy;
+    final bottom = top + box.size.height;
+    return top >= -1 && bottom <= viewport.size.height + 1;
   }
 
   Widget _bookmarksList(AppLocalizations l10n) {
@@ -2020,6 +2171,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
   }
 
   void _openTocSheet(BuildContext context, AppLocalizations l10n) {
+    _expandCurrentTocPath();
     showGlassSheet<void>(
       context: context,
       builder: (_) => Directionality(
@@ -2035,6 +2187,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
         ),
       ),
     );
+    _scheduleTocReveal();
   }
 
   void _openCardSheet(

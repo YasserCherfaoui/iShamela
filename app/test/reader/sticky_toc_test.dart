@@ -262,6 +262,28 @@ void main() {
     expect(next.map((row) => ids[row.index]), [1, 2, 4, 5]);
   });
 
+  test('reveal offset aims at the selected row', () {
+    expect(
+      tocRevealOffset(
+        visibleIndex: 40,
+        rowExtent: 50,
+        pixels: 0,
+        maxExtent: 4000,
+      ),
+      2000,
+    );
+    expect(
+      tocRevealOffset(
+        visibleIndex: 40,
+        rowExtent: 50,
+        pixels: 800,
+        maxExtent: 1200,
+        builtMax: 20,
+      ),
+      1200,
+    );
+  });
+
   test('a search shows the match and its ancestors', () {
     const ids = [1, 2, 3, 4];
     const parents = <int?>[null, 1, 1, 2];
