@@ -41,8 +41,8 @@ class HomeStatsDao {
   /// Optional injectable clock (tests / future relative helpers).
   final DateTime? Function()? clock;
 
-  HomeStats compute({required DateTime now}) {
-    final entries = state.listReadingHistory();
+  HomeStats compute({required DateTime now, List<ReadingHistoryEntry>? history}) {
+    final entries = history ?? state.listReadingHistory();
     if (entries.isEmpty) return HomeStats.empty;
 
     final weekStart = _mondayOfWeek(now);
@@ -92,12 +92,13 @@ class HomeStatsDao {
   ReadingHistoryEntry? latest() => state.latestReadingHistory();
 
   /// Continue reading follows qualified progress, not the viewport (SPEC-028).
-  ReadingHistoryEntry? continueReading() {
+  ReadingHistoryEntry? continueReading({List<ReadingHistoryEntry>? history}) {
     final progress = state.latestReadingProgress();
-    final history = latest();
-    if (progress == null) return history;
+    final rows = history ?? state.listReadingHistory();
+    final historyLatest = rows.isEmpty ? null : rows.first;
+    if (progress == null) return historyLatest;
     ReadingHistoryEntry? crumb;
-    for (final row in state.listReadingHistory()) {
+    for (final row in rows) {
       if (row.bookId == progress.bookId && row.pageId == progress.page) {
         crumb = row;
         break;
@@ -107,7 +108,7 @@ class HomeStatsDao {
       id: crumb?.id ?? 0,
       bookId: progress.bookId,
       pageId: progress.page,
-      part: crumb?.part,
+      part: crumb?.part ?? progress.volume?.toString(),
       printPage: crumb?.printPage,
       sectionTitle: crumb?.sectionTitle,
       openedAt: progress.progressAt,
@@ -116,23 +117,41 @@ class HomeStatsDao {
     );
   }
 
-  List<ReadingHistoryEntry> recentForContinue({int limit = 5}) {
-    final current = continueReading();
+  /// Recent history rows excluding [continueReading]'s book, deduplicated by
+  /// `bookId` (most recent entry per book).
+  List<ReadingHistoryEntry> recentForContinue({
+    int limit = 5,
+    List<ReadingHistoryEntry>? history,
+  }) {
+    final rows = history ?? state.listReadingHistory();
+    final current = continueReading(history: rows);
     if (current == null) return const [];
-    if (state.latestReadingProgress() == null) {
-      return recentExcludingLatest(limit: limit);
+    final seenBookIds = <int>{current.bookId};
+    final result = <ReadingHistoryEntry>[];
+    for (final row in rows) {
+      if (seenBookIds.add(row.bookId)) {
+        result.add(row);
+        if (result.length >= limit) break;
+      }
     }
-    return state
-        .listReadingHistory()
-        .where((row) => row.bookId != current.bookId)
-        .take(limit)
-        .toList();
+    return result;
   }
 
-  List<ReadingHistoryEntry> recentExcludingLatest({int limit = 5}) {
-    final all = state.listReadingHistory();
-    if (all.isEmpty) return const [];
-    return all.skip(1).take(limit).toList();
+  List<ReadingHistoryEntry> recentExcludingLatest({
+    int limit = 5,
+    List<ReadingHistoryEntry>? history,
+  }) {
+    final all = history ?? state.listReadingHistory();
+    if (all.length <= 1) return const [];
+    final seenBookIds = <int>{all.first.bookId};
+    final result = <ReadingHistoryEntry>[];
+    for (final row in all.skip(1)) {
+      if (seenBookIds.add(row.bookId)) {
+        result.add(row);
+        if (result.length >= limit) break;
+      }
+    }
+    return result;
   }
 
   /// Duration for stats: stored seconds, else closed−opened capped, else 0.

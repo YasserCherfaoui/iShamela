@@ -246,4 +246,43 @@ void main() {
     expect(state.getPref('sync_banner_dismissed_version'), '1.0.0');
     state.close();
   });
+
+  test('recentForContinue deduplicates by bookId and preserves order', () async {
+    final state = await _openTemp();
+    final t1 = DateTime(2026, 9, 21, 10).millisecondsSinceEpoch;
+    final t2 = DateTime(2026, 9, 22, 10).millisecondsSinceEpoch;
+    final t3 = DateTime(2026, 9, 23, 10).millisecondsSinceEpoch;
+    final t4 = DateTime(2026, 9, 24, 10).millisecondsSinceEpoch;
+
+    // Book 2 opened twice (>30 min apart so not coalesced); Book 1 once; Book 3 latest
+    state.touchReadingHistory(bookId: 1, pageId: 1, nowMs: t1);
+    state.touchReadingHistory(bookId: 2, pageId: 5, nowMs: t2);
+    state.touchReadingHistory(bookId: 2, pageId: 9, nowMs: t3);
+    state.touchReadingHistory(bookId: 3, pageId: 1, nowMs: t4);
+
+    final dao = HomeStatsDao(state);
+    final recent = dao.recentForContinue(limit: 5);
+    expect(recent.map((e) => e.bookId).toList(), [2, 1]);
+    expect(recent.first.pageId, 9);
+    state.close();
+  });
+
+  test('continueReading falls back to progress.volume when no history crumb matches', () async {
+    final state = await _openTemp();
+    final t1 = DateTime(2026, 9, 23, 10).millisecondsSinceEpoch;
+    state.commitQualifiedProgress(
+      bookId: 42,
+      page: 15,
+      volume: 3,
+      progressAt: t1,
+    );
+
+    final dao = HomeStatsDao(state);
+    final current = dao.continueReading();
+    expect(current, isNotNull);
+    expect(current!.bookId, 42);
+    expect(current.pageId, 15);
+    expect(current.part, '3');
+    state.close();
+  });
 }

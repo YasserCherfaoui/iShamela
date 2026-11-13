@@ -79,6 +79,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         bookId: entry.bookId,
         title: book?.title,
         authorName: book?.authorName,
+        authorId: book?.authorId,
         initialPageId: entry.pageId,
         initialPrintPage: entry.printPage,
         initialPart: entry.part,
@@ -129,6 +130,11 @@ class _HomePageState extends ConsumerState<HomePage> {
     setState(() => _tick++);
   }
 
+  Future<void> _pushAndRefresh(Future<void> Function() open) async {
+    await open();
+    if (mounted) setState(() => _tick++);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -155,10 +161,11 @@ class _HomePageState extends ConsumerState<HomePage> {
         );
         final dao = HomeStatsDao(state);
         final now = DateTime.now();
-        final latest = dao.continueReading();
-        final recent = dao.recentForContinue();
-        final stats = dao.compute(now: now);
-        final historyCount = state.listReadingHistory().length;
+        final history = state.listReadingHistory();
+        final latest = dao.continueReading(history: history);
+        final recent = dao.recentForContinue(history: history);
+        final stats = dao.compute(now: now, history: history);
+        final historyCount = history.length;
         final isGuest = auth.isGuest;
         final dismissedVersion = state.getPref(_kSyncBannerDismissKey);
         final showSyncBanner =
@@ -186,8 +193,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ),
                 const SizedBox(height: 24),
                 _QuickActions(
-                  onBookmarks: () => BookmarksPage.open(context),
-                  onNotes: () => NotesListPage.open(context),
+                  onBookmarks: () =>
+                      _pushAndRefresh(() => BookmarksPage.open(context)),
+                  onNotes: () =>
+                      _pushAndRefresh(() => NotesListPage.open(context)),
                 ),
               ],
             ),
@@ -230,7 +239,10 @@ class _HomePageState extends ConsumerState<HomePage> {
               const SizedBox(height: 16),
               _WeeklyStatsStrip(stats: stats, locale: locale),
               const SizedBox(height: 8),
-              _RecentHeader(onViewAll: () => HistoryPage.open(context)),
+              _RecentHeader(
+                onViewAll: () =>
+                    _pushAndRefresh(() => HistoryPage.open(context)),
+              ),
               if (recent.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
@@ -247,8 +259,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ..._buildRecentGroups(recent, catalog, state, locale),
               const SizedBox(height: 16),
               _QuickActions(
-                onBookmarks: () => BookmarksPage.open(context),
-                onNotes: () => NotesListPage.open(context),
+                onBookmarks: () =>
+                    _pushAndRefresh(() => BookmarksPage.open(context)),
+                onNotes: () =>
+                    _pushAndRefresh(() => NotesListPage.open(context)),
               ),
               if (showSyncBanner) ...[
                 const SizedBox(height: 16),
