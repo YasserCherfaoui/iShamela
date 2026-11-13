@@ -13,154 +13,129 @@ class NormResult {
   final List<int> map;
 }
 
-/// Same transforms as [normalize], tracking source indices (SPEC-005).
+/// Same transforms as [normalize], tracking source UTF-16 indices (SPEC-005).
 NormResult normalizeWithMap(String original) {
-  // Reuse normalize for the string; rebuild map by walking with the same rules
-  // as normalizer.dart (NFC subset → strip → folds → whitespace collapse).
-  // For correctness vs golden vectors we compare .norm == normalize(s).
-  final nfc = _nfc(original);
-  final buf = StringBuffer();
-  final map = <int>[];
-  // Map from NFC string index → original index (approx: 1:1 for our _nfc).
-  final nfcToOrig = <int>[];
-  {
-    var oi = 0;
-    final out = <int>[];
-    for (final rune in original.runes) {
-      if (out.isNotEmpty) {
-        final composed = _compose(out.last, rune);
-        if (composed != null) {
-          out[out.length - 1] = composed;
-          nfcToOrig[nfcToOrig.length - 1] = oi - _runeLen(out.last);
-          oi += _runeLen(rune);
-          continue;
-        }
-      }
-      out.add(rune);
-      nfcToOrig.add(oi);
-      oi += _runeLen(rune);
-    }
-    // Fall back: if NFC path is complex, map by normalize equality only.
-    if (String.fromCharCodes(out) != nfc) {
-      final normOnly = normalize(original);
-      return NormResult(
-        norm: normOnly,
-        map: List<int>.generate(normOnly.length, (i) => i < original.length ? i : original.length - 1),
-      );
-    }
+  if (original.isEmpty) {
+    return NormResult(norm: '', map: const []);
   }
 
-  var i = 0;
-  final nfcRunes = nfc.runes.toList();
-  while (i < nfcRunes.length) {
-    final r = nfcRunes[i];
-    final origIdx = i < nfcToOrig.length ? nfcToOrig[i] : (original.isEmpty ? 0 : original.length - 1);
-    if (_isStrip(r)) {
-      i++;
-      continue;
-    }
-    var c = r;
-    c = _foldAlef(c);
-    if (c == 0x0629) c = 0x0647; // ة → ه
-    if (c == 0x0649) c = 0x064A; // ى → ي
-    if (c == 0x0640) {
-      i++;
-      continue; // tatweel
-    }
-    if (_isWhitespace(c)) {
-      if (buf.isEmpty || !_endsWithSpace(buf)) {
-        buf.write(' ');
-        map.add(origIdx);
+  final nfcRunes = <int>[];
+  final nfcOrigStarts = <int>[];
+  var oi = 0;
+  for (final rune in original.runes) {
+    final len = rune > 0xFFFF ? 2 : 1;
+    if (nfcRunes.isNotEmpty) {
+      final composed = _compose(nfcRunes.last, rune);
+      if (composed != null) {
+        nfcRunes[nfcRunes.length - 1] = composed;
+        oi += len;
+        continue;
       }
-      i++;
+    }
+    nfcRunes.add(rune);
+    nfcOrigStarts.add(oi);
+    oi += len;
+  }
+
+  final buf = StringBuffer();
+  final map = <int>[];
+  var lastWasSpace = false;
+
+  for (var k = 0; k < nfcRunes.length; k++) {
+    final r = nfcRunes[k];
+    if (_isDeleted(r)) continue;
+    final origIdx = nfcOrigStarts[k];
+    final mapped = _fold(r);
+    final ch = String.fromCharCode(mapped);
+    final isSpace = !_keep(mapped) || _spaceRe.hasMatch(ch);
+    if (isSpace) {
+      if (buf.isNotEmpty && !lastWasSpace) {
+        buf.writeCharCode(0x20);
+        map.add(origIdx);
+        lastWasSpace = true;
+      }
       continue;
     }
-    buf.writeCharCode(c);
-    map.add(origIdx);
-    i++;
+    for (final cu in ch.codeUnits) {
+      buf.writeCharCode(cu);
+      map.add(origIdx);
+    }
+    lastWasSpace = false;
   }
-  var norm = buf.toString().trim();
-  // Adjust map for trim
-  if (norm != buf.toString()) {
-    final full = buf.toString();
-    final start = full.indexOf(norm);
-    final sliced = map.sublist(start, start + norm.length);
-    return NormResult(norm: normalize(original), map: _alignMap(normalize(original), sliced, original));
+
+  var norm = buf.toString();
+  if (lastWasSpace && norm.isNotEmpty) {
+    norm = norm.substring(0, norm.length - 1);
+    map.removeLast();
   }
-  final expected = normalize(original);
-  if (norm != expected) {
-    return NormResult(
-      norm: expected,
-      map: List<int>.generate(
-        expected.length,
-        (i) => i < original.length ? i : (original.isEmpty ? 0 : original.length - 1),
-      ),
-    );
-  }
+
+  assert(norm == normalize(original));
   return NormResult(norm: norm, map: map);
 }
 
-List<int> _alignMap(String expected, List<int> approx, String original) {
-  if (approx.length == expected.length) return approx;
-  return List<int>.generate(
-    expected.length,
-    (i) => i < approx.length
-        ? approx[i]
-        : (original.isEmpty ? 0 : original.length - 1),
-  );
-}
-
-bool _endsWithSpace(StringBuffer b) {
-  final s = b.toString();
-  return s.isNotEmpty && s.codeUnitAt(s.length - 1) == 0x20;
-}
-
-int _runeLen(int rune) => rune > 0xFFFF ? 2 : 1;
-
 int? _compose(int starter, int mark) {
   if (starter == 0x0627) {
-    if (mark == 0x0653) return 0x0622;
-    if (mark == 0x0654) return 0x0623;
-    if (mark == 0x0655) return 0x0625;
+    if (mark == 0x0653) return 0x0622; // ا + maddah → آ
+    if (mark == 0x0654) return 0x0623; // ا + hamza above → أ
+    if (mark == 0x0655) return 0x0625; // ا + hamza below → إ
   } else if (starter == 0x0648 && mark == 0x0654) {
-    return 0x0624;
+    return 0x0624; // و + hamza above → ؤ
   } else if (starter == 0x064A && mark == 0x0654) {
-    return 0x0626;
+    return 0x0626; // ي + hamza above → ئ
   } else if (starter == 0x0065 && mark == 0x0301) {
-    return 0x00E9;
+    return 0x00E9; // e + acute → é
   }
   return null;
 }
 
-String _nfc(String text) {
-  if (text.isEmpty) return text;
-  final out = <int>[];
-  for (final rune in text.runes) {
-    if (out.isNotEmpty) {
-      final composed = _compose(out.last, rune);
-      if (composed != null) {
-        out[out.length - 1] = composed;
-        continue;
+bool _isDeleted(int rune) {
+  // N1 tashkīl
+  if (rune >= 0x064B && rune <= 0x065F) return true;
+  if (rune == 0x0670) return true; // superscript alef
+  // N2 tatweel
+  if (rune == 0x0640) return true;
+  // N3 Quranic annotation
+  if (rune >= 0x06D6 && rune <= 0x06ED) return true;
+  if (rune >= 0x08D3 && rune <= 0x08FF) return true;
+  // N7 standalone hamza
+  if (rune == 0x0621) return true;
+  return false;
+}
+
+int _fold(int rune) {
+  switch (rune) {
+    case 0x0623: // أ
+    case 0x0625: // إ
+    case 0x0622: // آ
+    case 0x0671: // ٱ
+      return 0x0627;
+    case 0x0649: // ى
+      return 0x064A;
+    case 0x0629: // ة
+      return 0x0647;
+    case 0x0624: // ؤ
+      return 0x0648;
+    case 0x0626: // ئ
+      return 0x064A;
+    default:
+      if (rune >= 0x0660 && rune <= 0x0669) {
+        return 0x30 + (rune - 0x0660);
       }
-    }
-    out.add(rune);
+      if (rune >= 0x06F0 && rune <= 0x06F9) {
+        return 0x30 + (rune - 0x06F0);
+      }
+      return rune;
   }
-  return String.fromCharCodes(out);
 }
 
-bool _isStrip(int c) =>
-    (c >= 0x064B && c <= 0x065F) ||
-    c == 0x0670 ||
-    (c >= 0x06D6 && c <= 0x06ED) ||
-    (c >= 0x08D3 && c <= 0x08FF);
+final _letterRe = RegExp(r'\p{L}', unicode: true);
+final _spaceRe = RegExp(r'\s', unicode: true);
 
-int _foldAlef(int c) {
-  if (c == 0x0622 || c == 0x0623 || c == 0x0625 || c == 0x0671) return 0x0627;
-  return c;
+bool _keep(int rune) {
+  if (rune >= 0x30 && rune <= 0x39) return true;
+  final ch = String.fromCharCode(rune);
+  return _spaceRe.hasMatch(ch) || _letterRe.hasMatch(ch);
 }
-
-bool _isWhitespace(int c) =>
-    c == 0x20 || c == 0x09 || c == 0x0A || c == 0x0D || c == 0x00A0;
 
 /// Find token-boundary matches of [token] in [nr.norm]; return original ranges.
 List<({int start, int end})> findHighlightRanges(NormResult nr, String token) {

@@ -174,6 +174,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
   bool _exactPhrase = false;
   List<BookSearchHit> _hits = const [];
   int _activeHitIndex = 0;
+  bool _searchHitsExpanded = false;
   Set<int> _highlightPageIds = {};
   Map<int, List<({int start, int end})>> _searchRangesByPage = const {};
   StateDatabase? _state;
@@ -1151,7 +1152,10 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
                                 overflow: TextOverflow.ellipsis,
                               ),
                               onTap: () {
-                                setState(() => _activeHitIndex = i);
+                                setState(() {
+                                  _activeHitIndex = i;
+                                  _searchHitsExpanded = false;
+                                });
                                 Navigator.pop(ctx);
                                 _jumpToId(h.pageId);
                               },
@@ -1172,75 +1176,103 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
 
   Widget _searchHits(AppLocalizations l10n) {
     final t = IshamelaTokens.of(context);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-          child: Row(
-            children: [
-              Text(
-                '${_activeHitIndex + 1} / ${_hits.length}',
-                style: TextStyle(
-                  fontFamily: kFontUi,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: t.emphasis,
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                tooltip: l10n.previousPage,
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.keyboard_arrow_up, size: 20),
-                onPressed: () => _stepSearchHit(-1),
-              ),
-              IconButton(
-                tooltip: l10n.nextPage,
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.keyboard_arrow_down, size: 20),
-                onPressed: () => _stepSearchHit(1),
-              ),
-              const Spacer(),
-              IconButton(
-                tooltip: l10n.cancel,
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.close, size: 18),
-                onPressed: _clearSearch,
-              ),
-            ],
-          ),
+    final reader = ReaderThemeTokens.of(context);
+    return Material(
+      color: reader.raised,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: reader.hairline)),
         ),
-        SizedBox(
-          height: 112,
-          child: ListView.builder(
-            itemCount: _hits.length,
-            itemBuilder: (context, i) {
-              final h = _hits[i];
-              final label = (h.part != null && h.part!.isNotEmpty)
-                  ? 'ج${h.part} · ص ${h.pageNumber ?? '—'}'
-                  : 'ص ${h.pageNumber ?? '—'}';
-              return ListTile(
-                dense: true,
-                selected: i == _activeHitIndex,
-                title: Text(
-                  label,
-                  style: Theme.of(context).textTheme.labelLarge,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+              child: Row(
+                children: [
+                  Text(
+                    '${_activeHitIndex + 1} / ${_hits.length}',
+                    style: TextStyle(
+                      fontFamily: kFontUi,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: t.emphasis,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    tooltip: l10n.previousPage,
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.keyboard_arrow_up, size: 20),
+                    onPressed: () => _stepSearchHit(-1),
+                  ),
+                  IconButton(
+                    tooltip: l10n.nextPage,
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.keyboard_arrow_down, size: 20),
+                    onPressed: () => _stepSearchHit(1),
+                  ),
+                  IconButton(
+                    tooltip: _searchHitsExpanded
+                        ? l10n.tocCollapse
+                        : l10n.tocExpand,
+                    visualDensity: VisualDensity.compact,
+                    icon: Icon(
+                      _searchHitsExpanded
+                          ? Icons.expand_less
+                          : Icons.expand_more,
+                      size: 20,
+                    ),
+                    onPressed: () => setState(
+                      () => _searchHitsExpanded = !_searchHitsExpanded,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    tooltip: l10n.cancel,
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.close, size: 18),
+                    onPressed: _clearSearch,
+                  ),
+                ],
+              ),
+            ),
+            if (_searchHitsExpanded)
+              SizedBox(
+                height: 112,
+                child: ListView.builder(
+                  itemCount: _hits.length,
+                  itemBuilder: (context, i) {
+                    final h = _hits[i];
+                    final label = (h.part != null && h.part!.isNotEmpty)
+                        ? 'ج${h.part} · ص ${h.pageNumber ?? '—'}'
+                        : 'ص ${h.pageNumber ?? '—'}';
+                    return ListTile(
+                      dense: true,
+                      selected: i == _activeHitIndex,
+                      title: Text(
+                        label,
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                      subtitle: Text(
+                        h.snippet,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      onTap: () {
+                        setState(() {
+                          _activeHitIndex = i;
+                          _searchHitsExpanded = false;
+                        });
+                        _jumpToId(h.pageId);
+                      },
+                    );
+                  },
                 ),
-                subtitle: Text(
-                  h.snippet,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                onTap: () {
-                  setState(() => _activeHitIndex = i);
-                  _jumpToId(h.pageId);
-                },
-              );
-            },
-          ),
+              ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
