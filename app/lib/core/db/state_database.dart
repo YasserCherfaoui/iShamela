@@ -2142,6 +2142,17 @@ class StateDatabase {
         .map((r) => Map<String, Object?>.from(r))
         .toList();
   }
+
+  /// All highlights across books.
+  List<Map<String, Object?>> listAllHighlights() {
+    return _db
+        .select('''
+          SELECT id, book_id, page_id, start_offset, end_offset, color, created_at
+          FROM highlights ORDER BY created_at DESC
+          ''')
+        .map((r) => Map<String, Object?>.from(r))
+        .toList();
+  }
 }
 
 class LocalReadingProgress {

@@ -5,7 +5,9 @@ import 'package:ishamela/l10n/app_localizations.dart';
 import 'package:ishamela/core/db/state_database.dart';
 import 'package:ishamela/core/models/models.dart';
 import 'package:ishamela/core/providers.dart';
+import 'package:ishamela/core/search/normalizer.dart';
 import 'package:ishamela/features/reader/reader_page.dart';
+import 'package:ishamela/ui/app_search_field.dart';
 import 'package:ishamela/ui/book_card.dart';
 import 'package:ishamela/ui/empty_state.dart';
 import 'package:ishamela/ui/section_label.dart';
@@ -29,6 +31,7 @@ class HistoryPage extends ConsumerStatefulWidget {
 
 class _HistoryPageState extends ConsumerState<HistoryPage> {
   int _tick = 0;
+  String _query = '';
 
   Future<void> _clear(AppLocalizations l10n, StateDatabase state) async {
     final ok = await showDialog<bool>(
@@ -78,18 +81,23 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () {
+          Builder(
+            builder: (context) {
               final state = stateAsync.maybeWhen(
                 data: (s) => s,
                 orElse: () => null,
               );
-              if (state != null) _clear(l10n, state);
+              final hasHistory =
+                  state != null && state.listReadingHistory().isNotEmpty;
+              if (!hasHistory) return const SizedBox.shrink();
+              return TextButton(
+                onPressed: () => _clear(l10n, state),
+                child: Text(
+                  l10n.historyClear,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              );
             },
-            child: Text(
-              l10n.historyClear,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
           ),
         ],
       ),
@@ -102,32 +110,56 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
               data: (c) => c,
               orElse: () => null,
             );
-            final entries = state.listReadingHistory();
-            if (entries.isEmpty) {
+            final allEntries = state.listReadingHistory();
+            if (allEntries.isEmpty) {
               return EmptyState(message: l10n.historyEmpty);
             }
+            final q = normalize(_query.trim());
+            final entries = q.isEmpty
+                ? allEntries
+                : allEntries.where((e) {
+                    final title = catalog?.bookById(e.bookId)?.title ?? '';
+                    final section = e.sectionTitle ?? '';
+                    return normalize(title).contains(q) ||
+                        normalize(section).contains(q);
+                  }).toList();
             final groups = groupHistoryByDay(entries, DateTime.now());
-            final list = ListView(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            final list = Column(
               children: [
-                for (final g in groups) ...[
-                  SectionLabel(label: _dayLabel(l10n, g.key)),
-                  for (final e in g.entries)
-                    _HistoryRow(
-                      entry: e,
-                      book: catalog?.bookById(e.bookId),
-                      installed: state.isInstalled(e.bookId),
-                      onRemoved: () => setState(() => _tick++),
-                      onEnqueue: () async {
-                        final svc = downloadsAsync.maybeWhen(
-                          data: (s) => s,
-                          orElse: () => null,
-                        );
-                        await svc?.enqueue(e.bookId);
-                        setState(() => _tick++);
-                      },
-                    ),
-                ],
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+                  child: AppSearchField(
+                    hintText: l10n.searchHint,
+                    onChanged: (v) => setState(() => _query = v),
+                  ),
+                ),
+                Expanded(
+                  child: entries.isEmpty
+                      ? EmptyState(message: l10n.historyEmpty)
+                      : ListView(
+                          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                          children: [
+                            for (final g in groups) ...[
+                              SectionLabel(label: _dayLabel(l10n, g.key)),
+                              for (final e in g.entries)
+                                _HistoryRow(
+                                  entry: e,
+                                  book: catalog?.bookById(e.bookId),
+                                  installed: state.isInstalled(e.bookId),
+                                  onRemoved: () => setState(() => _tick++),
+                                  onEnqueue: () async {
+                                    final svc = downloadsAsync.maybeWhen(
+                                      data: (s) => s,
+                                      orElse: () => null,
+                                    );
+                                    await svc?.enqueue(e.bookId);
+                                    if (mounted) setState(() => _tick++);
+                                  },
+                                ),
+                            ],
+                          ],
+                        ),
+                ),
               ],
             );
             if (width >= 800) {
@@ -202,7 +234,7 @@ String relativeOpenedLabel(
   AppLocalizations l10n,
 ) {
   final diff = now.difference(DateTime.fromMillisecondsSinceEpoch(openedAtMs));
-  if (diff.inMinutes < 1) return '…';
+  if (diff.inMinutes < 1) return l10n.justNow;
   if (diff.inHours < 1) return l10n.minutesAgo(diff.inMinutes);
   if (diff.inHours < 24) return l10n.hoursAgo(diff.inHours);
   return l10n.daysAgo(diff.inDays);
@@ -258,7 +290,10 @@ class _HistoryRow extends ConsumerWidget {
         meta: [caption],
         available: installed,
         unavailableLabel: installed ? null : l10n.notInstalled,
-        trailing: trailing ??
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (trailing != null) trailing,
             PopupMenuButton<String>(
               onSelected: (v) async {
                 final state = await ref.read(stateDatabaseProvider.future);
@@ -293,16 +328,22 @@ class _HistoryRow extends ConsumerWidget {
                 PopupMenuItem(value: 'card', child: Text(l10n.bookCard)),
               ],
             ),
+          ],
+        ),
         onTap: installed
-            ? () => ReaderPage.open(
+            ? () async {
+                await ReaderPage.open(
                   context,
                   bookId: entry.bookId,
                   title: book?.title,
                   authorName: book?.authorName,
+                  authorId: book?.authorId,
                   initialPageId: entry.pageId,
                   initialPrintPage: entry.printPage,
                   initialPart: entry.part,
-                )
+                );
+                onRemoved();
+              }
             : null,
       ),
     );

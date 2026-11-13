@@ -1243,4 +1243,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String resumeAtPartPage(String part, String page) {
     return 'Resume at vol. $part, p.$page';
   }
+
+  @override
+  String get justNow => 'Just now';
 }

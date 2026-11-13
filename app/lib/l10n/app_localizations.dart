@@ -2347,6 +2347,12 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'متابعة من ج {part} · ص {page}'**
   String resumeAtPartPage(String part, String page);
+
+  /// No description provided for @justNow.
+  ///
+  /// In ar, this message translates to:
+  /// **'الآن'**
+  String get justNow;
 }
 
 class _AppLocalizationsDelegate

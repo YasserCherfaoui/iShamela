@@ -173,6 +173,31 @@ void main() {
     expect(state.latestReadingHistory()?.bookId, 2);
     state.close();
   });
+
+  test('listAllHighlights returns highlights across books newest first', () async {
+    final state = await _openTemp();
+    state.insertHighlight(
+      bookId: 1,
+      pageId: 10,
+      start: 0,
+      end: 5,
+      color: 'yellow',
+      createdAt: 100,
+    );
+    state.insertHighlight(
+      bookId: 2,
+      pageId: 20,
+      start: 1,
+      end: 8,
+      color: 'green',
+      createdAt: 200,
+    );
+    final all = state.listAllHighlights();
+    expect(all, hasLength(2));
+    expect(all.first['book_id'], 2);
+    expect(all.last['book_id'], 1);
+    state.close();
+  });
 }
 
 // groupHistoryByDay lives in history_page.dart — covered via widget/manual use.

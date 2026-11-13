@@ -1235,4 +1235,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String resumeAtPartPage(String part, String page) {
     return 'متابعة من ج $part · ص $page';
   }
+
+  @override
+  String get justNow => 'الآن';
 }

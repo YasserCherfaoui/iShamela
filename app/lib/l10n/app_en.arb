@@ -620,5 +620,6 @@
       "part": {"type": "String"},
       "page": {"type": "String"}
     }
-  }
+  },
+  "justNow": "Just now"
 }

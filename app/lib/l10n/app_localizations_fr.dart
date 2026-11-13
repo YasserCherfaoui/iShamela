@@ -1255,4 +1255,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String resumeAtPartPage(String part, String page) {
     return 'Reprendre au vol. $part, p. $page';
   }
+
+  @override
+  String get justNow => 'À l\'instant';
 }
