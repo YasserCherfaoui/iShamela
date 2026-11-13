@@ -13,9 +13,9 @@ import 'package:ishamela/core/providers.dart';
 import 'package:ishamela/core/sync/progress_policy.dart';
 import 'package:ishamela/core/sync/sync_scheduler.dart';
 import 'package:ishamela/core/search/normalizer.dart';
-import 'package:ishamela/core/search/normalizer_map.dart';
 import 'package:ishamela/features/catalog/author_page.dart';
 import 'package:ishamela/features/reader/annotated_body.dart';
+import 'package:ishamela/features/reader/reader_appearance_sheet.dart';
 import 'package:ishamela/features/reader/reader_chrome.dart';
 import 'package:ishamela/features/reader/body_html.dart';
 import 'package:ishamela/features/reader/book_database.dart';
@@ -158,8 +158,14 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
   int _notesTick = 0;
   int _bookmarksTick = 0;
   int _index = 0;
+  BookPage? _currentPage;
   PageController? _pageController;
-  final _jumpCtrl = TextEditingController();
+  final _continuousScroll = ScrollController();
+  final _continuousItemKeys = <int, GlobalKey>{};
+  int _continuousRevealGen = 0;
+  bool _continuousRevealRunning = false;
+  bool _programmaticContinuousScroll = false;
+  double _continuousAvgExtent = 520;
   final _searchCtrl = TextEditingController();
   Object? _error;
   ReadingMode _mode = ReadingMode.pagedH;
@@ -167,7 +173,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
   bool _showCard = true;
   bool _exactPhrase = false;
   List<BookSearchHit> _hits = const [];
+  int _activeHitIndex = 0;
   Set<int> _highlightPageIds = {};
+  Map<int, List<({int start, int end})>> _searchRangesByPage = const {};
   StateDatabase? _state;
 
   SyncScheduler? _scheduler;
@@ -269,9 +277,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
         _toc = toc;
         _parts = parts;
         _index = index;
+        _currentPage = page;
         _mode = mode;
         _pageController = PageController(initialPage: index);
-        _jumpCtrl.text = page?.pageNumber?.toString() ?? '';
         _showResumeChip = showChip;
         _resumeProgressPageId = progressPage;
         _resumePrintPage = showChip ? resumePage?.pageNumber : null;
@@ -281,6 +289,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
         _followToc(index);
       });
       _scheduleTocReveal();
+      if (mode == ReadingMode.continuousV && index > 0) {
+        _scheduleContinuousReveal(index);
+      }
       _scheduler = ref.read(syncSchedulerProvider);
       _scheduler!.setBookOpen(true);
       _dwellTimer?.cancel();
@@ -312,8 +323,8 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
     _scheduler?.setBookOpen(false);
     _closeHistorySession();
     _pageController?.dispose();
+    _continuousScroll.dispose();
     _tocScroll.dispose();
-    _jumpCtrl.dispose();
     _searchCtrl.dispose();
     _db?.close();
     _restoreSystemUi();
@@ -381,36 +392,36 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
   }
 
   /// Viewport on every turn. Qualified progress is a separate write.
-  void _writeViewport(int pageId) {
+  void _writeViewport(int pageId, {BookPage? page}) {
     final state = _state;
     if (state == null) return;
     final now = DateTime.now().millisecondsSinceEpoch;
-    final page = _db?.pageById(pageId);
+    final p = page ?? _db?.pageById(pageId);
     state.upsertBookSession(
       bookId: widget.bookId,
       page: pageId,
-      volume: int.tryParse(page?.part ?? ''),
+      volume: int.tryParse(p?.part ?? ''),
       updatedAt: now,
     );
     state.touchReadingHistory(
       bookId: widget.bookId,
       pageId: pageId,
-      part: page?.part,
-      printPage: page?.pageNumber,
+      part: p?.part,
+      printPage: p?.pageNumber,
       sectionTitle: _sectionTitleFor(pageId),
       nowMs: now,
     );
   }
 
-  void _qualify(int pageId) {
+  void _qualify(int pageId, {BookPage? page}) {
     final state = _state;
     if (state == null) return;
-    final page = _db?.pageById(pageId);
+    final p = page ?? _db?.pageById(pageId);
     state.commitQualifiedProgress(
       bookId: widget.bookId,
       page: pageId,
       progressAt: DateTime.now().millisecondsSinceEpoch,
-      volume: int.tryParse(page?.part ?? ''),
+      volume: int.tryParse(p?.part ?? ''),
     );
     _scheduler?.nudge();
     if (!mounted || !_showResumeChip) return;
@@ -420,21 +431,26 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
   Future<void> _setMode(ReadingMode mode) async {
     final state = await ref.read(stateDatabaseProvider.future);
     state.setSetting('reading_mode', _readingModeKey(mode));
+    if (!mounted) return;
     setState(() {
       _mode = mode;
       _pageController?.dispose();
       _pageController = PageController(initialPage: _index);
     });
+    if (mode == ReadingMode.continuousV && _index > 0) {
+      _scheduleContinuousReveal(_index);
+    }
   }
 
-  void _onPage(int i) {
+  void _onPage(int i, {bool fromContinuousScroll = false}) {
     final from = _index;
     final keepChrome = _keepChromeForPage == i;
     if (keepChrome) _keepChromeForPage = null;
-    final hid = keepChrome
+    final hid = (keepChrome || fromContinuousScroll)
         ? false
         : _chrome.onPageIndexChanged(from: from, to: i);
     final pageId = _ids[i];
+    final page = _db?.pageById(pageId);
     final qualified = _policy.onTurn(
       bookId: widget.bookId,
       ordinal: i,
@@ -443,23 +459,13 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
     final headingChanged = _followToc(i);
     setState(() {
       _index = i;
+      _currentPage = page;
       if (pageId == _resumeProgressPageId) _showResumeChip = false;
-      _syncJumpField();
     });
     if (headingChanged) _scheduleTocReveal();
     if (hid) _applySystemUi();
-    _writeViewport(pageId);
-    if (qualified) _qualify(pageId);
-  }
-
-  void _syncJumpField() {
-    if (_db == null || _ids.isEmpty) return;
-    final page = _db!.pageById(_ids[_index]);
-    final n = page?.pageNumber;
-    final text = n?.toString() ?? '';
-    if (_jumpCtrl.text != text) {
-      _jumpCtrl.text = text;
-    }
+    _writeViewport(pageId, page: page);
+    if (qualified) _qualify(pageId, page: page);
   }
 
   void _goRelative(int delta, {bool keepChrome = false}) {
@@ -467,7 +473,10 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
     if (next < 0 || next >= _ids.length) return;
     if (keepChrome) _keepChromeForPage = next;
     _onPage(next);
-    if (_mode == ReadingMode.continuousV) return;
+    if (_mode == ReadingMode.continuousV) {
+      _scheduleContinuousReveal(next);
+      return;
+    }
     _jumpReaderTo(next);
   }
 
@@ -491,19 +500,121 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
     if (i < 0) return;
     if (_mode == ReadingMode.continuousV) {
       _onPage(i);
+      _scheduleContinuousReveal(i);
     } else {
       _pageController?.jumpToPage(i);
       _onPage(i);
     }
   }
 
+  void _scheduleContinuousReveal(int targetIndex) {
+    if (_mode != ReadingMode.continuousV || _ids.isEmpty) return;
+    final clamped = targetIndex.clamp(0, _ids.length - 1);
+    final gen = ++_continuousRevealGen;
+    if (_continuousRevealRunning) return;
+    _continuousRevealRunning = true;
+    var steps = 0;
+
+    Future<void> step() async {
+      if (!mounted ||
+          gen != _continuousRevealGen ||
+          _mode != ReadingMode.continuousV) {
+        if (gen == _continuousRevealGen) _continuousRevealRunning = false;
+        return;
+      }
+      final scroll = _continuousScroll;
+      if (!scroll.hasClients || !scroll.position.hasContentDimensions) {
+        if (steps++ < 20) {
+          WidgetsBinding.instance.addPostFrameCallback((_) => step());
+        } else {
+          _continuousRevealRunning = false;
+        }
+        return;
+      }
+      final key = _continuousItemKeys[clamped];
+      final ctx = key?.currentContext;
+      if (ctx != null && Scrollable.maybeOf(ctx) != null) {
+        _continuousRevealRunning = false;
+        _programmaticContinuousScroll = true;
+        try {
+          await Scrollable.ensureVisible(
+            ctx,
+            alignment: 0.0,
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeOutCubic,
+          );
+        } finally {
+          _programmaticContinuousScroll = false;
+        }
+        return;
+      }
+      if (steps++ > 14) {
+        _continuousRevealRunning = false;
+        return;
+      }
+      // Estimate offset from average built item extent and jump closer.
+      final avg = _measureContinuousAvgExtent();
+      final pos = scroll.position;
+      final dest = (clamped * avg).clamp(0.0, pos.maxScrollExtent);
+      _programmaticContinuousScroll = true;
+      try {
+        scroll.jumpTo(dest);
+      } finally {
+        _programmaticContinuousScroll = false;
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) => step());
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => step());
+  }
+
+  double _measureContinuousAvgExtent() {
+    var sum = 0.0;
+    var count = 0;
+    for (final key in _continuousItemKeys.values) {
+      final box = key.currentContext?.findRenderObject();
+      if (box is RenderBox && box.hasSize && box.size.height > 0) {
+        sum += box.size.height;
+        count++;
+      }
+    }
+    if (count > 0) {
+      _continuousAvgExtent = sum / count;
+    }
+    return _continuousAvgExtent;
+  }
+
   void _runSearch() {
     if (_db == null) return;
     final hits = _db!.searchInBook(_searchCtrl.text, exactPhrase: _exactPhrase);
+    final byPage = <int, List<({int start, int end})>>{};
+    for (final h in hits) {
+      byPage[h.pageId] = h.highlightRanges;
+    }
     setState(() {
       _hits = hits;
+      _activeHitIndex = 0;
       _highlightPageIds = hits.map((h) => h.pageId).toSet();
+      _searchRangesByPage = byPage;
     });
+  }
+
+  void _clearSearch() {
+    setState(() {
+      _searchCtrl.clear();
+      _hits = const [];
+      _activeHitIndex = 0;
+      _highlightPageIds = {};
+      _searchRangesByPage = const {};
+    });
+  }
+
+  void _stepSearchHit(int delta) {
+    if (_hits.isEmpty) return;
+    final next = (_activeHitIndex + delta) % _hits.length;
+    final target = next < 0 ? next + _hits.length : next;
+    setState(() => _activeHitIndex = target);
+    _jumpToId(_hits[target].pageId);
   }
 
   void _applySystemUi() {
@@ -592,9 +703,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
       open: _showCard,
     );
     final reader = ReaderThemeTokens.of(context);
-    final page = (_db != null && _ids.isNotEmpty)
-        ? _db!.pageById(_ids[_index])
-        : null;
+    final page = _currentPage;
     final printNo = page?.pageNumber?.toString() ?? '—';
     final part = page?.part;
 
@@ -602,7 +711,29 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
     final glassOn = GlassStyleScope.maybeOf(context)?.liquid ?? false;
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: Scaffold(
+      child: CallbackShortcuts(
+        bindings: <ShortcutActivator, VoidCallback>{
+          const SingleActivator(LogicalKeyboardKey.arrowLeft): () =>
+              _goRelative(1, keepChrome: true),
+          const SingleActivator(LogicalKeyboardKey.arrowRight): () =>
+              _goRelative(-1, keepChrome: true),
+          const SingleActivator(LogicalKeyboardKey.pageDown): () =>
+              _goRelative(1, keepChrome: true),
+          const SingleActivator(LogicalKeyboardKey.pageUp): () =>
+              _goRelative(-1, keepChrome: true),
+          const SingleActivator(LogicalKeyboardKey.keyF, control: true): () =>
+              _openSearchSheet(l10n),
+          const SingleActivator(LogicalKeyboardKey.keyF, meta: true): () =>
+              _openSearchSheet(l10n),
+          const SingleActivator(LogicalKeyboardKey.keyB): () {
+            if (page != null && _state != null) {
+              _toggleBookmark(l10n, page);
+            }
+          },
+        },
+        child: Focus(
+          autofocus: true,
+          child: Scaffold(
         backgroundColor: reader.ground,
         body: _GlassOrColumn(
           glass: glassOn,
@@ -685,10 +816,12 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
                       showToc: showToc,
                       showCard: showCard,
                     ),
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
+    ),
     );
   }
 
@@ -710,10 +843,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
                 hintText: l10n.searchInBook,
                 initialQuery: _searchCtrl.text,
                 onChanged: (v) => _searchCtrl.text = v,
-                onSubmitted: (_) {
-                  _runSearch();
-                  setState(() {});
-                },
+                onSubmitted: (_) => _runSearch(),
               ),
             ),
           ),
@@ -724,6 +854,11 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
           icon: const Icon(Icons.search),
           onPressed: () => _openSearchSheet(l10n),
         ),
+      IconButton(
+        tooltip: l10n.textAppearance,
+        icon: const Icon(Icons.text_fields),
+        onPressed: () => showReaderAppearanceSheet(context),
+      ),
       _bookmarkToggleButton(l10n, page),
       if (!wide)
         IconButton(
@@ -971,10 +1106,21 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
                           selected: _exactPhrase,
                           onSelected: (v) {
                             setState(() => _exactPhrase = v);
+                            if (_searchCtrl.text.trim().isNotEmpty) {
+                              _runSearch();
+                            }
                             setLocal(() {});
                           },
                         ),
                         const Spacer(),
+                        if (_hits.isNotEmpty)
+                          TextButton(
+                            onPressed: () {
+                              _clearSearch();
+                              setLocal(() {});
+                            },
+                            child: Text(l10n.cancel),
+                          ),
                         FilledButton(
                           onPressed: () {
                             _runSearch();
@@ -992,15 +1138,20 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
                           itemCount: _hits.length,
                           itemBuilder: (context, i) {
                             final h = _hits[i];
+                            final label =
+                                (h.part != null && h.part!.isNotEmpty)
+                                ? 'ج${h.part} · ص ${h.pageNumber ?? '—'}'
+                                : 'ص ${h.pageNumber ?? '—'}';
                             return ListTile(
                               dense: true,
-                              title: Text('ص ${h.pageNumber ?? '—'}'),
+                              title: Text(label),
                               subtitle: Text(
                                 h.snippet,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
                               onTap: () {
+                                setState(() => _activeHitIndex = i);
                                 Navigator.pop(ctx);
                                 _jumpToId(h.pageId);
                               },
@@ -1020,29 +1171,76 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
   }
 
   Widget _searchHits(AppLocalizations l10n) {
-    return SizedBox(
-      height: 140,
-      child: ListView.builder(
-        itemCount: _hits.length,
-        itemBuilder: (context, i) {
-          final h = _hits[i];
-          return ListTile(
-            dense: true,
-            title: Text(
-              'ص ${h.pageNumber ?? '—'}',
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
-            subtitle: Text(
-              h.snippet,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            onTap: () {
-              _jumpToId(h.pageId);
+    final t = IshamelaTokens.of(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+          child: Row(
+            children: [
+              Text(
+                '${_activeHitIndex + 1} / ${_hits.length}',
+                style: TextStyle(
+                  fontFamily: kFontUi,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: t.emphasis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                tooltip: l10n.previousPage,
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(Icons.keyboard_arrow_up, size: 20),
+                onPressed: () => _stepSearchHit(-1),
+              ),
+              IconButton(
+                tooltip: l10n.nextPage,
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(Icons.keyboard_arrow_down, size: 20),
+                onPressed: () => _stepSearchHit(1),
+              ),
+              const Spacer(),
+              IconButton(
+                tooltip: l10n.cancel,
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(Icons.close, size: 18),
+                onPressed: _clearSearch,
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 112,
+          child: ListView.builder(
+            itemCount: _hits.length,
+            itemBuilder: (context, i) {
+              final h = _hits[i];
+              final label = (h.part != null && h.part!.isNotEmpty)
+                  ? 'ج${h.part} · ص ${h.pageNumber ?? '—'}'
+                  : 'ص ${h.pageNumber ?? '—'}';
+              return ListTile(
+                dense: true,
+                selected: i == _activeHitIndex,
+                title: Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+                subtitle: Text(
+                  h.snippet,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                onTap: () {
+                  setState(() => _activeHitIndex = i);
+                  _jumpToId(h.pageId);
+                },
+              );
             },
-          );
-        },
-      ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1050,7 +1248,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
     if (_ids.isEmpty || _db == null) return const SizedBox.shrink();
     final reader = ReaderThemeTokens.of(context);
     final t = IshamelaTokens.of(context);
-    final page = _db!.pageById(_ids[_index]);
+    final page = _currentPage ?? _db!.pageById(_ids[_index]);
     final printNo = page?.pageNumber?.toString() ?? '—';
     final part = page?.part;
     final canPrev = _index > 0;
@@ -1110,6 +1308,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
                         final i = v.round();
                         if (_mode == ReadingMode.continuousV) {
                           _onPage(i);
+                          _scheduleContinuousReveal(i);
                         } else {
                           _pageController?.jumpToPage(i);
                           _onPage(i);
@@ -1139,13 +1338,19 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
                             cancelLabel: l10n.cancel,
                             tocLabel: l10n.toc,
                             initialValue: page?.pageNumber?.toString(),
-                            onGo: (raw) async {
+                            parts: _parts.length > 1
+                                ? [for (final p in _parts) p.label]
+                                : null,
+                            initialPart: page?.part,
+                            onGoWithPart: (raw, selectedPart) async {
                               final n = int.tryParse(raw.trim());
                               if (n == null) return false;
-                              final p = _db!.pageByPrintNumber(
-                                n,
-                                part: page?.part,
-                              );
+                              final p =
+                                  _db!.pageByPrintNumber(
+                                    n,
+                                    part: selectedPart ?? page?.part,
+                                  ) ??
+                                  _db!.pageByPrintNumber(n);
                               if (p == null) {
                                 if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
@@ -1253,6 +1458,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
   Widget _sideIndexPane(
     AppLocalizations l10n, {
     VoidCallback? onSheetTick,
+    VoidCallback? onCloseSheet,
     VoidCallback? onClose,
   }) {
     // Depend on ticks so badges rebuild when annotations/bookmarks change.
@@ -1311,10 +1517,14 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
           child: IndexedStack(
             index: _paneTab,
             children: [
-              _tocList(l10n, onSheetTick: onSheetTick),
-              _bookmarksList(l10n),
-              _highlightsList(l10n),
-              _notesList(l10n),
+              _tocList(
+                l10n,
+                onSheetTick: onSheetTick,
+                onCloseSheet: onCloseSheet,
+              ),
+              _bookmarksList(l10n, onCloseSheet: onCloseSheet),
+              _highlightsList(l10n, onCloseSheet: onCloseSheet),
+              _notesList(l10n, onCloseSheet: onCloseSheet),
             ],
           ),
         ),
@@ -1322,13 +1532,17 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
     );
   }
 
-  Widget _tocList(AppLocalizations l10n, {VoidCallback? onSheetTick}) {
+  Widget _tocList(
+    AppLocalizations l10n, {
+    VoidCallback? onSheetTick,
+    VoidCallback? onCloseSheet,
+  }) {
     if (_toc.isEmpty && _parts.length < 2) {
       return Center(child: Text(l10n.tocEmpty));
     }
     return Column(
       children: [
-        if (_parts.length > 1) _partSwitcher(),
+        if (_parts.length > 1) _partSwitcher(onCloseSheet: onCloseSheet),
         if (_toc.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
@@ -1340,16 +1554,20 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
               },
             ),
           ),
-        Expanded(child: _tocRows(l10n, onSheetTick: onSheetTick)),
+        Expanded(
+          child: _tocRows(
+            l10n,
+            onSheetTick: onSheetTick,
+            onCloseSheet: onCloseSheet,
+          ),
+        ),
       ],
     );
   }
 
-  Widget _partSwitcher() {
+  Widget _partSwitcher({VoidCallback? onCloseSheet}) {
     final t = IshamelaTokens.of(context);
-    final current = (_db != null && _ids.isNotEmpty)
-        ? _db!.pageById(_ids[_index])?.part
-        : null;
+    final current = _currentPage?.part;
     return SizedBox(
       height: 40,
       child: ListView.separated(
@@ -1365,7 +1583,10 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
             borderRadius: BorderRadius.circular(999),
             child: InkWell(
               borderRadius: BorderRadius.circular(999),
-              onTap: () => _jumpToId(part.firstPageId),
+              onTap: () {
+                onCloseSheet?.call();
+                _jumpToId(part.firstPageId);
+              },
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Center(
@@ -1387,7 +1608,20 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
     );
   }
 
-  Widget _tocRows(AppLocalizations l10n, {VoidCallback? onSheetTick}) {
+  Set<int>? _tocMatchIds() {
+    final query = normalize(_tocQuery.trim());
+    if (query.isEmpty) return null;
+    return <int>{
+      for (final entry in _toc)
+        if (normalize(entry.title).contains(query)) entry.id,
+    };
+  }
+
+  Widget _tocRows(
+    AppLocalizations l10n, {
+    VoidCallback? onSheetTick,
+    VoidCallback? onCloseSheet,
+  }) {
     if (_toc.isEmpty) {
       return Center(child: Text(l10n.tocEmpty));
     }
@@ -1396,13 +1630,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
       _toc.map((e) => e.pageId).toList(),
       currentId,
     );
-    final query = normalize(_tocQuery.trim());
-    final matchIds = query.isEmpty
-        ? null
-        : <int>{
-            for (final entry in _toc)
-              if (normalize(entry.title).contains(query)) entry.id,
-          };
+    final matchIds = _tocMatchIds();
     final titleIds = [for (final entry in _toc) entry.id];
     final rows = visibleTocRows(
       ids: titleIds,
@@ -1473,7 +1701,10 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
                 Expanded(
                   child: InkWell(
                     borderRadius: BorderRadius.circular(10),
-                    onTap: () => _jumpToId(e.pageId),
+                    onTap: () {
+                      onCloseSheet?.call();
+                      _jumpToId(e.pageId);
+                    },
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 4,
@@ -1635,6 +1866,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
         ids: [for (final entry in _toc) entry.id],
         parentIds: _tocParents,
         expandedIds: _tocExpanded,
+        matchIds: _tocMatchIds(),
       );
       final pos = rows.indexWhere((row) => row.index == _tocFollowIndex);
       if (pos < 0) {
@@ -1734,7 +1966,10 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
     return top >= -1 && bottom <= viewport.size.height + 1;
   }
 
-  Widget _bookmarksList(AppLocalizations l10n) {
+  Widget _bookmarksList(
+    AppLocalizations l10n, {
+    VoidCallback? onCloseSheet,
+  }) {
     final _ = _bookmarksTick;
     final marks = _state?.bookmarksForBook(widget.bookId) ?? const [];
     if (marks.isEmpty) {
@@ -1758,7 +1993,10 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
             printNo,
             style: TextStyle(fontFamily: kFontUi, fontSize: 11, color: t.muted),
           ),
-          onTap: () => _jumpToId(b.pageId),
+          onTap: () {
+            onCloseSheet?.call();
+            _jumpToId(b.pageId);
+          },
           onLongPress: () => _bookmarkActions(l10n, b),
         );
       },
@@ -1792,29 +2030,37 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
     }
     if (!mounted) return;
     final ctrl = TextEditingController(text: b.label ?? '');
-    final renamed = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.renameBookmark),
-        content: TextField(controller: ctrl, autofocus: true),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, ctrl.text),
-            child: Text(l10n.confirm),
-          ),
-        ],
-      ),
-    );
+    final String? renamed;
+    try {
+      renamed = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.renameBookmark),
+          content: TextField(controller: ctrl, autofocus: true),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, ctrl.text),
+              child: Text(l10n.confirm),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      ctrl.dispose();
+    }
     if (renamed == null || !mounted) return;
     _state!.updateBookmarkLabel(b.id, renamed);
     setState(() => _bookmarksTick++);
   }
 
-  Widget _highlightsList(AppLocalizations l10n) {
+  Widget _highlightsList(
+    AppLocalizations l10n, {
+    VoidCallback? onCloseSheet,
+  }) {
     final _ = _notesTick;
     final rows = _state?.highlightsForBook(widget.bookId) ?? const [];
     if (rows.isEmpty) {
@@ -1849,13 +2095,27 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
           ),
           title: Text(excerpt, maxLines: 2, overflow: TextOverflow.ellipsis),
           subtitle: Text(l10n.notePageLabel(printNo)),
-          onTap: () => _jumpToId(pageId),
+          trailing: IconButton(
+            tooltip: l10n.delete,
+            icon: const Icon(Icons.delete_outline, size: 18),
+            onPressed: () {
+              _state?.deleteHighlight(h['id'] as int);
+              setState(() => _notesTick++);
+            },
+          ),
+          onTap: () {
+            onCloseSheet?.call();
+            _jumpToId(pageId);
+          },
         );
       },
     );
   }
 
-  Widget _notesList(AppLocalizations l10n) {
+  Widget _notesList(
+    AppLocalizations l10n, {
+    VoidCallback? onCloseSheet,
+  }) {
     // Depend on tick so list rebuilds when annotations change.
     final _ = _notesTick;
     final notes = _state?.notesForBook(widget.bookId) ?? const [];
@@ -1878,10 +2138,77 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
           ),
           title: Text(preview, maxLines: 2, overflow: TextOverflow.ellipsis),
           subtitle: Text(l10n.notePageLabel(printNo)),
-          onTap: () => _jumpToId(pageId),
+          onTap: () {
+            onCloseSheet?.call();
+            _jumpToId(pageId);
+          },
+          onLongPress: () => _noteActions(l10n, n),
         );
       },
     );
+  }
+
+  Future<void> _noteActions(
+    AppLocalizations l10n,
+    Map<String, Object?> n,
+  ) async {
+    final id = n['id'] as int;
+    final current = n['note'] as String;
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text(l10n.addNote),
+              onTap: () => Navigator.pop(ctx, 'edit'),
+            ),
+            ListTile(
+              title: Text(l10n.delete),
+              onTap: () => Navigator.pop(ctx, 'delete'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (choice == null || _state == null) return;
+    if (choice == 'delete') {
+      _state!.deleteNote(id);
+      setState(() => _notesTick++);
+      return;
+    }
+    if (!mounted) return;
+    final ctrl = TextEditingController(text: current);
+    final String? updated;
+    try {
+      updated = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.addNote),
+          content: TextField(controller: ctrl, maxLines: 4, autofocus: true),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+              child: Text(l10n.confirm),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      ctrl.dispose();
+    }
+    if (!mounted || updated == null) return;
+    if (updated.isEmpty) {
+      _state!.deleteNote(id);
+    } else {
+      _state!.updateNote(id, updated);
+    }
+    setState(() => _notesTick++);
   }
 
   Widget _cardPane(
@@ -1970,8 +2297,15 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
       return NotificationListener<ScrollNotification>(
         onNotification: _onContinuousScroll,
         child: ListView.builder(
+          controller: _continuousScroll,
           itemCount: _ids.length,
-          itemBuilder: (context, i) => _pageContent(title, i),
+          itemBuilder: (context, i) {
+            final key = _continuousItemKeys.putIfAbsent(i, () => GlobalKey());
+            return KeyedSubtree(
+              key: key,
+              child: _pageContent(title, i, scrollableInner: false),
+            );
+          },
         ),
       );
     }
@@ -2022,16 +2356,52 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
     }
     if (notification is ScrollUpdateNotification) {
       final delta = notification.scrollDelta ?? 0;
-      if (delta != 0 && _chrome.onContinuousScrollDelta(delta)) {
+      if (!_programmaticContinuousScroll &&
+          delta != 0 &&
+          _chrome.onContinuousScrollDelta(delta)) {
         _commitChrome();
+      }
+      if (!_programmaticContinuousScroll) {
+        _syncContinuousVisiblePage();
       }
     } else if (notification is ScrollEndNotification) {
       _chrome.onContinuousScrollEnd();
+      if (!_programmaticContinuousScroll) {
+        _syncContinuousVisiblePage();
+      }
     }
     return false;
   }
 
-  Widget _pageContent(String title, int i) {
+  void _syncContinuousVisiblePage() {
+    if (!_continuousScroll.hasClients) return;
+    final viewport = _continuousScroll.position.context.notificationContext
+        ?.findRenderObject();
+    if (viewport is! RenderBox || !viewport.hasSize) return;
+    int? bestIdx;
+    var bestDist = double.infinity;
+    for (final entry in _continuousItemKeys.entries) {
+      final box = entry.value.currentContext?.findRenderObject();
+      if (box is! RenderBox || !box.hasSize || !box.attached) continue;
+      final top = box.localToGlobal(Offset.zero, ancestor: viewport).dy;
+      final bottom = top + box.size.height;
+      if (bottom <= 0 || top >= viewport.size.height) continue;
+      final dist = top.abs();
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestIdx = entry.key;
+      }
+    }
+    if (bestIdx != null && bestIdx != _index) {
+      _onPage(bestIdx, fromContinuousScroll: true);
+    }
+  }
+
+  Widget _pageContent(
+    String title,
+    int i, {
+    bool scrollableInner = true,
+  }) {
     final page = _db!.pageById(_ids[i])!;
     final printNo = page.pageNumber?.toString() ?? '—';
     final part = page.part;
@@ -2040,151 +2410,144 @@ class _ReaderPageState extends ConsumerState<ReaderPage>
       if (part != null && part.isNotEmpty) part,
       printNo,
     ].join(' · ');
-    final searchHit = _highlightPageIds.contains(page.id);
+    final searchRanges = _highlightPageIds.contains(page.id)
+        ? (_searchRangesByPage[page.id] ?? const <({int start, int end})>[])
+        : const <({int start, int end})>[];
     final author = widget.authorName ?? _db?.meta('author') ?? '';
     final footnotes = page.footnotes?.trim();
+    final hasFootnotes = footnotes != null && footnotes.isNotEmpty;
+    final footnotesKey = hasFootnotes ? GlobalKey() : null;
     final l10n = AppLocalizations.of(context);
+    final styles = ref.watch(readerTextStylesProvider);
+
+    final bodyContent = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: scrollableInner ? MainAxisSize.max : MainAxisSize.min,
+      children: [
+        _state == null
+            ? buildBodyDisplay(page.body)
+            : AnnotatedBody(
+                body: page.body,
+                bookId: widget.bookId,
+                pageId: page.id,
+                state: _state!,
+                title: title,
+                author: author,
+                part: part,
+                pageNumber: page.pageNumber,
+                textStyles: styles,
+                searchRanges: searchRanges,
+                onSelectionActive: (active) {
+                  _chrome.selectionActive = active;
+                },
+                onInteractivePointerDown: () {
+                  _tapInteractive = true;
+                },
+                onNotesChanged: () {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      setState(() => _notesTick++);
+                    }
+                  });
+                },
+              ),
+        if (hasFootnotes) ...[
+          const SizedBox(height: 24),
+          Divider(color: ReaderThemeTokens.of(context).hairline),
+          Text(
+            key: footnotesKey,
+            l10n.footnotes,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: IshamelaTokens.of(context).gold,
+              fontFamily: 'Amiri',
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _FootnotesBlock(
+            text: footnotes,
+            fontSize: styles.fontSize * 0.9,
+            fontFamily: styles.font.familyName,
+          ),
+        ],
+      ],
+    );
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: scrollableInner ? MainAxisSize.max : MainAxisSize.min,
         children: [
-          Text(
-            header,
-            style: Theme.of(context).textTheme.labelLarge,
-            textAlign: TextAlign.center,
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  header,
+                  style: Theme.of(context).textTheme.labelLarge,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              if (hasFootnotes && footnotesKey != null)
+                ActionChip(
+                  visualDensity: VisualDensity.compact,
+                  label: Text(
+                    l10n.footnotes,
+                    style: const TextStyle(fontSize: 11),
+                  ),
+                  onPressed: () {
+                    final ctx = footnotesKey.currentContext;
+                    if (ctx != null) {
+                      Scrollable.ensureVisible(
+                        ctx,
+                        duration: const Duration(milliseconds: 260),
+                        curve: Curves.easeOutCubic,
+                      );
+                    }
+                  },
+                ),
+            ],
           ),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 8),
             child: RosetteDivider(size: 14),
           ),
-          Expanded(
-            child: NotificationListener<ScrollNotification>(
-              onNotification: _onPageBodyScroll,
-              child: SingleChildScrollView(
-                // Always scrollable so short pages still receive drag/overscroll
-                // (otherwise only the header/footer hit the PageView).
-                physics: const AlwaysScrollableScrollPhysics(
-                  parent: BouncingScrollPhysics(),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    searchHit
-                        ? _highlightedBody(page.body)
-                        : (_state == null
-                              ? buildBodyDisplay(page.body)
-                              : AnnotatedBody(
-                                  body: page.body,
-                                  bookId: widget.bookId,
-                                  pageId: page.id,
-                                  state: _state!,
-                                  title: title,
-                                  author: author,
-                                  part: part,
-                                  pageNumber: page.pageNumber,
-                                  textStyles: ref.watch(
-                                    readerTextStylesProvider,
-                                  ),
-                                  onSelectionActive: (active) {
-                                    _chrome.selectionActive = active;
-                                  },
-                                  onInteractivePointerDown: () {
-                                    _tapInteractive = true;
-                                  },
-                                  onNotesChanged: () {
-                                    WidgetsBinding.instance
-                                        .addPostFrameCallback((_) {
-                                          if (mounted) {
-                                            setState(() => _notesTick++);
-                                          }
-                                        });
-                                  },
-                                )),
-                    if (footnotes != null && footnotes.isNotEmpty) ...[
-                      const SizedBox(height: 24),
-                      Divider(color: ReaderThemeTokens.of(context).hairline),
-                      Text(
-                        l10n.footnotes,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: IshamelaTokens.of(context).gold,
-                          fontFamily: 'Amiri',
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      _FootnotesBlock(
-                        text: footnotes,
-                        fontSize:
-                            (ref.watch(readerTextStylesProvider).fontSize) *
-                            0.9,
-                        fontFamily: ref
-                            .watch(readerTextStylesProvider)
-                            .font
-                            .familyName,
-                      ),
-                    ],
-                  ],
+          if (scrollableInner)
+            Expanded(
+              child: NotificationListener<ScrollNotification>(
+                onNotification: _onPageBodyScroll,
+                child: SingleChildScrollView(
+                  // Always scrollable so short pages still receive drag/overscroll
+                  // (otherwise only the header/footer hit the PageView).
+                  physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics(),
+                  ),
+                  child: bodyContent,
                 ),
               ),
-            ),
-          ),
+            )
+          else
+            bodyContent,
         ],
       ),
     );
-  }
-
-  Widget _highlightedBody(String body) {
-    final nr = normalizeWithMap(body);
-    final q = normalize(_searchCtrl.text);
-    final tokens = _exactPhrase
-        ? [q]
-        : q.split(RegExp(r'\s+')).where((t) => t.isNotEmpty);
-    final ranges = <({int start, int end})>[];
-    for (final t in tokens) {
-      ranges.addAll(findHighlightRanges(nr, t));
-    }
-    ranges.sort((a, b) => a.start.compareTo(b.start));
-    if (ranges.isEmpty) return buildBodyDisplay(body);
-    final reader = ReaderThemeTokens.of(context);
-    final spans = <InlineSpan>[];
-    var cursor = 0;
-    final base = TextStyle(fontSize: 20, height: 1.9, color: reader.body);
-    var hi = base.copyWith(backgroundColor: reader.highlight);
-    if (reader.highlightUnderline != null) {
-      hi = hi.copyWith(
-        decoration: TextDecoration.underline,
-        decorationColor: reader.highlightUnderline,
-        decorationThickness: 2,
-      );
-    }
-    for (final r in ranges) {
-      if (r.start < cursor) continue;
-      if (r.start > cursor) {
-        spans.add(TextSpan(text: body.substring(cursor, r.start), style: base));
-      }
-      final end = r.end.clamp(0, body.length);
-      spans.add(TextSpan(text: body.substring(r.start, end), style: hi));
-      cursor = end;
-    }
-    if (cursor < body.length) {
-      spans.add(TextSpan(text: body.substring(cursor), style: base));
-    }
-    return Text.rich(TextSpan(children: spans), textAlign: TextAlign.justify);
   }
 
   void _openTocSheet(BuildContext context, AppLocalizations l10n) {
     _expandCurrentTocPath();
     showGlassSheet<void>(
       context: context,
-      builder: (_) => Directionality(
+      builder: (sheetCtx) => Directionality(
         textDirection: TextDirection.rtl,
         child: SafeArea(
           child: SizedBox(
             height: MediaQuery.sizeOf(context).height * 0.6,
             child: StatefulBuilder(
-              builder: (_, setSheet) =>
-                  _sideIndexPane(l10n, onSheetTick: () => setSheet(() {})),
+              builder: (_, setSheet) => _sideIndexPane(
+                l10n,
+                onSheetTick: () => setSheet(() {}),
+                onCloseSheet: () => Navigator.pop(sheetCtx),
+              ),
             ),
           ),
         ),

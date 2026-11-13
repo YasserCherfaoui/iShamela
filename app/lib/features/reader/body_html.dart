@@ -32,15 +32,16 @@ List<InlineSpan> parseBodySpans(String raw, {TextStyle? style}) {
 
   final out = <InlineSpan>[];
   var cursor = 0;
-  var isTitle = false;
-  var isBold = false;
-  var isItalic = false;
+  var titleDepth = 0;
+  var boldDepth = 0;
+  var italicDepth = 0;
+  final spanTitleStack = <bool>[];
 
   TextStyle current() {
     var s = base;
-    if (isTitle) s = titleStyle;
-    if (isBold) s = s.merge(bold);
-    if (isItalic) s = s.merge(italic);
+    if (titleDepth > 0) s = titleStyle;
+    if (boldDepth > 0) s = s.merge(bold);
+    if (italicDepth > 0) s = s.merge(italic);
     return s;
   }
 
@@ -65,17 +66,30 @@ List<InlineSpan> parseBodySpans(String raw, {TextStyle? style}) {
         if (!closing) out.add(const TextSpan(text: '\n'));
       case 'span':
         if (closing) {
-          isTitle = false;
-        } else if (attrs.contains('data-type="title"') ||
-            attrs.contains("data-type='title'")) {
-          isTitle = true;
+          if (spanTitleStack.isNotEmpty && spanTitleStack.removeLast()) {
+            titleDepth = (titleDepth - 1).clamp(0, 999);
+          }
+        } else {
+          final isTitleSpan =
+              attrs.contains('data-type="title"') ||
+              attrs.contains("data-type='title'");
+          spanTitleStack.add(isTitleSpan);
+          if (isTitleSpan) titleDepth++;
         }
       case 'b':
       case 'strong':
-        isBold = !closing;
+        if (closing) {
+          boldDepth = (boldDepth - 1).clamp(0, 999);
+        } else {
+          boldDepth++;
+        }
       case 'i':
       case 'em':
-        isItalic = !closing;
+        if (closing) {
+          italicDepth = (italicDepth - 1).clamp(0, 999);
+        } else {
+          italicDepth++;
+        }
       default:
         // strip tag; inner text handled by surrounding matches
         break;

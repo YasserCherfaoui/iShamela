@@ -13,9 +13,13 @@ Future<void> showJumpSheet({
   required String cancelLabel,
   String? tocLabel,
   String? initialValue,
-  required Future<bool> Function(String raw) onGo,
+  List<String>? parts,
+  String? initialPart,
+  Future<bool> Function(String raw)? onGo,
+  Future<bool> Function(String raw, String? part)? onGoWithPart,
   VoidCallback? onOpenToc,
 }) {
+  assert(onGo != null || onGoWithPart != null);
   return showGlassSheet<void>(
     context: context,
     showDragHandle: true,
@@ -31,7 +35,10 @@ Future<void> showJumpSheet({
         cancelLabel: cancelLabel,
         tocLabel: tocLabel,
         initialValue: initialValue,
+        parts: parts,
+        initialPart: initialPart,
         onGo: onGo,
+        onGoWithPart: onGoWithPart,
         onOpenToc: onOpenToc,
       );
     },
@@ -45,7 +52,10 @@ class _JumpSheetBody extends StatefulWidget {
     required this.goLabel,
     required this.cancelLabel,
     required this.initialValue,
-    required this.onGo,
+    this.parts,
+    this.initialPart,
+    this.onGo,
+    this.onGoWithPart,
     this.tocLabel,
     this.onOpenToc,
   });
@@ -56,7 +66,10 @@ class _JumpSheetBody extends StatefulWidget {
   final String cancelLabel;
   final String? tocLabel;
   final String? initialValue;
-  final Future<bool> Function(String raw) onGo;
+  final List<String>? parts;
+  final String? initialPart;
+  final Future<bool> Function(String raw)? onGo;
+  final Future<bool> Function(String raw, String? part)? onGoWithPart;
   final VoidCallback? onOpenToc;
 
   @override
@@ -65,11 +78,19 @@ class _JumpSheetBody extends StatefulWidget {
 
 class _JumpSheetBodyState extends State<_JumpSheetBody> {
   late final TextEditingController _ctrl;
+  String? _selectedPart;
 
   @override
   void initState() {
     super.initState();
     _ctrl = TextEditingController(text: widget.initialValue ?? '');
+    final parts = widget.parts;
+    if (parts != null && parts.isNotEmpty) {
+      _selectedPart =
+          (widget.initialPart != null && parts.contains(widget.initialPart))
+          ? widget.initialPart
+          : parts.first;
+    }
   }
 
   @override
@@ -104,6 +125,26 @@ class _JumpSheetBodyState extends State<_JumpSheetBody> {
               ),
             ),
             const SizedBox(height: 16),
+            if (widget.parts != null && widget.parts!.length > 1) ...[
+              SizedBox(
+                height: 36,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: widget.parts!.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (_, i) {
+                    final part = widget.parts![i];
+                    final selected = part == _selectedPart;
+                    return ChoiceChip(
+                      label: Text('ج$part'),
+                      selected: selected,
+                      onSelected: (_) => setState(() => _selectedPart = part),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             TextField(
               controller: _ctrl,
               keyboardType: TextInputType.number,
@@ -153,7 +194,9 @@ class _JumpSheetBodyState extends State<_JumpSheetBody> {
   }
 
   Future<void> _submit() async {
-    final ok = await widget.onGo(_ctrl.text);
+    final ok = widget.onGoWithPart != null
+        ? await widget.onGoWithPart!(_ctrl.text, _selectedPart)
+        : await widget.onGo!(_ctrl.text);
     if (ok && mounted) Navigator.pop(context);
   }
 }

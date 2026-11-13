@@ -26,6 +26,7 @@ class AnnotatedBody extends StatefulWidget {
     this.part,
     this.pageNumber,
     this.textStyles,
+    this.searchRanges = const [],
     this.onNotesChanged,
     this.onSelectionActive,
     this.onInteractivePointerDown,
@@ -40,6 +41,9 @@ class AnnotatedBody extends StatefulWidget {
   final String? part;
   final int? pageNumber;
   final ReaderTextStyles? textStyles;
+
+  /// Body-offset highlight ranges from in-book search.
+  final List<({int start, int end})> searchRanges;
   final VoidCallback? onNotesChanged;
 
   /// SPEC-026: true while a non-collapsed selection is active.
@@ -251,29 +255,34 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
   Future<void> _addNote(TextSelection sel) async {
     final l10n = AppLocalizations.of(context);
     final ctrl = TextEditingController();
-    final note = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.addNote),
-        content: TextField(
-          controller: ctrl,
-          maxLines: 4,
-          autofocus: true,
-          decoration: InputDecoration(hintText: l10n.addNote),
+    final String? note;
+    try {
+      note = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.addNote),
+          content: TextField(
+            controller: ctrl,
+            maxLines: 4,
+            autofocus: true,
+            decoration: InputDecoration(hintText: l10n.addNote),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+              child: Text(l10n.confirm),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-            child: Text(l10n.confirm),
-          ),
-        ],
-      ),
-    );
-    if (note == null || note.isEmpty) return;
+      );
+    } finally {
+      ctrl.dispose();
+    }
+    if (!mounted || note == null || note.isEmpty) return;
     final range = _selectionToBody(sel);
     if (range == null) return;
     final (start, end) = range;
@@ -433,6 +442,7 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
     final display = _map.display;
     final base = _baseStyle(styles);
     final hl = List<Color?>.filled(display.length, null);
+    final searchFlags = List<bool>.filled(display.length, false);
     final noteFlags = List<bool>.filled(display.length, false);
     final badgeAt = <int, int>{};
     final night = reader.atmosphere == ReadingAtmosphere.night;
@@ -447,6 +457,12 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
       final (ds, de) = _map.toDisplayRange(start, end);
       for (var i = ds; i < de && i < display.length; i++) {
         hl[i] = c;
+      }
+    }
+    for (final r in widget.searchRanges) {
+      final (ds, de) = _map.toDisplayRange(r.start, r.end);
+      for (var i = ds; i < de && i < display.length; i++) {
+        searchFlags[i] = true;
       }
     }
     for (final n in _notes) {
@@ -495,12 +511,14 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
       }
       final role = _roles.roleAt(i);
       final bg = hl[i];
+      final isSearch = searchFlags[i];
       final note = noteFlags[i];
       var j = i + 1;
       while (j < display.length &&
           !badgeAt.containsKey(j) &&
           _roles.roleAt(j) == role &&
           hl[j] == bg &&
+          searchFlags[j] == isSearch &&
           noteFlags[j] == note) {
         j++;
       }
@@ -509,20 +527,26 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
         color: _roleColor(role, styles, reader),
         fontWeight: rs.bold ? FontWeight.bold : FontWeight.normal,
       );
-      if (bg != null) {
-        style = style.copyWith(backgroundColor: bg);
-        if (night && reader.highlightUnderline != null) {
-          style = style.copyWith(
-            decoration: TextDecoration.underline,
-            decorationColor: reader.highlightUnderline,
-            decorationThickness: 2,
-          );
-        }
+      final effectiveBg = isSearch ? reader.highlight : bg;
+      if (effectiveBg != null) {
+        style = style.copyWith(backgroundColor: effectiveBg);
       }
+      final hasNightUnderline =
+          (isSearch || (bg != null && night)) &&
+          reader.highlightUnderline != null;
       if (note) {
         style = style.copyWith(
           decoration: TextDecoration.underline,
           decorationStyle: TextDecorationStyle.dashed,
+          decorationColor: hasNightUnderline
+              ? reader.highlightUnderline
+              : null,
+        );
+      } else if (hasNightUnderline) {
+        style = style.copyWith(
+          decoration: TextDecoration.underline,
+          decorationColor: reader.highlightUnderline,
+          decorationThickness: 2,
         );
       }
       out.add(TextSpan(text: display.substring(i, j), style: style));
@@ -537,31 +561,33 @@ class _AnnotatedBodyState extends State<AnnotatedBody> {
   Future<void> _editNote(int id, String current) async {
     final l10n = AppLocalizations.of(context);
     final ctrl = TextEditingController(text: current);
-    final result = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.addNote),
-        content: TextField(controller: ctrl, maxLines: 4, autofocus: true),
-        actions: [
-          TextButton(
-            onPressed: () {
-              widget.state.deleteNote(id);
-              Navigator.pop(ctx, '');
-            },
-            child: Text(l10n.delete),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-            child: Text(l10n.confirm),
-          ),
-        ],
-      ),
-    );
-    if (result == null) return;
+    final String? result;
+    try {
+      result = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.addNote),
+          content: TextField(controller: ctrl, maxLines: 4, autofocus: true),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, ''),
+              child: Text(l10n.delete),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+              child: Text(l10n.confirm),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      ctrl.dispose();
+    }
+    if (!mounted || result == null) return;
     if (result.isEmpty) {
       widget.state.deleteNote(id);
     } else {

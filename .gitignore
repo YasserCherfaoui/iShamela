@@ -48,3 +48,5 @@ app/android/app/google-services.json
 
 # Local Cursor MCP config
 .mcp.json
+
+*.zip
