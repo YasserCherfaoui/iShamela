@@ -66,6 +66,8 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
   /// 0 = titles (default), 1 = full text (SPEC-017).
   int _searchScope = 0;
   bool _exactPhrase = false;
+  bool _scopeToFilter = true;
+  final Set<int> _collapsedSearchBooks = {};
   CancellationToken? _textSearchToken;
   StreamSubscription<LibraryTextSearchGroup>? _textSearchSub;
   final List<LibraryTextSearchGroup> _textGroups = [];
@@ -189,26 +191,49 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
       state: state,
       catalog: catalog,
     );
-    final ordered = svc.orderedInstalledBookIds();
+    final hasFilter = _categoryFilter != null || _authorFilter != null;
+    final scopeIds = (_scopeToFilter && hasFilter && _drillBooks != null)
+        ? _drillBooks!.map((b) => b.bookId).toSet()
+        : null;
+    final ordered = svc.orderedInstalledBookIds(scopeBookIds: scopeIds);
+    final order = {for (var i = 0; i < ordered.length; i++) ordered[i]: i};
     setState(() {
       _textGroups.clear();
+      _collapsedSearchBooks.clear();
       _textSearching = true;
       _textSearchFailed = false;
       _textSearchDone = 0;
       _textSearchTotal = ordered.length;
     });
 
-    final seen = <int>{};
     _textSearchSub = svc
-        .search(query: _query, exactPhrase: _exactPhrase, token: token)
+        .search(
+          query: _query,
+          exactPhrase: _exactPhrase,
+          scopeBookIds: scopeIds,
+          onProgress: (done, total) {
+            if (!mounted || token.isCancelled) return;
+            setState(() {
+              _textSearchDone = done;
+              _textSearchTotal = total;
+            });
+          },
+          token: token,
+        )
         .listen(
           (g) {
             if (!mounted || token.isCancelled) return;
             setState(() {
               _textGroups.removeWhere((x) => x.bookId == g.bookId);
-              _textGroups.add(g);
-              seen.add(g.bookId);
-              _textSearchDone = seen.length;
+              final rank = order[g.bookId] ?? _textGroups.length;
+              var insertAt = _textGroups.length;
+              for (var i = 0; i < _textGroups.length; i++) {
+                if ((order[_textGroups[i].bookId] ?? 0) > rank) {
+                  insertAt = i;
+                  break;
+                }
+              }
+              _textGroups.insert(insertAt, g);
             });
           },
           onError: (_) {
@@ -223,14 +248,6 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
             setState(() {
               _textSearching = false;
               _textSearchDone = _textSearchTotal;
-              // Re-sort to LS-11 order
-              final order = {
-                for (var i = 0; i < ordered.length; i++) ordered[i]: i,
-              };
-              _textGroups.sort(
-                (a, b) =>
-                    (order[a.bookId] ?? 0).compareTo(order[b.bookId] ?? 0),
-              );
             });
           },
         );
@@ -491,20 +508,43 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
                               ),
                               if (_searchScope == 1) ...[
                                 const SizedBox(height: 8),
-                                Align(
-                                  alignment: AlignmentDirectional.centerStart,
-                                  child: GlassCluster(
-                                    shape: const GlassShape.pill(),
-                                    useBackdrop: false,
-                                    child: GlassFilterChip(
-                                      label: Text(l10n.exactPhrase),
-                                      selected: _exactPhrase,
-                                      onSelected: (v) {
-                                        setState(() => _exactPhrase = v);
-                                        _startTextSearch();
-                                      },
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 6,
+                                  children: [
+                                    GlassCluster(
+                                      shape: const GlassShape.pill(),
+                                      useBackdrop: false,
+                                      child: GlassFilterChip(
+                                        label: Text(l10n.exactPhrase),
+                                        selected: _exactPhrase,
+                                        onSelected: (v) {
+                                          setState(() => _exactPhrase = v);
+                                          _startTextSearch();
+                                        },
+                                      ),
                                     ),
-                                  ),
+                                    if (_categoryFilter != null ||
+                                        _authorFilter != null)
+                                      GlassCluster(
+                                        shape: const GlassShape.pill(),
+                                        useBackdrop: false,
+                                        child: GlassFilterChip(
+                                          label: Text(
+                                            _categoryFilter?.name ??
+                                                _authorFilter?.name ??
+                                                '',
+                                          ),
+                                          selected: _scopeToFilter,
+                                          onSelected: (v) {
+                                            setState(
+                                              () => _scopeToFilter = v,
+                                            );
+                                            _startTextSearch();
+                                          },
+                                        ),
+                                      ),
+                                  ],
                                 ),
                                 if (_textSearching)
                                   Padding(
@@ -630,8 +670,9 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
       itemCount: _textGroups.length,
       itemBuilder: (context, i) {
         final g = _textGroups[i];
+        final collapsed = _collapsedSearchBooks.contains(g.bookId);
         final countLabel = g.capped
-            ? l10n.hitsCapped(g.totalHits > 50 ? 50 : g.totalHits)
+            ? l10n.hitsCapped(g.totalHits)
             : '${g.totalHits}';
         return TweenAnimationBuilder<double>(
           tween: Tween(begin: 0, end: 1),
@@ -643,93 +684,130 @@ class _LibraryPageState extends ConsumerState<LibraryPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Row(
-                  children: [
-                    BookSpine(
-                      title: g.title,
-                      categoryId: g.categoryId,
-                      width: 32,
-                      height: 46,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        g.title,
-                        style: TextStyle(
-                          fontFamily: kFontAmiri,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                          color: t.ink,
+                InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () => ReaderPage.open(
+                    context,
+                    bookId: g.bookId,
+                    title: g.title,
+                    authorName: g.authorName,
+                    authorId: g.authorId,
+                    initialSearchQuery: _query,
+                    exactPhrase: _exactPhrase,
+                  ),
+                  child: Row(
+                    children: [
+                      BookSpine(
+                        title: g.title,
+                        categoryId: g.categoryId,
+                        width: 32,
+                        height: 46,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          g.title,
+                          style: TextStyle(
+                            fontFamily: kFontAmiri,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                            color: t.ink,
+                          ),
+                        ),
+                      ),
+                      MetaChip(label: countLabel),
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        icon: Icon(
+                          collapsed
+                              ? Icons.expand_more
+                              : Icons.expand_less,
+                          size: 20,
+                          color: t.muted,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            if (!_collapsedSearchBooks.add(g.bookId)) {
+                              _collapsedSearchBooks.remove(g.bookId);
+                            }
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                if (!collapsed) ...[
+                  const SizedBox(height: 8),
+                  for (final hit in g.hits)
+                    InkWell(
+                      onTap: () => ReaderPage.open(
+                        context,
+                        bookId: g.bookId,
+                        title: g.title,
+                        authorName: g.authorName,
+                        authorId: g.authorId,
+                        initialPageId: hit.pageId,
+                        initialSearchQuery: _query,
+                        exactPhrase: _exactPhrase,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: t.goldSoft.withValues(alpha: 0.45),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                hit.part != null && hit.part!.isNotEmpty
+                                    ? 'ج${hit.part} · ص ${hit.pageNumber ?? '—'}'
+                                    : 'ص ${hit.pageNumber ?? '—'}',
+                                style: TextStyle(
+                                  fontFamily: kFontUi,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                  color: t.ink,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: HighlightedText(
+                                text: hit.snippet,
+                                query: _query,
+                                maxLines: 2,
+                                style: TextStyle(
+                                  fontFamily: kFontAmiri,
+                                  fontSize: 14,
+                                  height: 1.4,
+                                  color: t.ink,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                    MetaChip(label: countLabel),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                for (final hit in g.hits)
-                  InkWell(
-                    onTap: () => ReaderPage.open(
-                      context,
-                      bookId: g.bookId,
-                      title: g.title,
-                      initialPageId: hit.pageId,
-                      initialSearchQuery: _query,
-                      exactPhrase: _exactPhrase,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: t.goldSoft.withValues(alpha: 0.45),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Text(
-                              'ص ${hit.pageNumber?.toString() ?? '—'}',
-                              style: TextStyle(
-                                fontFamily: kFontUi,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
-                                color: t.ink,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: HighlightedText(
-                              text: hit.snippet,
-                              query: _query,
-                              maxLines: 1,
-                              style: TextStyle(
-                                fontFamily: kFontAmiri,
-                                fontSize: 14,
-                                height: 1.4,
-                                color: t.ink,
-                              ),
-                            ),
-                          ),
-                        ],
+                  if (g.capped)
+                    TextButton(
+                      onPressed: () => ReaderPage.open(
+                        context,
+                        bookId: g.bookId,
+                        title: g.title,
+                        authorName: g.authorName,
+                        authorId: g.authorId,
+                        initialSearchQuery: _query,
+                        exactPhrase: _exactPhrase,
                       ),
+                      child: Text(l10n.moreHitsInBook),
                     ),
-                  ),
-                if (g.capped)
-                  TextButton(
-                    onPressed: () => ReaderPage.open(
-                      context,
-                      bookId: g.bookId,
-                      title: g.title,
-                      initialSearchQuery: _query,
-                      exactPhrase: _exactPhrase,
-                    ),
-                    child: Text(l10n.moreHitsInBook),
-                  ),
+                ],
               ],
             ),
           ),

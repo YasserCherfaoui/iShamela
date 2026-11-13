@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:isolate';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:ishamela/core/db/app_fs.dart';
 import 'package:ishamela/core/db/paths.dart';
 import 'package:ishamela/core/db/state_database.dart';
@@ -14,6 +16,8 @@ class LibraryTextSearchGroup {
     required this.bookId,
     required this.title,
     required this.categoryId,
+    this.authorName,
+    this.authorId,
     required this.hits,
     required this.totalHits,
     required this.capped,
@@ -22,6 +26,8 @@ class LibraryTextSearchGroup {
   final int bookId;
   final String title;
   final int categoryId;
+  final String? authorName;
+  final int? authorId;
   final List<BookSearchHit> hits;
 
   /// True hit count for chip (capped display separately).
@@ -54,8 +60,11 @@ class LibrarySearchService {
   final int countCap;
 
   /// Installed book ids: history-first, then remaining by title.
-  List<int> orderedInstalledBookIds() {
-    final installed = state.installedBookIds().toSet();
+  List<int> orderedInstalledBookIds({Set<int>? scopeBookIds}) {
+    var installed = state.installedBookIds().toSet();
+    if (scopeBookIds != null) {
+      installed = installed.intersection(scopeBookIds);
+    }
     final seen = <int>{};
     final ordered = <int>[];
     for (final e in state.listReadingHistory()) {
@@ -77,19 +86,23 @@ class LibrarySearchService {
   Stream<LibraryTextSearchGroup> search({
     required String query,
     bool exactPhrase = false,
+    Set<int>? scopeBookIds,
+    void Function(int completed, int total)? onProgress,
     required CancellationToken token,
   }) {
     final q = normalize(query);
     if (q.length < 2) {
       return const Stream.empty();
     }
-    final ids = orderedInstalledBookIds();
+    final ids = orderedInstalledBookIds(scopeBookIds: scopeBookIds);
     if (ids.isEmpty) return const Stream.empty();
 
     late final StreamController<LibraryTextSearchGroup> controller;
     controller = StreamController<LibraryTextSearchGroup>(
       onListen: () {
-        unawaited(_run(ids, q, exactPhrase, token, controller));
+        unawaited(
+          _run(ids, q, exactPhrase, token, controller, onProgress: onProgress),
+        );
       },
     );
     return controller.stream;
@@ -100,8 +113,9 @@ class LibrarySearchService {
     String normalizedQuery,
     bool exactPhrase,
     CancellationToken token,
-    StreamController<LibraryTextSearchGroup> controller,
-  ) async {
+    StreamController<LibraryTextSearchGroup> controller, {
+    void Function(int completed, int total)? onProgress,
+  }) async {
     final queue = Queue<int>.from(ids);
     var active = 0;
     var completed = 0;
@@ -121,10 +135,25 @@ class LibrarySearchService {
         unawaited(() async {
           try {
             if (token.isCancelled) return;
-            final group = _searchBook(bookId, normalizedQuery, exactPhrase);
-            if (group == null) {
+            final result = await _searchBookAsync(
+              bookId,
+              normalizedQuery,
+              exactPhrase,
+            );
+            if (result == null) {
               failures++;
-            } else if (group.hits.isNotEmpty && !token.isCancelled) {
+            } else if (result.hits.isNotEmpty && !token.isCancelled) {
+              final book = catalog.bookById(bookId);
+              final group = LibraryTextSearchGroup(
+                bookId: bookId,
+                title: book?.title ?? 'book_$bookId',
+                categoryId: book?.categoryId ?? 0,
+                authorName: book?.authorName,
+                authorId: book?.authorId,
+                hits: result.hits,
+                totalHits: result.totalHits,
+                capped: result.capped,
+              );
               if (!controller.isClosed) controller.add(group);
             }
           } catch (_) {
@@ -132,6 +161,9 @@ class LibrarySearchService {
           } finally {
             active--;
             completed++;
+            if (!token.isCancelled) {
+              onProgress?.call(completed, ids.length);
+            }
             maybeFinish();
             if (!token.isCancelled) await spawn();
           }
@@ -150,35 +182,51 @@ class LibrarySearchService {
     }
   }
 
-  LibraryTextSearchGroup? _searchBook(
-    int bookId,
-    String normalizedQuery,
-    bool exactPhrase,
-  ) {
-    final path = paths.bookSqlite(bookId);
-    if (!appFileExistsSync(path)) return null;
-    BookDatabase? db;
-    try {
-      db = BookDatabase.open(paths, bookId);
-      final result = db.searchInBookCapped(
-        normalizedQuery,
-        exactPhrase: exactPhrase,
-        hitCap: hitCap,
-        countCap: countCap,
-      );
-      final book = catalog.bookById(bookId);
-      return LibraryTextSearchGroup(
-        bookId: bookId,
-        title: book?.title ?? 'book_$bookId',
-        categoryId: book?.categoryId ?? 0,
-        hits: result.hits,
-        totalHits: result.totalHits,
-        capped: result.capped,
-      );
-    } catch (_) {
-      return null;
-    } finally {
-      db?.close();
+  Future<({List<BookSearchHit> hits, int totalHits, bool capped})?>
+  _searchBookAsync(int bookId, String normalizedQuery, bool exactPhrase) async {
+    final root = paths.root;
+    final hCap = hitCap;
+    final cCap = countCap;
+    if (kIsWeb) {
+      await Future<void>.delayed(Duration.zero);
+      return _searchBookSync(root, bookId, normalizedQuery, exactPhrase, hCap, cCap);
     }
+    return Isolate.run(
+      () => _searchBookSync(
+        root,
+        bookId,
+        normalizedQuery,
+        exactPhrase,
+        hCap,
+        cCap,
+      ),
+    );
+  }
+}
+
+({List<BookSearchHit> hits, int totalHits, bool capped})? _searchBookSync(
+  String root,
+  int bookId,
+  String normalizedQuery,
+  bool exactPhrase,
+  int hitCap,
+  int countCap,
+) {
+  final paths = AppPaths(root);
+  final path = paths.bookSqlite(bookId);
+  if (!appFileExistsSync(path)) return null;
+  BookDatabase? db;
+  try {
+    db = BookDatabase.open(paths, bookId);
+    return db.searchInBookCapped(
+      normalizedQuery,
+      exactPhrase: exactPhrase,
+      hitCap: hitCap,
+      countCap: countCap,
+    );
+  } catch (_) {
+    return null;
+  } finally {
+    db?.close();
   }
 }
